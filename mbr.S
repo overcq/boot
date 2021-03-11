@@ -62,6 +62,7 @@ I_next_boot_loader:
     cmp     $0x80, %al
     loopne  0b
     jne     I_print_no_bootable_partition
+    push    %cx
     mov     -2(%bp), %dl
     lodsb
     mov     %al, %dh
@@ -75,6 +76,14 @@ I_next_boot_loader:
     mov     (%bx), %ax
     cmp     $0xaa55, %ax
     jne     I_print_not_bootable_sector
+    push    $Q_print_S_booting_partition_1
+    call    Q_vga_I_print
+    pop     %cx
+    mov     $'4', %al
+    sub     %cl, %al
+    call    Q_vga_I_putchar
+    push    $Q_print_S_booting_partition_2
+    call    Q_vga_I_print
     pop     %dx
     jmp     Q_memory_S_relocation_from
 I_print_io_error:
@@ -91,6 +100,11 @@ I_print_not_bootable_sector:
     jmp 0b
 #===============================================================================
 .org Q_offset_S_second_mbr_part
+Q_vga_I_putchar:
+    mov     $0xe, %ah
+    mov     $Q_vga_color_S_light_gray, %bx
+    int     $0x10
+    ret
 Q_vga_I_print:
     pop     %ax
     pop     %si
@@ -99,10 +113,8 @@ Q_vga_I_print:
     lodsb
     test    %al, %al
     jz      0f
-    mov     $0xe, %ah
-    mov     $Q_vga_color_S_light_gray, %bx
     push    %si
-    int     $0x10
+    call    Q_vga_I_putchar
     pop     %si
     jmp     0b
 0:  ret
@@ -115,6 +127,10 @@ Q_print_S_no_bootable_partition:
     .asciz  "No bootable partition."
 Q_print_S_not_bootable_sector:
     .asciz  "Not bootable sector."
+Q_print_S_booting_partition_1:
+    .asciz  "Booting partition "
+Q_print_S_booting_partition_2:
+    .asciz  "...\r\n"
 #===============================================================================
 .org Q_offset_S_signature
 .byte   0x55
