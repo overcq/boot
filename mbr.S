@@ -10,9 +10,9 @@
 .equiv Q_memory_S_relocation_to,    0x7a00
 .equiv Q_memory_S_file_loader,      0x7e00
 #-------------------------------------------------------------------------------
-.equiv Q_offset_S_second_mbr_part,  0xe0
-.equiv Q_offset_S_partiton,         0x1be
-.equiv Q_offset_S_file_loader_data, 0x1b3
+.equiv Q_offset_S_file_loader_data, 224
+.equiv Q_offset_S_second_mbr_part,  228
+.equiv Q_offset_S_partiton,         446
 .equiv Q_offset_S_signature,        510
 #-------------------------------------------------------------------------------
 .equiv Q_vga_color_S_light_gray,    7
@@ -30,10 +30,10 @@
     sti
     mov     %sp, %bp
     push    %dx                             # Numer dysku, z którego ‘bootuje’.
-    push    $Q_print_S_logo + ( Q_memory_S_relocation_from - Q_memory_S_relocation_to )
+    mov     $Q_print_S_logo + ( Q_memory_S_relocation_from - Q_memory_S_relocation_to ), %si
     call    Q_vga_I_print
     cld
-    mov     $Q_offset_S_file_loader_data, %si
+    mov     $Q_memory_S_relocation_from + Q_offset_S_file_loader_data, %si
     lodsb
     mov     %al, %dh                        # head
     lodsw
@@ -41,12 +41,19 @@
     lodsb                                   # Liczba sektorów do przeczytania.
     test    %al, %al
     jz      I_next_boot_loader
+    pusha
+    mov     $Q_print_S_booting_file + ( Q_memory_S_relocation_from - Q_memory_S_relocation_to ), %si
+    call    Q_vga_I_print
+    popa
     mov     -2(%bp), %dl
     mov     $Q_memory_S_file_loader, %bx
     mov     $2, %ah
     int     $0x13
-    jc      I_print_io_error
-    pop     %dx
+    jnc     1f
+    mov     $Q_print_S_io_error + ( Q_memory_S_relocation_from - Q_memory_S_relocation_to ), %si
+    call    Q_vga_I_print
+    jmp     I_hlt
+1:  pop     %dx
     jmp     Q_memory_S_file_loader
 I_next_boot_loader:
     mov     $Q_memory_S_relocation_from, %si
@@ -76,28 +83,29 @@ I_next_boot_loader:
     mov     (%bx), %ax
     cmp     $0xaa55, %ax
     jne     I_print_not_bootable_sector
-    push    $Q_print_S_booting_partition_1
+    mov     $Q_print_S_booting_partition_1, %si
     call    Q_vga_I_print
     pop     %cx
     mov     $'4', %al
     sub     %cl, %al
     call    Q_vga_I_putchar
-    push    $Q_print_S_booting_partition_2
+    mov     $Q_print_S_booting_partition_2, %si
     call    Q_vga_I_print
     pop     %dx
     jmp     Q_memory_S_relocation_from
 I_print_io_error:
-    push    $Q_print_S_io_error
+    mov     $Q_print_S_io_error, %si
     jmp     0f
 I_print_no_bootable_partition:
-    push    $Q_print_S_no_bootable_partition
+    mov     $Q_print_S_no_bootable_partition, %si
     jmp     0f
 I_print_not_bootable_sector:
-    push    $Q_print_S_not_bootable_sector
+    mov     $Q_print_S_not_bootable_sector, %si
 0:  call    Q_vga_I_print
     cli
-0:  hlt
-    jmp 0b
+I_hlt:
+    hlt
+    jmp     I_hlt
 #===============================================================================
 .org Q_offset_S_second_mbr_part
 Q_vga_I_putchar:
@@ -106,9 +114,6 @@ Q_vga_I_putchar:
     int     $0x10
     ret
 Q_vga_I_print:
-    pop     %ax
-    pop     %si
-    push    %ax
 0:  cld
     lodsb
     test    %al, %al
@@ -127,6 +132,8 @@ Q_print_S_no_bootable_partition:
     .asciz  "No bootable partition."
 Q_print_S_not_bootable_sector:
     .asciz  "Not bootable sector."
+Q_print_S_booting_file:
+    .asciz  "Booting file...\r\n"
 Q_print_S_booting_partition_1:
     .asciz  "Booting partition "
 Q_print_S_booting_partition_2:

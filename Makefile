@@ -30,15 +30,18 @@ clean:
 install: install-mbr install-vbr
 install-mbr: mbr
 	dd conv=notrunc if=$< of=disk.img bs=1 count=218 \
-	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=224 seek=224 count=$$(( 440 - 224 )) \
+	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=510 seek=510 count=2
 install-vbr: vbr
-	dd conv=notrunc if=$< of=disk.img bs=512 seek=1 count=1
+	dd conv=notrunc if=$< of=disk.img bs=1 seek=512 count=224 \
+	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( 512 + 228 )) count=$$(( 428 - 228 )) \
+	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 #-------------------------------------------------------------------------------
-usb: mbr
-	dd conv=notrunc if=$< of=/dev/sdb bs=1 count=218 \
-	&& dd conv=notrunc if=$< of=/dev/sdb bs=1 skip=224 seek=224 count=$$(( 440 - 224 )) \
-	&& dd conv=notrunc if=$< of=/dev/sdb bs=1 skip=510 seek=510 count=2
+usb: mbr vbr
+	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \
+	&& dd conv=notrunc if=mbr of=/dev/sdb bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
+	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 seek=512 count=428 \
+	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
 	part_1=$$( mktemp ); part_2=$$( mktemp ); \
