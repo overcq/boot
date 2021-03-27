@@ -1,3 +1,10 @@
-disk.img
-mbr
-vbr
+/disk.img
+/fileloader
+/mbr
+/vbr
+a.out
+E_cplus_S_cx_sources
+*.o
+*.c
+*.h
+!/fileloader.c
