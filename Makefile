@@ -11,7 +11,7 @@ CC=/usr/lib/llvm/11/bin/clang
 LD=ld
 #===============================================================================
 all: build
-build: mbr vbr
+build: mbr vbr fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .PHONY: all build mbr clean install install-mbr install-vbr install-fileloader usb dump
 #===============================================================================
@@ -35,7 +35,7 @@ fileloader-1: fileloader.S
 	&& rm $@_
 fileloader-2: fileloader.c
 	init_size=$$( stat -c %s fileloader-1 ); \
-	$(CC) -c -o a.out $< \
+	$(CC) -c -ffreestanding -o a.out $< \
 	&& $(LD) --oformat binary -Ttext $$(( 0x7e00 + $$init_size )) -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ bs=512 skip=$$(( ( 0x7e00 + $$init_size ) / 512 )) \
@@ -59,20 +59,19 @@ install-vbr: vbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( 512 + 228 )) count=$$(( 428 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
-	loopdev=$$( losetup -P -f disk.img && losetup -j disk.img | cut -d : -f 1 ); \
+	loopdev=$$( losetup -Pf disk.img && losetup -j disk.img | cut -d : -f 1 ); \
 	[ -n "$$loopdev" ] || exit 1; \
 	trap 'losetup -d "$$loopdev"' EXIT; \
 	[ -e "$${loopdev}p1" ] || exit 1; \
 	mkfs.oux "$${loopdev}p1" \
 	&& mkdir -p /mnt/oth \
-	&& ( mount.oux "$${loopdev}p1" /mnt/oth & ) \
+	&& ( mount.oux "$${loopdev}p1" /mnt/oth 2>/dev/null & ) \
 	&& sleep 1 \
-	|| exit 1 \
+	|| exit 1; \
 	trap 'umount /mnt/oth; losetup -d "$$loopdev"' EXIT; \
 	mkdir -p /mnt/oth/boot \
 	&& install $< /mnt/oth/boot/loader \
-	&& install/a.out "$${loopdev}p1" /boot/loader \
-	|| exit 1
+	&& install/a.out "$${loopdev}p1" /boot/loader
 #-------------------------------------------------------------------------------
 usb: mbr vbr
 	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \
@@ -93,4 +92,5 @@ dump: mbr vbr
 	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1" \
 	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2" \
 	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_3" \
+	&& objdump -D -b binary -mi386 fileloader
 #*******************************************************************************
