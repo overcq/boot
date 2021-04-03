@@ -6,13 +6,236 @@
 *         main
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 *******************************************************************************/
-
+#define Z_inode_flags_1_S_directory             0x1000
+#define Z_inode_flags_1_S_empty                 0x8000
+#define Q_filesystem_S_file_loader_data         224
+#define Q_filesystem_S_top_of_boot_record_data  439
+#define Q_filesystem_S_partiton                 446
+#define Q_filesystem_S_size_of_cluster          4096
 //==============================================================================
+N Q_filesystem_S_start;
+N Q_filesystem_S_table_of_files_offset;
+N device_n_size;
+//==============================================================================
+N
+E_main_Q_filesystem_R_dir_inode( N device_file_id
+, N parent_dir
+, Pc file
+){  N inode = FUSE_ROOT_ID;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_table_of_files_offset ))
+        return 0;
+    struct E_mem_Q_file_Z *device = E_mem_Q_tab_R( E_base_S->E_mem_Q_file_S, device_file_id );
+    O{  if( device->pos == device->l )
+            break;
+        inode++;
+        N parent_dir_inode;
+        if( E_mem_Q_file_R_N( device_file_id, &parent_dir_inode, device_n_size ))
+            return 0;
+        N file_size_in_last_cluster;
+        if( E_mem_Q_file_R_16( device_file_id, &file_size_in_last_cluster ))
+            return 0;
+        N16 flags_1 = file_size_in_last_cluster & 0xf000;
+        if( !( flags_1 & Z_inode_flags_1_S_directory ))
+        {   N file_pos_in_the_only_cluster;
+            if( E_mem_Q_file_R_16( device_file_id, &file_pos_in_the_only_cluster ))
+                return 0;
+            N file_pos_cluster;
+            if( E_mem_Q_file_R_N( device_file_id, &file_pos_cluster, device_n_size ))
+                return 0;
+            N file_size_clusters;
+            if( E_mem_Q_file_R_N( device_file_id, &file_size_clusters, device_n_size ))
+                return 0;
+        }
+        N inode_pos = device->pos;
+        N i = 0;
+        O{  C c;
+            if( E_mem_Q_file_R_c( device_file_id, &c ))
+                return 0;
+            i++;
+            if( !c )
+                break;
+        }
+        if( flags_1 & Z_inode_flags_1_S_empty )
+            continue;
+        if( parent_dir_inode == parent_dir )
+        {   Pc s = M(i);
+            if( !s )
+                return 0;
+            if( E_mem_Q_file_P_pos( device_file_id, inode_pos ))
+            {   W(s);
+                return 0;
+            }
+            if( E_mem_Q_file_R_s( device_file_id, s, i ))
+            {   W(s);
+                return 0;
+            }
+            if( E_text_Z_s0_T_s0_eq( file, s ))
+            {   W(s);
+                return inode;
+            }
+            W(s);
+        }
+    }
+    return 0;
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 int
 main( int argc
 , char *argv[]
-){
+){  E_base_M( argc, argv );
+    if( argc != 1 + 2 )
+        goto Error;
+    Pc device = argv[1];
+    Pc file = argv[2];
+    I device_file_id;
+    if( !~( device_file_id = E_mem_Q_file_M( device, no )))
+        goto Error;
+    N i = 0;
+    O{  if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_partiton + i * 16 ))
+            goto Error_2;
+        C b;
+        if( E_mem_Q_file_R_c( device_file_id, &b ))
+            goto Error_2;
+        if( b & 0x80 ) /// Partycja ‘bootowalna’.
+            break;
+        if( ++i == 4 )
+            goto Error_2;
+    }
+    N head;
+    if( E_mem_Q_file_R_N( device_file_id, &head, 1 ))
+        goto Error_2;
+    N sector;
+    if( E_mem_Q_file_R_N( device_file_id, &sector, 1 ))
+        goto Error_2;
+    N cylinder;
+    if( E_mem_Q_file_R_N( device_file_id, &cylinder, 1 ))
+        goto Error_2;
+    Q_filesystem_S_start = ((( cylinder | (( sector & ( 3 << 6 )) << 2 )) * 254 + head ) * 63 + ( sector & ~( 3 << 6 )) - 1 ) * 512;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data ))
+        goto Error_2;
+    C filesystem_version;
+    if( E_mem_Q_file_R_c( device_file_id, &filesystem_version )
+    || filesystem_version != 1
+    )
+        goto Error_2;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 ))
+        goto Error_2;
+    C cluster_address_size_power_bit;
+    if( E_mem_Q_file_R_c( device_file_id, &cluster_address_size_power_bit )
+    || !cluster_address_size_power_bit
+    || cluster_address_size_power_bit > 6
+    )
+        goto Error_2;
+    device_n_size = ( 1 << cluster_address_size_power_bit ) / 8;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 - 2 - device_n_size ))
+        goto Error_2;
+    if( E_mem_Q_file_R_N( device_file_id, &Q_filesystem_S_table_of_files_offset, device_n_size ))
+        goto Error_2;
+    N table_of_files_pos_in_cluster;
+    if( E_mem_Q_file_R_16( device_file_id, &table_of_files_pos_in_cluster ))
+        goto Error_2;
+    Q_filesystem_S_table_of_files_offset *= Q_filesystem_S_size_of_cluster;
+    Q_filesystem_S_table_of_files_offset += table_of_files_pos_in_cluster;
+    N parent_dir = FUSE_ROOT_ID;
+    Pc node = file;
+    Pc sep = E_text_Z_s0_R_c_search( node, E_mem_Q_file_S_filename_separator );
+    while( *sep )
+    {   *sep = '\0';
+        parent_dir = E_main_Q_filesystem_R_dir_inode( device_file_id, parent_dir, node );
+        if( !parent_dir )
+            goto Error_2;
+        node = sep + 1;
+        sep = E_text_Z_s0_R_c_search( node, E_mem_Q_file_S_filename_separator );
+    }
+    N inode = FUSE_ROOT_ID;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_table_of_files_offset ))
+        goto Error_2;
+    N file_size_in_last_cluster;
+    N file_pos_in_the_only_cluster;
+    N file_pos_cluster;
+    N file_size_clusters;
+    struct E_mem_Q_file_Z *device_ = E_mem_Q_tab_R( E_base_S->E_mem_Q_file_S, device_file_id );
+    O{  if( device_->pos == device_->l )
+            goto Error_2;
+        inode++;
+        N parent_dir_inode;
+        if( E_mem_Q_file_R_N( device_file_id, &parent_dir_inode, device_n_size ))
+            goto Error_2;
+        if( E_mem_Q_file_R_16( device_file_id, &file_size_in_last_cluster ))
+            goto Error_2;
+        N16 flags_1 = file_size_in_last_cluster & 0xf000;
+        if( !( flags_1 & Z_inode_flags_1_S_directory ))
+        {   if( E_mem_Q_file_R_16( device_file_id, &file_pos_in_the_only_cluster ))
+                goto Error_2;
+            if( E_mem_Q_file_R_N( device_file_id, &file_pos_cluster, device_n_size ))
+                goto Error_2;
+            if( E_mem_Q_file_R_N( device_file_id, &file_size_clusters, device_n_size ))
+                goto Error_2;
+        }
+        N inode_pos = device_->pos;
+        N i = 0;
+        O{  C c;
+            if( E_mem_Q_file_R_c( device_file_id, &c ))
+                goto Error_2;
+            i++;
+            if( !c )
+                break;
+        }
+        if( flags_1 & Z_inode_flags_1_S_empty )
+            continue;
+        if( parent_dir_inode == parent_dir )
+        {   Pc s = M(i);
+            if( !s )
+                goto Error_2;
+            if( E_mem_Q_file_P_pos( device_file_id, inode_pos ))
+            {   W(s);
+                goto Error_2;
+            }
+            if( E_mem_Q_file_R_s( device_file_id, s, i ))
+            {   W(s);
+                goto Error_2;
+            }
+            if( E_text_Z_s0_T_s0_eq( node, s ))
+            {   W(s);
+                if( flags_1 & Z_inode_flags_1_S_directory )
+                    goto Error_2;
+                break;
+            }
+            W(s);
+        }
+    }
+    N file_pos = Q_filesystem_S_start + file_pos_cluster * Q_filesystem_S_size_of_cluster + file_pos_in_the_only_cluster;
+    if( !E_simple_Z_n_T_aligned_to_v2( file_pos, 512 ))
+        goto Error_2;
+    N file_pos_sectors = file_pos / 512;
+    if( file_pos_sectors / ( 254 * 63 ) > 1024 ) /// Za dużo cylindrów dla adresu CHS.
+        goto Error_2;
+    N file_size = file_size_clusters * Q_filesystem_S_size_of_cluster + ( file_size_in_last_cluster & 0xfff );
+    if( file_size > 255 * 512 ) /// Za duży rozmiar pliku dla liczby sektorów w bajcie.
+        goto Error_2;
+    cylinder = file_pos_sectors / ( 254 * 63 );
+    file_pos_sectors %= 254 * 63;
+    head = file_pos_sectors / 254;
+    file_pos_sectors %= 254;
+    sector = file_pos_sectors + 1;
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_file_loader_data ))
+        goto Error_2;
+    if( E_mem_Q_file_P_N( device_file_id, head, 1 ))
+        goto Error_2;
+    if( E_mem_Q_file_P_N( device_file_id, sector, 1 ))
+        goto Error_2;
+    if( E_mem_Q_file_P_N( device_file_id, cylinder, 1 ))
+        goto Error_2;
+    if( E_mem_Q_file_P_N( device_file_id, file_size / 512, 1 ))
+        goto Error_2;
+    E_mem_Q_file_W( device_file_id );
+    E_base_W();
     return 0;
+Error_2:
+    E_mem_Q_file_W( device_file_id );
+Error:
+    E_base_W();
+    return 1;
 }
 //==============================================================================
 void

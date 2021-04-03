@@ -42,9 +42,10 @@ fileloader-2: fileloader.c
 	&& rm $@_
 fileloader: fileloader-1 fileloader-2
 	cat fileloader-1 fileloader-2 > $@ \
-	&& rm $^
+	&& rm $^ \
+	&& { size=$$( stat -c %s $@ ); if [ $$size -lt 4096 ]; then dd conv=notrunc if=/dev/zero of=$@ bs=1 seek=$$size count=$$(( 4096 - $$size )); fi; }
 install/a.out: install/main.cx
-	$$(MAKE) -C install
+	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
 	rm -f mbr vbr
@@ -59,7 +60,7 @@ install-vbr: vbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( 512 + 228 )) count=$$(( 428 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
-	loopdev=$$( losetup -Pf disk.img && losetup -j disk.img | cut -d : -f 1 ); \
+	loopdev=$$( losetup -Pf --show disk.img ); \
 	[ -n "$$loopdev" ] || exit 1; \
 	trap 'losetup -d "$$loopdev"' EXIT; \
 	[ -e "$${loopdev}p1" ] || exit 1; \
