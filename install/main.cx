@@ -217,7 +217,7 @@ main( int argc
     file_pos_sectors %= 254 * 63;
     head = file_pos_sectors / 254;
     file_pos_sectors %= 254;
-    sector = file_pos_sectors + 1;
+    sector = (( cylinder & ( 3 << 8 )) >> 2 ) | ( file_pos_sectors + 1 );
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_file_loader_data ))
         goto Error_2;
     if( E_mem_Q_file_P_N( device_file_id, head, 1 ))
