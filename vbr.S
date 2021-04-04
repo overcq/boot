@@ -17,7 +17,7 @@
 #===============================================================================
 .code16
 .text
-0:  cli
+    cli
     xor     %ax, %ax
     mov     %ax, %ss
     mov     Q_memory_S_vbr, %sp
@@ -27,7 +27,7 @@
     pop     %es
     sti
     mov     %sp, %bp
-    ljmp    $0, $Q_memory_S_vbr + 0f - 0b
+    ljmp    $0, $0f
 0:  push    %dx                             # Numer dysku, z którego ‘bootuje’.
     mov     $Q_print_S_logo, %si
     call    Q_vga_I_print
@@ -85,6 +85,5 @@ Q_print_S_booting_file:
     .asciz  "Booting file...\r\n"
 #===============================================================================
 .org Q_offset_S_signature
-.byte   0x55
-.byte   0xaa
+.byte   0x55, 0xaa
 #*******************************************************************************

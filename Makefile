@@ -35,7 +35,7 @@ fileloader-1: fileloader.S
 	&& rm $@_
 fileloader-2: fileloader.c
 	init_size=$$( stat -c %s fileloader-1 ); \
-	$(CC) -c -ffreestanding -o a.out $< \
+	$(CC) -c -ffreestanding -Os -s -o a.out $< \
 	&& $(LD) --oformat binary -Ttext $$(( 0x7e00 + $$init_size )) -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ bs=512 skip=$$(( ( 0x7e00 + $$init_size ) / 512 )) \

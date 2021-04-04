@@ -137,7 +137,9 @@ main( int argc
     Q_filesystem_S_table_of_files_offset *= Q_filesystem_S_size_of_cluster;
     Q_filesystem_S_table_of_files_offset += table_of_files_pos_in_cluster;
     N parent_dir = FUSE_ROOT_ID;
-    Pc node = file;
+    if( *file != E_mem_Q_file_S_filename_separator )
+        goto Error_2;
+    Pc node = file + 1;
     Pc sep = E_text_Z_s0_R_c_search( node, E_mem_Q_file_S_filename_separator );
     while( *sep )
     {   *sep = '\0';
@@ -204,6 +206,8 @@ main( int argc
             W(s);
         }
     }
+    if( device_->pos == device_->l )
+        goto Error_2;
     N file_pos = Q_filesystem_S_start + file_pos_cluster * Q_filesystem_S_size_of_cluster + file_pos_in_the_only_cluster;
     if( !E_simple_Z_n_T_aligned_to_v2( file_pos, 512 ))
         goto Error_2;
