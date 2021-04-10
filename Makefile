@@ -17,29 +17,21 @@ build: mbr vbr fileloader
 #===============================================================================
 mbr: mbr.S
 	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7a00 -o $@_ a.out \
-	&& rm a.out \
-	&& dd if=$@_ of=$@ bs=512 skip=$$(( 0x7a00 / 512 )) count=1 \
-	&& rm $@_
+	&& $(LD) --oformat binary -Ttext 0x7a00 -o $@ a.out \
+	&& rm a.out
 vbr: vbr.S
 	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7c00 -o $@_ a.out \
-	&& rm a.out \
-	&& dd if=$@_ of=$@ bs=512 skip=$$(( 0x7c00 / 512 )) count=1 \
-	&& rm $@_
+	&& $(LD) --oformat binary -Ttext 0x7c00 -o $@ a.out \
+	&& rm a.out
 fileloader-1: fileloader.S
 	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@_ a.out \
-	&& rm a.out \
-	&& dd if=$@_ of=$@ bs=512 skip=$$(( 0x7e00 / 512 )) \
-	&& rm $@_
+	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out \
+	&& rm a.out
 fileloader-2: fileloader.c
 	init_size=$$( stat -c %s fileloader-1 ); \
-	$(CC) -c -ffreestanding -Os -s -o a.out $< \
-	&& $(LD) --oformat binary -Ttext $$(( 0x7e00 + $$init_size )) -o $@_ a.out \
-	&& rm a.out \
-	&& dd if=$@_ of=$@ bs=512 skip=$$(( ( 0x7e00 + $$init_size ) / 512 )) \
-	&& rm $@_
+	$(CC) -c -ffreestanding -Os -o a.out $< \
+	&& $(LD) --oformat binary -Ttext $$(( 0x7e00 + $$init_size )) -o $@ a.out \
+	&& rm a.out
 fileloader: fileloader-1 fileloader-2
 	cat fileloader-1 fileloader-2 > $@ \
 	&& rm $^ \
@@ -48,7 +40,7 @@ install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
-	rm -f mbr vbr
+	rm -f mbr vbr fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 install: install-mbr install-vbr install-fileloader
 install-mbr: mbr
@@ -71,8 +63,9 @@ install-fileloader: fileloader install/a.out
 	|| exit 1; \
 	trap 'umount /mnt/oth; losetup -d "$$loopdev"' EXIT; \
 	mkdir -p /mnt/oth/boot \
-	&& install $< /mnt/oth/boot/loader \
-	&& install/a.out "$${loopdev}p1" /boot/loader
+	&& { install $< /mnt/oth/boot/loader || true; } \
+	&& install/a.out "$$loopdev" /boot/loader
+	# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr
 	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \

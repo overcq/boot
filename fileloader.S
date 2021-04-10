@@ -10,9 +10,13 @@
 #-------------------------------------------------------------------------------
 .equiv Z_cr0_S_pe,                          ( 1 << 0 )
 .equiv Z_cr0_S_pg,                          ( 1 << 31 )
+#-------------------------------------------------------------------------------
 .equiv Z_msr_S_ia32_efer,                   0xc0000080
 .equiv Z_msr_S_ia32_efer_S_lme,             ( 1 << 8 )
+#-------------------------------------------------------------------------------
 .equiv Z_cr4_S_pae,                         ( 1 << 5 )
+.equiv Z_cr4_S_la57,                        ( 1 << 12 )
+#-------------------------------------------------------------------------------
 .equiv Z_descriptor_Z_type_data_code_S_a,   ( 1 << 8 )
 .equiv Z_descriptor_Z_type_data_S_w,        ( 1 << 9 )
 .equiv Z_descriptor_Z_type_data_code_S_code,( 1 << 11 )
@@ -21,12 +25,23 @@
 .equiv Z_descriptor_S_p,                    ( 1 << 15 )
 .equiv Z_descriptor_S_l,                    ( 1 << 21 )
 .equiv Z_descriptor_S_db,                   ( 1 << 22 )
+#-------------------------------------------------------------------------------
+.equiv Z_page_entry_S_p,                    ( 1 << 0 )
+.equiv Z_page_entry_S_rw,                   ( 1 << 1 )
 #===============================================================================
 .code16
 .text
     mov     $Q_print_S_logo, %si
     call    Q_vga_I_print
-    mov     $S_page_dir_lvl_3, %eax
+    mov     $S_pt_32, %ebx
+    xor     %eax, %eax
+0:  mov     %eax, %edx
+    or      $Z_page_entry_S_p | Z_page_entry_S_rw, %edx
+    mov     %edx, (%ebx,%eax)
+    lea     0x1000(%eax), %eax
+    cmp     $0x80000, %eax
+    jne     0b
+    mov     $S_pd_32, %eax
     mov     %eax, %cr3
     cli
 # TODO Blokować zewnętrzne przerwania (APIC).
@@ -50,9 +65,26 @@
     and     $~Z_cr0_S_pg, %eax
     mov     %eax, %cr0
     mov     %cr4, %eax
-    or      $Z_cr4_S_pae, %eax
+    or      $Z_cr4_S_pae | Z_cr4_S_la57, %eax
     mov     %eax, %cr4
-    mov     $S_page_dir_lvl_5, %eax
+    mov     $S_pt, %ebx
+    xor     %eax, %eax
+0:  mov     %eax, %edx
+    or      $Z_page_entry_S_p | Z_page_entry_S_rw, %edx
+    mov     %edx, (%ebx,%eax)
+    lea     0x1000(%eax), %eax
+    cmp     $0x80000, %eax
+    jne     0b
+    mov     $S_pt, %eax
+    or      $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
+    mov     %eax, S_pd
+    mov     $S_pd, %eax
+    or      $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
+    mov     %eax, S_pml4
+    mov     $S_pml4, %eax
+    or      $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
+    mov     %eax, S_pml5
+    mov     $S_pml5, %eax
     mov     %eax, %cr3
     mov     $Z_msr_S_ia32_efer, %ecx
     rdmsr
@@ -73,6 +105,7 @@
 0:  hlt
     jmp 0b
 #===============================================================================
+.code16
 Q_vga_I_print:
 0:  cld
     lodsb
@@ -127,6 +160,42 @@ S_ldt:
     .8byte  0
 S_idt:
     .8byte  0
+#-------------------------------------------------------------------------------
+.p2align 12
+.macro page_entry_32 flags
+    .4byte  Z_page_entry_S_p | \flags
+.endm
+.macro pte_flat_memory_32 from, to
+    page_entry_32 Z_page_entry_S_rw
+    .if \to - \from
+        pte_flat_memory_32 "(\from + 0x1000 )", \to
+    .endif
+.endm
+S_pt_32:
+    pte_flat_memory_32 0, 0x60000
+    pte_flat_memory_32 0x60000, 0x80000
+S_pd_32:
+    page_entry_32 Z_page_entry_S_rw
+#-------------------------------------------------------------------------------
+.macro page_entry flags
+    .8byte  Z_page_entry_S_p | \flags
+.endm
+.macro pte_flat_memory from, to
+    page_entry Z_page_entry_S_rw
+    .if \to - \from
+        pte_flat_memory "(\from + 0x1000 )", \to
+    .endif
+.endm
+S_pt:
+    pte_flat_memory 0, 0x60000
+    pte_flat_memory 0x60000, 0x80000
+S_pd:
+    page_entry Z_page_entry_S_rw
+S_pml4:
+    page_entry Z_page_entry_S_rw
+S_pml5:
+    page_entry Z_page_entry_S_rw
 #===============================================================================
+.code64
 I_start:
 #*******************************************************************************
