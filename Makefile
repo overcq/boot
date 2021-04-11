@@ -13,8 +13,11 @@ LD=ld
 all: build
 build: mbr vbr fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build mbr clean install install-mbr install-vbr install-fileloader usb dump
+.PHONY: all build mbr clean distclean install install-mbr install-vbr install-fileloader usb dump
 #===============================================================================
+disk.img:
+	dd if=/dev/zero of=$@ bs=512 count=2812 \
+	&& fdisk $@
 mbr: mbr.S
 	$(AS) -o a.out $< \
 	&& $(LD) --oformat binary -Ttext 0x7a00 -o $@ a.out \
@@ -41,8 +44,10 @@ install/a.out: install/main.cx
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
 	rm -f mbr vbr fileloader
+distclean: clean
+	rm -f disk.img
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-install: install-mbr install-vbr install-fileloader
+install: disk.img install-mbr install-vbr install-fileloader
 install-mbr: mbr
 	dd conv=notrunc if=$< of=disk.img bs=1 count=218 \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \

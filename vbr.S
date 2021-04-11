@@ -76,7 +76,7 @@ Q_vga_I_print:
 0:  ret
 #===============================================================================
 Q_print_S_logo:
-    .asciz  "OUX/C+ boot loader. Volume Boot Record.\r\n"
+    .asciz  "OUX/C+ OS boot loader. Volume Boot Record.\r\n"
 Q_print_S_io_error:
     .asciz  "Disc I/O error."
 Q_print_S_no_file_loader:

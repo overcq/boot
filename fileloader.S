@@ -103,6 +103,10 @@
     wrmsr
     mov     %cr0, %eax
     or      $Z_cr0_S_pg, %eax
+
+0:  hlt
+    jmp 0b
+
     mov     %eax, %cr0 # Ta instrukcja powoduje #GP.
 
 0:  hlt
@@ -135,7 +139,7 @@ Q_vga_I_print:
 #===============================================================================
 .data
 Q_print_S_logo:
-    .asciz  "OUX/C+ boot loader. File Boot Loader.\r\n"
+    .asciz  "OUX/C+ OS boot loader. File Boot Loader.\r\n"
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .p2align 1
 S_gd:
