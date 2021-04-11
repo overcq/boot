@@ -9,7 +9,7 @@
 #define Z_inode_flags_1_S_directory             0x1000
 #define Z_inode_flags_1_S_empty                 0x8000
 #define Q_filesystem_S_file_loader_data         224
-#define Q_filesystem_S_top_of_boot_record_data  439
+#define Q_filesystem_S_top_of_boot_record_data  440
 #define Q_filesystem_S_partiton                 446
 #define Q_filesystem_S_size_of_cluster          4096
 //==============================================================================
@@ -111,23 +111,23 @@ main( int argc
     if( E_mem_Q_file_R_N( device_file_id, &cylinder, 1 ))
         goto Error_2;
     Q_filesystem_S_start = ((( cylinder | (( sector & ( 3 << 6 )) << 2 )) * 254 + head ) * 63 + ( sector & ~( 3 << 6 )) - 1 ) * 512;
-    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data ))
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 ))
         goto Error_2;
-    C filesystem_version;
-    if( E_mem_Q_file_R_c( device_file_id, &filesystem_version )
+    N filesystem_version;
+    if( E_mem_Q_file_R_N( device_file_id, &filesystem_version, 1 )
     || filesystem_version != 1
     )
         goto Error_2;
-    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 ))
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 - 1 ))
         goto Error_2;
-    C cluster_address_size_power_bit;
-    if( E_mem_Q_file_R_c( device_file_id, &cluster_address_size_power_bit )
+    N cluster_address_size_power_bit;
+    if( E_mem_Q_file_R_N( device_file_id, &cluster_address_size_power_bit, 1 )
     || !cluster_address_size_power_bit
     || cluster_address_size_power_bit > 6
     )
         goto Error_2;
     device_n_size = ( 1 << cluster_address_size_power_bit ) / 8;
-    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 - 2 - device_n_size ))
+    if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_top_of_boot_record_data - 1 - 1 - 2 - device_n_size ))
         goto Error_2;
     if( E_mem_Q_file_R_N( device_file_id, &Q_filesystem_S_table_of_files_offset, device_n_size ))
         goto Error_2;

@@ -53,19 +53,19 @@ install-vbr: vbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
 	loopdev=$$( losetup -Pf --show disk.img ); \
-	[ -n "$$loopdev" ] || exit 1; \
+	[ -n "$$loopdev" ] || { echo 1; exit 1; }; \
 	trap 'losetup -d "$$loopdev"' EXIT; \
-	[ -e "$${loopdev}p1" ] || exit 1; \
+	[ -e "$${loopdev}p1" ] || { echo 2; exit 1; }; \
 	mkfs.oux "$${loopdev}p1" \
 	&& mkdir -p /mnt/oth \
 	&& ( mount.oux "$${loopdev}p1" /mnt/oth 2>/dev/null & ) \
-	&& sleep 1 \
-	|| exit 1; \
+	|| { echo 3; exit 1; }; \
 	trap 'umount /mnt/oth; losetup -d "$$loopdev"' EXIT; \
+	sleep 1; \
 	mkdir -p /mnt/oth/boot \
 	&& { install $< /mnt/oth/boot/loader || true; } \
 	&& install/a.out "$$loopdev" /boot/loader
-	# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
+# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr
 	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \
@@ -78,13 +78,14 @@ dump: mbr vbr
 	trap 'rm "$$part_1" "$$part_2" "$$part_3"' EXIT; \
 	dd if=mbr of="$$part_1" bs=1 count=218 \
 	&& dd if=mbr of="$$part_2" bs=1 skip=228 count=$$(( 428 - 228 )) \
-	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1" \
-	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2" \
+	&& { echo mbr \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; } \
+	&& { echo mbr \#2; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2"; } \
 	&& dd if=vbr of="$$part_1" bs=1 count=224 \
 	&& dd if=vbr of="$$part_2" bs=1 skip=228 count=$$(( 428 - 228 )) \
 	&& dd if=vbr of="$$part_3" bs=1 skip=440 count=$$(( 510 - 440 )) \
-	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1" \
-	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2" \
-	&& objdump -D -b binary -mi386 -Maddr16,data16 "$$part_3" \
-	&& objdump -D -b binary -mi386 fileloader
+	&& { echo vbr \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; } \
+	&& { echo vbr \#2; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2"; } \
+	&& { echo vbr \#3; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_3"; } \
+	&& dd if=fileloader of="$$part_1" bs=512 count=2 \
+	&& { echo fileloader \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; }
 #*******************************************************************************
