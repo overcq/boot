@@ -64,8 +64,8 @@
     mov     %ax, %gs
     ljmpl   $1 << 3, $0f
 .code32
-0:  #mov     $3 << 3, %ax
-    #lldt    %ax
+0:  mov     $3 << 3, %ax
+    lldt    %ax
     lidt    S_id
 # Inicjowanie ‘page tables’ trybu IA-32e.
     mov     $S_pt, %ebx
@@ -103,25 +103,14 @@
     wrmsr
     mov     %cr0, %eax
     or      $Z_cr0_S_pg, %eax
-
-0:  hlt
-    jmp 0b
-
-    mov     %eax, %cr0 # Ta instrukcja powoduje #GP.
-
-0:  hlt
-    jmp 0b
-
+    mov     %eax, %cr0
     lgdt    S_gd
-.code64
-    #mov     $3 << 3, %ax
-    #lldt    %ax
+    mov     $3 << 3, %ax
+    lldt    %ax
     lidt    S_id
-    sti
-    jmp     I_start
-    cli
-0:  hlt
-    jmp 0b
+    ljmp    $1 << 3, $0f
+.code64
+0:  jmp     main
 #===============================================================================
 .code16
 Q_vga_I_print:
@@ -179,7 +168,6 @@ S_idt:
     .4byte  0
 .endm
 .macro pte_flat_memory_32 from, to
-    .p2align 0
     page_entry_32
     .if \to - \from
         pte_flat_memory_32 "(\from + 0x1000 )", \to
@@ -193,6 +181,7 @@ S_pt_32:
 .p2align 12
 S_pdt_32:
     page_entry_32
+.p2align 12
 S_pdpt_32:
     page_entry_32
 #-------------------------------------------------------------------------------
@@ -200,7 +189,6 @@ S_pdpt_32:
     .8byte  0
 .endm
 .macro pte_flat_memory from, to
-    .p2align 0
     page_entry
     .if \to - \from
         pte_flat_memory "(\from + 0x1000 )", \to
@@ -214,12 +202,10 @@ S_pt:
 .p2align 12
 S_pd:
     page_entry
+.p2align 12
 S_pdpt:
     page_entry
+.p2align 12
 S_pml4:
     page_entry
-#===============================================================================
-.text
-.code64
-I_start:
 #*******************************************************************************

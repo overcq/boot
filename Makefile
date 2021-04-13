@@ -13,7 +13,7 @@ LD=ld
 all: build
 build: mbr vbr fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build mbr clean distclean install install-mbr install-vbr install-fileloader usb dump
+.PHONY: all build clean distclean install install-mbr install-vbr install-fileloader usb dump
 #===============================================================================
 disk.img:
 	dd if=/dev/zero of=$@ bs=512 count=2812 \
@@ -26,19 +26,11 @@ vbr: vbr.S
 	$(AS) -o a.out $< \
 	&& $(LD) --oformat binary -Ttext 0x7c00 -o $@ a.out \
 	&& rm a.out
-fileloader-1: fileloader.S
-	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out \
-	&& rm a.out
-fileloader-2: fileloader.c
-	init_size=$$( stat -c %s fileloader-1 ); \
-	$(CC) -c -ffreestanding -Os -o a.out $< \
-	&& $(LD) --oformat binary -Ttext $$(( 0x7e00 + $$init_size )) -o $@ a.out \
-	&& rm a.out
-fileloader: fileloader-1 fileloader-2
-	cat fileloader-1 fileloader-2 > $@ \
-	&& rm $^ \
-	&& { size=$$( stat -c %s $@ ); if [ $$size -lt 4096 ]; then dd conv=notrunc if=/dev/zero of=$@ bs=1 seek=$$size count=$$(( 4096 - $$size )); fi; }
+fileloader: fileloader.S fileloader.c
+	$(AS) -o a.out fileloader.S \
+	&& $(CC) -c -ffreestanding -Os -o b.out fileloader.c \
+	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out b.out \
+	&& rm a.out b.out
 install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
