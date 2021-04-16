@@ -64,7 +64,8 @@
     mov     %ax, %gs
     ljmpl   $1 << 3, $0f
 .code32
-0:  mov     $3 << 3, %ax
+0:  orl     $S_ldt_32, S_gdt_32 + 3 * 8 + 2 # Adres “S_ldt_32” mniejszy niż 1000000.
+    mov     $3 << 3, %ax
     lldt    %ax
     lidt    S_id
 # Inicjowanie ‘page tables’ trybu IA-32e.
@@ -105,9 +106,17 @@
     or      $Z_cr0_S_pg, %eax
     mov     %eax, %cr0
     lgdt    S_gd
+    orl     $S_ldt, S_gdt + 3 * 8 + 2 # Adres “S_ldt_32” mniejszy niż 1000000.
     mov     $3 << 3, %ax
     lldt    %ax
     lidt    S_id
+    mov     $2 << 3, %ax
+    mov     %ax, %ds
+    mov     %ax, %es
+    mov     %ax, %ss
+    xor     %ax, %ax
+    mov     %ax, %fs
+    mov     %ax, %gs
     ljmp    $1 << 3, $0f
 .code64
 0:  jmp     main
