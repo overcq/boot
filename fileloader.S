@@ -34,11 +34,10 @@
     mov     $Q_print_S_logo, %si
     call    Q_vga_I_print
 # Odczytanie obszarów pamięci RAM, jeśli dostępne.
-    push    $0 # Liczba wpisów w tablicy.
+    mov     $7 << 12, %ax
     mov     $0x534d4150, %edx
-    mov     $7, %ax
     mov     %ax, %es
-    mov     $0xffff - 24, %di
+    mov     $0 - 24, %di
     mov     $24, %ecx
     xor     %ebx, %ebx
     mov     $0xe820, %eax
@@ -52,65 +51,20 @@
 1:  cmp     $20, %cl
     jne     0f
     movl    $1, 20(%di)
-0:  pop     %ax
-    mov     $24, %ecx
-    inc     %ax
+0:  mov     $24, %ecx
     sub     %cx, %di
-    push    %ax
     mov     $0xe820, %eax
     int     $0x15
     jc      0f
     test    %ebx, %ebx
     jz      0f
     jmp     0b
-0:  mov     %es, %ax
-    shl     $16, %eax
-    mov     %di, %ax
-2:  pop     %cx # Liczba wpisów w tablicy.
-    push    %eax # Zachowanie na później adresu listy.
-# Sortowanie obszarów pamięci RAM po adresie.
-0:  cmp     $1, %cx
-    jna     0f
+0:  xor     %eax, %eax
     mov     %es, %ax
-    xor     %dx, %dx
-    mov     %ax, %ds
-    xor     %bx, %bx
-    mov     %dx, %si
-    lea     -24(%bx), %bx
-    dec     %cx
-1:  lea     24(%bx), %bx
-    inc     %si
-    movl    8(%bx,%di), %eax
-    test    %eax, %eax
-    jnz     2f
-    movl    4 + 8(%bx,%di), %eax
-    test    %eax, %eax
-    jz      1b
-2:  mov     4 + 8 + 8(%bx,%di), %ax
-    test    $1, %ax
-    jz      1b
-2:  movl    4(%bx,%di), %eax
-    cmp     %eax, 24 + 4(%bx,%di)
-    ja      2f
-    jb      3f
-    movl    (%bx,%di), %eax
-    cmp     %eax, 24(%bx,%di)
-    jb      3f
-2:  mov     (%bx,%di), %eax
-    pushl   24(%bx,%di)
-    mov     %eax, 24(%bx,%di)
-    popl    (%bx,%di)
-    mov     4(%bx,%di), %eax
-    pushl   24 + 4(%bx,%di)
-    mov     %eax, 24 + 4(%bx,%di)
-    popl    4(%bx,%di)
-    mov     %si, %dx
-    cmp     %cx, %si
-    jne     1b
-3:  mov     %dx, %cx
-    jmp     0b
-0:  xor     %ax, %ax
-    mov     %ax, %ds
+    shl     $4, %eax
+    mov     %di, %ax
+2:  pushl   $0
+    push    %eax                            # Zachowanie na później adresu tablicy.
 # Inicjowanie ‘page tables’ trybu chronionego.
     mov     $S_pt_32, %ebx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
@@ -184,7 +138,7 @@
     or      $Z_cr0_S_pg, %eax
     mov     %eax, %cr0
     lgdt    S_gd
-    orl     $S_ldt, S_gdt + 3 * 8 + 2 # Adres “S_ldt_32” mniejszy niż 1000000.
+    orl     $S_ldt, S_gdt + 3 * 8 + 2       # Adres “S_ldt” mniejszy niż 1000000.
     mov     $3 << 3, %ax
     lldt    %ax
     lidt    S_id
@@ -197,7 +151,8 @@
     mov     %ax, %gs
     ljmp    $1 << 3, $0f
 .code64
-0:  jmp     main
+0:  pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
+    jmp     main
 #===============================================================================
 .code16
 Q_vga_I_print:
@@ -243,7 +198,7 @@ S_idt_32:
     .8byte  0
 S_gdt:
     .8byte  0
-    descriptor , , Z_descriptor_Z_type_data_code_S_code | Z_descriptor_Z_type_data_code_S_a | Z_descriptor_S_s | Z_descriptor_S_l
+    descriptor , , Z_descriptor_Z_type_data_code_S_code | Z_descriptor_Z_type_data_code_S_a | Z_descriptor_S_s
     descriptor , , Z_descriptor_Z_type_data_code_S_a | Z_descriptor_Z_type_data_S_w | Z_descriptor_S_s
     descriptor , , Z_descriptor_Z_type_system_S_ldt
 S_ldt:

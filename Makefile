@@ -18,17 +18,17 @@ build: mbr vbr fileloader
 disk.img:
 	dd if=/dev/zero of=$@ bs=512 count=2812 \
 	&& fdisk $@
-mbr: mbr.S
+mbr: mbr.S Makefile
 	$(AS) -o a.out $< \
 	&& $(LD) --oformat binary -Ttext 0x7a00 -o $@ a.out \
 	&& rm a.out
-vbr: vbr.S
+vbr: vbr.S Makefile
 	$(AS) -o a.out $< \
 	&& $(LD) --oformat binary -Ttext 0x7c00 -o $@ a.out \
 	&& rm a.out
-fileloader: fileloader.S fileloader.c
+fileloader: fileloader.S fileloader.c Makefile
 	$(AS) -o a.out fileloader.S \
-	&& $(CC) -c -ffreestanding -Os -o b.out fileloader.c \
+	&& $(CC) -c -ffreestanding -O0 -o b.out fileloader.c \
 	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out b.out \
 	&& rm a.out b.out
 install/a.out: install/main.cx

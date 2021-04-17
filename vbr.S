@@ -50,6 +50,7 @@
     int     $0x13
     jc      I_print_io_error
     pop     %dx
+    mov     Q_memory_S_file_loader, %sp     # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_print_no_file_loader:
     mov     $Q_print_S_no_file_loader, %si

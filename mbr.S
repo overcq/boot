@@ -54,6 +54,7 @@
     call    Q_vga_I_print
     jmp     I_hlt
 1:  pop     %dx
+    mov     Q_memory_S_file_loader, %sp     # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_next_boot_loader:
     mov     $Q_memory_S_relocation_from, %si
