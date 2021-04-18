@@ -7,6 +7,7 @@
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒11 T
 #*******************************************************************************
 .equiv Q_memory_S_vbr,              0x7c00
+# “Q_memory_S_file_loader” musi być na wielokrotności 512.
 .equiv Q_memory_S_file_loader,      0x7e00
 #-------------------------------------------------------------------------------
 .equiv Q_offset_S_file_loader_data, 224
@@ -20,7 +21,7 @@
     cli
     xor     %ax, %ax
     mov     %ax, %ss
-    mov     Q_memory_S_vbr, %sp
+    mov     $Q_memory_S_vbr, %sp
     push    %ax
     pop     %ds
     push    %ax
@@ -40,29 +41,111 @@
     lodsb                                   # Liczba sektorów do przeczytania.
     test    %al, %al
     jz      I_print_no_file_loader
-    pusha
+    push    %ax
+    push    %cx
+    push    %dx
     mov     $Q_print_S_booting_file, %si
     call    Q_vga_I_print
-    popa
-    mov     -2(%bp), %dl
+    xor     %dx, %dx
+    movzbw  -4(%bp), %ax
+    mov     $512, %si
     mov     $Q_memory_S_file_loader, %bx
+    mul     %si                             # Rozmiar pliku w “dx:ax”.
+    add     %bx, %ax
+    adc     $0,%dx
+    jz      2f                              # Czy nie zostanie przekroczony blok 0x10000?
+    dec     %dx
+    push    %dx
+    xor     %dx,%dx
+    div     %si                             # Liczba pełnych sektorów pozostałych w ostatnim bloku 0x10000.
+    test    %dx, %dx
+    jz      0f
+    inc     %ax
+    xor     %dx, %dx
+0:  mov     %ax, -4(%bp)
+    mov     $Q_memory_S_file_loader, %ax
+    neg     %ax
+    div     %si                             # Liczba sektorów w pierwszym bloku 0x10000.
+    push    %ax
+1:  mov     -7(%bp), %dh
+    mov     -6(%bp), %cx
+    mov     -2(%bp), %dl
     mov     $2, %ah
     int     $0x13
     jc      I_print_io_error
+# Zamiana CHS na LBA.
+    mov     -7(%bp), %bl
+    mov     -6(%bp), %ax
+    movzbl  %bl, %ebx                       # head
+    mov     %al, %cl
+    shr     $6, %al
+    xchg    %al, %ah
+    movzwl  %ax, %eax                       # cylinder
+    and     $~( ~0 << 6 ), %cl
+    dec     %cl
+    movzbl  %cl, %ecx                       # sector from 0
+    mov     $255, %esi
+    xor     %edx, %edx
+    mul     %esi
+    add     %ebx, %eax
+    mov     $63, %esi
+    xor     %edx, %edx
+    mul     %esi
+    add     %ecx, %eax
     pop     %dx
-    mov     Q_memory_S_file_loader, %sp     # Ustawienie większego stosu.
+    movzwl  %dx, %edx                       # Liczba odczytanych sektorów.
+    sub     %edx, %eax
+# Zamiana LBA na CHS.
+    mov     $255 * 63, %esi
+    xor     %edx, %edx
+    div     %esi
+    xchg    %al, %ah
+    shl     $6, %al
+    mov     %ax, %cx                        # cylinder without sector
+    mov     %dx, %ax
+    mov     $255, %si
+    div     %si
+#-------------------------------------------------------------------------------
+    jmp     0f
+.org Q_offset_S_second_mbr_part
+#-------------------------------------------------------------------------------
+0:  mov     %al, -7(%bp)                    # head
+    inc     %dl
+    or      %dl, %cl                        # sector
+    mov     %cx, -6(%bp)                    # cylinder with sector
+    mov     %es, %ax
+    pop     %dx
+    add     $1 << 12, %ax
+    xor     %bx, %bx
+    mov     %ax, %es
+    test    %dx, %dx
+    jz      2f
+    dec     %dx
+    push    %dx
+    mov     $0x10000 / 512, %ax
+    push    %ax
+    jmp     1b
+2:  pop     %dx
+    pop     %cx
+    pop     %ax
+    mov     -2(%bp), %dl
+    mov     $2, %ah
+    int     $0x13
+    jc      I_print_io_error
+3:  pop     %dx
+    mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_print_no_file_loader:
     mov     $Q_print_S_no_file_loader, %si
     jmp     0f
 I_print_io_error:
+    xor     %ax, %ax
+    mov     %ax, %es
     mov     $Q_print_S_io_error, %si
 0:  call    Q_vga_I_print
     cli
 0:  hlt
     jmp 0b
-#===============================================================================
-.org Q_offset_S_second_mbr_part
 Q_vga_I_print:
 0:  cld
     lodsb

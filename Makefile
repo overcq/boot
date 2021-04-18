@@ -28,7 +28,7 @@ vbr: vbr.S Makefile
 	&& rm a.out
 fileloader: fileloader.S fileloader.c Makefile
 	$(AS) -o a.out fileloader.S \
-	&& $(CC) -c -ffreestanding -O0 -o b.out fileloader.c \
+	&& $(CC) -m64 -march=native -c -ffreestanding -O0 -o b.out fileloader.c \
 	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out b.out \
 	&& rm a.out b.out
 install/a.out: install/main.cx
@@ -83,6 +83,10 @@ dump: mbr vbr
 	&& { echo vbr \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; } \
 	&& { echo vbr \#2; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_2"; } \
 	&& { echo vbr \#3; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_3"; } \
-	&& dd if=fileloader of="$$part_1" bs=512 count=2 \
-	&& { echo fileloader \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; }
+	&& dd if=fileloader of="$$part_1" bs=1 count=256 \
+	&& dd if=fileloader of="$$part_2" bs=1 skip=256 count=256 \
+	&& dd if=fileloader of="$$part_3" bs=1 skip=256 \
+	&& { echo fileloader \#1; objdump -D -b binary -mi386 -Maddr16,data16 "$$part_1"; } \
+	&& { echo fileloader \#2; objdump -D -b binary -mi386 -Maddr32,data32 "$$part_2"; } \
+	&& { echo fileloader \#3; objdump -D -b binary -mi386 -Mx86-64 "$$part_3"; }
 #*******************************************************************************

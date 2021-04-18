@@ -66,21 +66,20 @@
 2:  pushl   $0
     push    %eax                            # Zachowanie na później adresu tablicy.
 # Inicjowanie ‘page tables’ trybu chronionego.
-    mov     $S_pt_32, %ebx
+    mov     $S_pt_32, %bx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
 0:  cmp     $0x80000, %eax
     ja      0f
-    mov     %eax, (%ebx)
+    mov     %eax, (%bx)
     lea     0x1000(%eax), %eax
-    lea     4(%ebx), %ebx
+    lea     4(%bx), %bx
     jmp     0b
 0:  mov     $S_pt_32, %eax
     or      $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
     mov     %eax, S_pdt_32
     mov     $S_pdt_32, %eax
     mov     %eax, %cr3
-    cli
-# TODO Blokować zewnętrzne przerwania (APIC).
+    cli                                     #TODO Blokować zewnętrzne przerwania (APIC).
     mov     $S_gd, %eax
     lgdtl   S_gd
 # Przełączenie do trybu chronionego.
@@ -94,6 +93,7 @@
     xor     %ax, %ax
     mov     %ax, %fs
     mov     %ax, %gs
+    movzwl  %sp, %esp
     ljmpl   $1 << 3, $0f
 .code32
 0:  orl     $S_ldt_32, S_gdt_32 + 3 * 8 + 2 # Adres “S_ldt_32” mniejszy niż 1000000.
@@ -151,7 +151,8 @@
     mov     %ax, %gs
     ljmp    $1 << 3, $0f
 .code64
-0:  pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
+0:  mov     %esp, %esp
+    pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
     jmp     main
 #===============================================================================
 .code16
@@ -198,7 +199,7 @@ S_idt_32:
     .8byte  0
 S_gdt:
     .8byte  0
-    descriptor , , Z_descriptor_Z_type_data_code_S_code | Z_descriptor_Z_type_data_code_S_a | Z_descriptor_S_s
+    descriptor , , Z_descriptor_Z_type_data_code_S_code | Z_descriptor_Z_type_data_code_S_a | Z_descriptor_S_s | Z_descriptor_S_l
     descriptor , , Z_descriptor_Z_type_data_code_S_a | Z_descriptor_Z_type_data_S_w | Z_descriptor_S_s
     descriptor , , Z_descriptor_Z_type_system_S_ldt
 S_ldt:
@@ -209,17 +210,17 @@ S_idt:
 .macro page_entry_32
     .4byte  0
 .endm
-.macro pte_flat_memory_32 from, to
+.macro pte_32_flat_memory from, to
     page_entry_32
     .if \to - \from
-        pte_flat_memory_32 "(\from + 0x1000 )", \to
+        pte_32_flat_memory "(\from + 0x1000 )", \to
     .endif
 .endm
 .p2align 12
 S_pt_32:
     page_entry_32
-    pte_flat_memory_32 0x1000, 0x60000
-    pte_flat_memory_32 0x60000, 0x80000
+    pte_32_flat_memory 0x1000, 0x60000
+    pte_32_flat_memory 0x60000, 0x80000
 .p2align 12
 S_pdt_32:
     page_entry_32

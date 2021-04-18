@@ -212,15 +212,15 @@ main( int argc
     if( !E_simple_Z_n_T_aligned_to_v2( file_pos, 512 ))
         goto Error_2;
     N file_pos_sectors = file_pos / 512;
-    if( file_pos_sectors / ( 254 * 63 ) > 1024 ) /// Za dużo cylindrów dla adresu CHS.
+    if( file_pos_sectors / ( 255 * 63 ) > 1024 ) /// Za dużo cylindrów dla adresu CHS.
         goto Error_2;
     N file_size = file_size_clusters * Q_filesystem_S_size_of_cluster + ( file_size_in_last_cluster & 0xfff );
     if( file_size > 255 * 512 ) /// Za duży rozmiar pliku dla liczby sektorów w bajcie.
         goto Error_2;
-    cylinder = file_pos_sectors / ( 254 * 63 );
-    file_pos_sectors %= 254 * 63;
-    head = file_pos_sectors / 254;
-    file_pos_sectors %= 254;
+    cylinder = file_pos_sectors / ( 255 * 63 );
+    file_pos_sectors %= 255 * 63;
+    head = file_pos_sectors / 255;
+    file_pos_sectors %= 255;
     sector = (( cylinder & ( 3 << 8 )) >> 2 ) | ( file_pos_sectors + 1 );
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_file_loader_data ))
         goto Error_2;
