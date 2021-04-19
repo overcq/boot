@@ -18,6 +18,7 @@
 #===============================================================================
 .code16
 .text
+    sti
     cli
     xor     %ax, %ax
     mov     %ax, %ss
@@ -57,16 +58,13 @@
     dec     %dx
     push    %dx
     xor     %dx,%dx
-    div     %si                             # Liczba pełnych sektorów pozostałych w ostatnim bloku 0x10000.
-    test    %dx, %dx
-    jz      0f
-    inc     %ax
-    xor     %dx, %dx
-0:  mov     %ax, -4(%bp)
+    div     %si                             # Liczba sektorów pozostałych w ostatnim bloku 0x10000.
+    mov     %ax, -4(%bp)
     mov     $Q_memory_S_file_loader, %ax
+    xor     %dx, %dx
     neg     %ax
-    div     %si                             # Liczba sektorów w pierwszym bloku 0x10000.
-    push    %ax
+    div     %si
+    push    %ax                             # Liczba sektorów w pierwszym bloku 0x10000.
 1:  mov     -7(%bp), %dh
     mov     -6(%bp), %cx
     mov     -2(%bp), %dl
@@ -94,7 +92,7 @@
     add     %ecx, %eax
     pop     %dx
     movzwl  %dx, %edx                       # Liczba odczytanych sektorów.
-    sub     %edx, %eax
+    add     %edx, %eax
 # Zamiana LBA na CHS.
     mov     $255 * 63, %esi
     xor     %edx, %edx
@@ -103,16 +101,17 @@
     shl     $6, %al
     mov     %ax, %cx                        # cylinder without sector
     mov     %dx, %ax
-    mov     $255, %si
+    mov     $63, %si
+    xor     %dx, %dx
     div     %si
+    mov     %al, -7(%bp)                    # head
+    inc     %dl
+    or      %dl, %cl                        # sector
 #-------------------------------------------------------------------------------
     jmp     0f
 .org Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
-0:  mov     %al, -7(%bp)                    # head
-    inc     %dl
-    or      %dl, %cl                        # sector
-    mov     %cx, -6(%bp)                    # cylinder with sector
+0:  mov     %cx, -6(%bp)                    # cylinder with sector
     mov     %es, %ax
     pop     %dx
     add     $1 << 12, %ax
@@ -128,11 +127,13 @@
 2:  pop     %dx
     pop     %cx
     pop     %ax
+    test    %ax, %ax
+    jz      0f
     mov     -2(%bp), %dl
     mov     $2, %ah
     int     $0x13
     jc      I_print_io_error
-3:  pop     %dx
+0:  pop     %dx
     mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_print_no_file_loader:

@@ -210,7 +210,7 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
 void
 main( struct E_main_Z_memory_table_entry *memory_table
 ){  E_main_Q_memory_table_I_sort( memory_table );
-    //E_main_Q_memory_table_I_remove_overlapping( &memory_table );
+    E_main_Q_memory_table_I_remove_overlapping( &memory_table );
     __asm__ (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"

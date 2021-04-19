@@ -219,8 +219,8 @@ main( int argc
         goto Error_2;
     cylinder = file_pos_sectors / ( 255 * 63 );
     file_pos_sectors %= 255 * 63;
-    head = file_pos_sectors / 255;
-    file_pos_sectors %= 255;
+    head = file_pos_sectors / 63;
+    file_pos_sectors %= 63;
     sector = (( cylinder & ( 3 << 8 )) >> 2 ) | ( file_pos_sectors + 1 );
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_file_loader_data ))
         goto Error_2;
@@ -230,7 +230,7 @@ main( int argc
         goto Error_2;
     if( E_mem_Q_file_P_N( device_file_id, cylinder, 1 ))
         goto Error_2;
-    if( E_mem_Q_file_P_N( device_file_id, file_size / 512, 1 ))
+    if( E_mem_Q_file_P_N( device_file_id, file_size / 512 + ( file_size % 512 ? 1 : 0 ), 1 ))
         goto Error_2;
     E_mem_Q_file_W( device_file_id );
     E_base_W();
