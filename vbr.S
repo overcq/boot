@@ -107,14 +107,14 @@
     mov     %al, -7(%bp)                    # head
     inc     %dl
     or      %dl, %cl                        # sector
+    mov     %cx, -6(%bp)                    # cylinder with sector
+    mov     %es, %ax
+    pop     %dx
 #-------------------------------------------------------------------------------
     jmp     0f
 .org Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
-0:  mov     %cx, -6(%bp)                    # cylinder with sector
-    mov     %es, %ax
-    pop     %dx
-    add     $1 << 12, %ax
+0:  add     $1 << 12, %ax
     xor     %bx, %bx
     mov     %ax, %es
     test    %dx, %dx

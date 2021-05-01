@@ -115,12 +115,7 @@ E_main_Q_memory_table_I_insert( struct E_main_Z_memory_table_entry **memory_tabl
 _internal
 void
 E_main_Q_memory_table_I_sort( struct E_main_Z_memory_table_entry *memory_table
-){  
-    __asm__ (
-    "\n0:"  "hlt"
-    "\n"    "jmp    0b"
-    );
-    N n = ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end - memory_table;
+){  N n = ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end - memory_table;
     while( n > 1 )
     {   struct E_main_Z_memory_table_entry *entry;
         N i;

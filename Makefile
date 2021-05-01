@@ -1,5 +1,5 @@
 #*******************************************************************************
-#   ___   publicplace
+#   ___   publicplacex
 #  ¦OUX¦  ‟GNU” “make”
 #  ¦/C+¦  OUX/C+ OS
 #   ---   boot loader
@@ -20,17 +20,23 @@ disk.img:
 	&& fdisk $@
 mbr: mbr.S Makefile
 	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7a00 -o $@ a.out \
-	&& rm a.out
+	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7a00 -o $@_ a.out \
+	&& rm a.out \
+	&& dd if=$@_ of=$@ skip=$$(( 0x7a00 / 512 )) \
+	&& rm $@_
 vbr: vbr.S Makefile
 	$(AS) -o a.out $< \
-	&& $(LD) --oformat binary -Ttext 0x7c00 -o $@ a.out \
-	&& rm a.out
+	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7c00 -o $@_ a.out \
+	&& rm a.out \
+	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
+	&& rm $@_
 fileloader: fileloader.S fileloader.c Makefile
 	$(AS) -o a.out fileloader.S \
 	&& $(CC) -m64 -march=native -c -ffreestanding -O0 -o b.out fileloader.c \
-	&& $(LD) --oformat binary -Ttext 0x7e00 -o $@ a.out b.out \
-	&& rm a.out b.out
+	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7e00 -o $@_ a.out b.out \
+	&& rm a.out b.out \
+	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \
+	&& rm $@_
 install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,26 +55,39 @@ install-vbr: vbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( 512 + 228 )) count=$$(( 428 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
+	ocq_mnt=/mnt/oth; \
 	loopdev=$$( losetup -Pf --show disk.img ); \
-	[ -n "$$loopdev" ] || { echo 1; exit 1; }; \
+	[ -n "$$loopdev" ] || exit 1; \
 	trap 'losetup -d "$$loopdev"' EXIT; \
-	[ -e "$${loopdev}p1" ] || { echo 2; exit 1; }; \
+	[ -e "$${loopdev}p1" ] || exit 1; \
 	mkfs.oux "$${loopdev}p1" \
-	&& mkdir -p /mnt/oth \
-	&& ( mount.oux "$${loopdev}p1" /mnt/oth 2>/dev/null & ) \
-	|| { echo 3; exit 1; }; \
-	trap 'umount /mnt/oth; losetup -d "$$loopdev"' EXIT; \
+	&& mkdir -p $$ocq_mnt \
+	&& ( mount.oux "$${loopdev}p1" $$ocq_mnt 2>/dev/null & ) \
+	|| exit 1; \
+	trap 'umount $$ocq_mnt; losetup -d "$$loopdev"' EXIT; \
 	sleep 1; \
-	mkdir -p /mnt/oth/boot \
-	&& { install $< /mnt/oth/boot/loader || true; } \
+	mkdir -p $$ocq_mnt/boot \
+	&& { install $< $$ocq_mnt/boot/loader || true; } \
 	&& install/a.out "$$loopdev" /boot/loader
 # NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
-usb: mbr vbr
+usb: mbr vbr fileloader install/a.out
+	ocq_usb_dev=/dev/sdb; \
+	ocq_usb_mnt=/mnt/usb; \
 	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \
 	&& dd conv=notrunc if=mbr of=/dev/sdb bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
 	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 seek=512 count=428 \
-	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
+	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 )) \
+	&& mkfs.oux $${ocq_usb_dev}1 \
+	&& mkdir -p $$ocq_usb_mnt \
+	&& ( mount.oux $${ocq_usb_dev}1 $$ocq_usb_mnt 2>/dev/null & ) \
+	|| exit 1; \
+	trap 'umount $$ocq_usb_mnt' EXIT; \
+	sleep 1; \
+	mkdir -p $$ocq_usb_mnt/boot \
+	&& { install $< /mnt/usb/boot/loader || true; } \
+	&& install/a.out $$ocq_usb_dev /boot/loader
+# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
 	part_1=$$( mktemp ); part_2=$$( mktemp ); part_3=$$( mktemp ); \
