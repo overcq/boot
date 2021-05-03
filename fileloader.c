@@ -286,16 +286,22 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
 End_loop_1:
     if( ~max_free_memory )
         goto End;
+//#define DEBUG
+#define DEBUG_2
+#ifdef DEBUG
     pml4 = (Pn)0x100000; // Start od pierwszego magabajta, rosnąco.
+#else
+    pml4 = (Pn)0x200000;
+#endif
     pdpt = (Pn)( (Pc)pml4 + 0x1000 );
     pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
     pd = (Pn)( (Pc)pdpt + 0x1000 );
+    B end = no;
     for_n( pdpt_i, 16 ) // 16 GiB pamięci. Tablice stron pamięci zajmują ok. 32 MiB.
     {   pt = (Pn)( (Pc)pd + 0x1000 );
         for_n( pd_i, 512 )
         {   for_n( pt_i, 512 )
             {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
-#define DEBUG
 #ifdef DEBUG
                 if( address < 24 * 1024 * 1024
                 || ( address >= 25 * 1024 * 1024
@@ -305,17 +311,28 @@ End_loop_1:
                 ) //DBG
 #endif
                     pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
+#ifdef DEBUG_2
+                if( address == 505 * 1024 * 1024 )
+                {   end = yes;
+                    break;
+                }
+#endif
             }
             pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
+            if(end)
+                break;
             pt = (Pn)( (Pc)pt + 0x1000 );
         }
         pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
+        if(end)
+            break;
         pd = pt;
     }
 #ifdef DEBUG
     return 0; //DBG
 #endif
     E_main_Q_cr0_P(pml4);
+    return 0; //DBG
     for_n_( pdpt_i, 16 )
     {   for_n( pd_i, 512 )
         {   for_n( pt_i, 512 )
