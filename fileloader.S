@@ -6,7 +6,8 @@
 #         IA-32e mode initialization
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 #*******************************************************************************
-.equiv Q_vga_color_S_light_gray,    7
+.equiv Q_int_15_e820_S_magic,               0x534d4150
+.equiv Q_vga_color_S_light_gray,            7
 #-------------------------------------------------------------------------------
 .equiv Z_cr0_S_pe,                          ( 1 << 0 )
 .equiv Z_cr0_S_pg,                          ( 1 << 31 )
@@ -15,6 +16,9 @@
 .equiv Z_msr_Z_ia32_efer_S_lme,             ( 1 << 8 )
 #-------------------------------------------------------------------------------
 .equiv Z_cr4_S_pae,                         ( 1 << 5 )
+.equiv Z_cr4_S_osfxsr,                      ( 1 << 9 )
+.equiv Z_cr4_S_osxmmexcpt,                  ( 1 << 10 )
+.equiv Z_cr4_S_osxsave,                     ( 1 << 18 )
 #-------------------------------------------------------------------------------
 .equiv Z_descriptor_Z_type_data_code_S_a,   ( 1 << 8 )
 .equiv Z_descriptor_Z_type_data_S_w,        ( 1 << 9 )
@@ -35,17 +39,16 @@
     call    Q_vga_I_print
 # Odczytanie obszarów pamięci RAM, jeśli dostępne.
     mov     $7 << 12, %ax
-    mov     $0x534d4150, %edx
+    mov     $Q_int_15_e820_S_magic, %edx
     mov     %ax, %es
-    mov     $0 - 24, %di
+    mov     $0 - 24, %di                    # Wrap around.
     mov     $24, %ecx
     xor     %ebx, %ebx
     mov     $0xe820, %eax
     int     $0x15
     jc      0f
-    cmp     $0x534d4150, %eax
-    jne     0f
-    jmp     1f
+    cmp     $Q_int_15_e820_S_magic, %eax
+    je      1f
 0:  mov     $80000, %eax
     jmp     2f
 1:  cmp     $20, %cl
@@ -55,16 +58,35 @@
     sub     %cx, %di
     mov     $0xe820, %eax
     int     $0x15
-    jc      0f
+    mov     $0, %ax
+    adc     $0, %ax
     test    %ebx, %ebx
     jz      0f
-    jmp     0b
+    test    %ax, %ax
+    jz      0b
+    lea     24(%di), %di
 0:  xor     %eax, %eax
     mov     %es, %ax
     shl     $4, %eax
     mov     %di, %ax
-2:  pushl   $0
-    push    %eax                            # Zachowanie na później adresu tablicy.
+2:  pushl   $0                              # Zachowanie na później 64-bitowego adresu tablicy.
+    push    %eax
+# Włączenie trybu graficznego ekranu.
+    xor     %ax, %ax
+    mov     %sp, %bx
+    mov     %ax, %es
+    lea     -256(%bx),%sp
+    mov     $0x4f01, %ax
+    mov     %sp, %di
+    mov     $0x11a, %cx
+    int     $0x10
+    mov     %sp, %bx
+    lea     256(%bx),%sp
+    pushl   $0
+    pushl   0x28(%bx)
+    mov     $0x4f02, %ax
+    mov     $0x11a, %bx
+    int     $0x10
 # Inicjowanie ‘page tables’ trybu chronionego.
     mov     $S_pt_32, %bx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
@@ -106,6 +128,7 @@
 0:  cmp     $0x80000, %eax
     ja      0f
     mov     %eax, (%ebx)
+    movl    $0, 4(%ebx)
     lea     0x1000(%eax), %eax
     lea     8(%ebx), %ebx
     jmp     0b
@@ -126,7 +149,7 @@
     and     $~Z_cr0_S_pg, %eax
     mov     %eax, %cr0
     mov     %cr4, %eax
-    or      $Z_cr4_S_pae, %eax
+    or      $Z_cr4_S_pae | Z_cr4_S_osfxsr | Z_cr4_S_osxmmexcpt | Z_cr4_S_osxsave, %eax
     mov     %eax, %cr4
     mov     $S_pml4, %eax
     mov     %eax, %cr3
@@ -152,6 +175,7 @@
     ljmp    $1 << 3, $0f
 .code64
 0:  mov     %esp, %esp
+    pop     %rsi                            # Przekazanie adresu bufora pamięci video.
     pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
     jmp     main
 #===============================================================================
@@ -205,21 +229,14 @@ S_ldt:
     .8byte  0
 S_idt:
     .8byte  0
+    .8byte  0
 #-------------------------------------------------------------------------------
 .macro page_entry_32
     .4byte  0
 .endm
-.macro pte_32_flat_memory from, to
-    page_entry_32
-    .if \to - \from
-        pte_32_flat_memory "(\from + 0x1000 )", \to
-    .endif
-.endm
 .p2align 12
 S_pt_32:
     page_entry_32
-    pte_32_flat_memory 0x1000, 0x60000
-    pte_32_flat_memory 0x60000, 0x80000
 .p2align 12
 S_pdt_32:
     page_entry_32
@@ -230,17 +247,9 @@ S_pdpt_32:
 .macro page_entry
     .8byte  0
 .endm
-.macro pte_flat_memory from, to
-    page_entry
-    .if \to - \from
-        pte_flat_memory "(\from + 0x1000 )", \to
-    .endif
-.endm
 .p2align 12
 S_pt:
     page_entry
-    pte_flat_memory 0x1000, 0x60000
-    pte_flat_memory 0x60000, 0x80000
 .p2align 12
 S_pd:
     page_entry

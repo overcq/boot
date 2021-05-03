@@ -6,9 +6,9 @@
 #         program makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
-AS=as
-CC=/usr/lib/llvm/11/bin/clang
-LD=ld
+AS := as
+CC := /usr/lib/llvm/11/bin/clang
+LD := ld
 #===============================================================================
 all: build
 build: mbr vbr fileloader
@@ -32,7 +32,7 @@ vbr: vbr.S Makefile
 	&& rm $@_
 fileloader: fileloader.S fileloader.c Makefile
 	$(AS) -o a.out fileloader.S \
-	&& $(CC) -m64 -march=native -c -ffreestanding -O0 -o b.out fileloader.c \
+	&& $(CC) -m64 -march=x86-64 -ffreestanding -c -Os -o b.out fileloader.c \
 	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7e00 -o $@_ a.out b.out \
 	&& rm a.out b.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \

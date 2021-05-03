@@ -9,7 +9,10 @@
 typedef char            C;
 typedef unsigned long   N64;
 typedef unsigned        N32;
+typedef unsigned short  N16;
+typedef unsigned char   N8;
 typedef N64             N;
+typedef _Bool               B;
 typedef void            *P;
 typedef C               *Pc;
 typedef N               *Pn;
@@ -33,8 +36,22 @@ typedef N               *Pn;
 #define for_n(i_var,n)                      N i_var; for_n_(i_var,(n))
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define _internal                           static
+#define _inline                             static __attribute__ ((__always_inline__,__unused__))
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define E_main_Z_memory_table_end           0x80000UL
+#define E_main_Z_memory_table_end           0x80000
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define Z_page_entry_S_p                    ( 1 << 0 )
+#define Z_page_entry_S_rw                   ( 1 << 1 )
+//==============================================================================
+#define E_simple_Z_p_I_align_down_to_v2(p,v2) (Pc)E_simple_Z_n_I_align_down_to_v2( (N)p, v2 )
+_inline
+N
+E_simple_Z_n_I_align_down_to_v2( N n
+, N v2
+){  if( !v2 )
+        return n;
+    return n & ~( v2 - 1 );
+}
 //==============================================================================
 struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
 { Pc address;
@@ -202,11 +219,211 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
         }
     }
 }
+_internal
+B
+E_main_I_test_page( N address_
+){  volatile Pn address = (Pn)address_;
+    N original_data = *address;
+    *address = 0x55aa55aa55aa55aa;
+    __asm__ (
+    "\n"    "wbinvd"
+    );
+    if( *address != 0x55aa55aa55aa55aa )
+    {   *address = original_data;
+        return no;
+    }
+    *address = 0xaa55aa55aa55aa55;
+    __asm__ (
+    "\n"    "wbinvd"
+    );
+    if( *address != 0xaa55aa55aa55aa55 )
+    {   *address = original_data;
+        return no;
+    }
+    *address = original_data;
+    return yes;
+}
+_inline
+void
+E_main_Q_cr0_P( P pml4
+){  __asm__(
+    "\n"    "mov    %0, %%cr3"
+    :
+    : "r" (pml4)
+    );
+}
+_internal
+N
+E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
+){  N max_free_memory = ~0;
+    Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, 0xfff ) - 0x1000 ); // Start poniżej tablicy pamięci, malejąco.
+    Pn pdpt = (Pn)( (Pc)pml4 - 0x1000 );
+    pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
+    Pn pd = (Pn)( (Pc)pdpt - 0x1000 );
+    pdpt[0] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
+    Pn pt = (Pn)( (Pc)pd - 0x1000 );
+    for_n( pd_i, 32 ) // 64 MiB pamięci. Tablice stron pamięci zajmują ok. 140 KiB.
+    {   for_n( pt_i, 512 )
+        {   N address = pd_i * ( 1 << 21 ) + pt_i * 0x1000;
+            pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
+        }
+        pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
+        pt = (Pn)( (Pc)pt - 0x1000 );
+    }
+    E_main_Q_cr0_P(pml4);
+    for_n_( pd_i, 32 )
+    {   for_n( pt_i, 512 )
+        {   N address = pd_i * ( 1 << 21 ) + pt_i * 0x1000;
+            if( pt_i
+            && !( address & 0xfffff )
+            && !E_main_I_test_page(address)
+            )
+            {   max_free_memory = address;
+                goto End_loop_1;
+            } 
+        }
+    }
+End_loop_1:
+    if( ~max_free_memory )
+        goto End;
+    pml4 = (Pn)0x100000; // Start od pierwszego magabajta, rosnąco.
+    pdpt = (Pn)( (Pc)pml4 + 0x1000 );
+    pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
+    pd = (Pn)( (Pc)pdpt + 0x1000 );
+    for_n( pdpt_i, 16 ) // 16 GiB pamięci. Tablice stron pamięci zajmują ok. 32 MiB.
+    {   pt = (Pn)( (Pc)pd + 0x1000 );
+        for_n( pd_i, 512 )
+        {   for_n( pt_i, 512 )
+            {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+#define DEBUG
+#ifdef DEBUG
+                if( address < 24 * 1024 * 1024
+                || ( address >= 25 * 1024 * 1024
+                  && address < 240 * 1024 * 1024
+                )
+                || address >= 241 * 1024 * 1024
+                ) //DBG
+#endif
+                    pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
+            }
+            pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
+            pt = (Pn)( (Pc)pt + 0x1000 );
+        }
+        pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
+        pd = pt;
+    }
+#ifdef DEBUG
+    return 0; //DBG
+#endif
+    E_main_Q_cr0_P(pml4);
+    for_n_( pdpt_i, 16 )
+    {   for_n( pd_i, 512 )
+        {   for_n( pt_i, 512 )
+            {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+                if( pd_i >= 32
+                && !( address & 0xfffff )
+                && !E_main_I_test_page(address)
+                )
+                {   max_free_memory = address;
+                    goto End_loop_2;
+                } 
+            }
+        }
+    }
+End_loop_2:
+    max_free_memory = 256 * 1024 * 1024; //DBG
+    if( ~max_free_memory )
+        goto End;
+    for_n( pml4_i, 8 ) // 4 TiB pamięci. Tablice stron pamięci zajmują ok. 8 GiB.
+    {   pd = (Pn)( (Pc)pdpt + 0x1000 );
+        for_n( pdpt_i, 512 )
+        {   pt = (Pn)( (Pc)pd + 0x1000 );
+            for_n( pd_i, 512 )
+            {   for_n( pt_i, 512 )
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+                    pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
+                }
+                pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
+                pt = (Pn)( (Pc)pt + 0x1000 );
+            }
+            pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
+            pd = pt;
+        }
+        pml4[ pml4_i ] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
+        pdpt = pd;
+    }
+    E_main_Q_cr0_P(pml4);
+    for_n_( pml4_i, 8 )
+    {   for_n( pdpt_i, 512 )
+        {   for_n( pd_i, 512 )
+            {   for_n( pt_i, 512 )
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+                    if( pdpt_i >= 16
+                    && !( address & 0xfffff )
+                    && !E_main_I_test_page(address)
+                    )
+                    {   max_free_memory = address;
+                        goto End_loop_3;
+                    } 
+                }
+            }
+        }
+    }
+End_loop_3:
+    if( ~max_free_memory )
+        goto End;
+    pdpt = (Pn)( (Pc)pml4 + 0x1000 );
+    for_n_( pml4_i, 512 ) // 256 TiB pamięci. Tablice stron pamięci zajmują ok. 513 GiB.
+    {   pd = (Pn)( (Pc)pdpt + 0x1000 );
+        for_n( pdpt_i, 512 )
+        {   pt = (Pn)( (Pc)pd + 0x1000 );
+            for_n( pd_i, 512 )
+            {   for_n( pt_i, 512 )
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+                    pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
+                }
+                pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
+                pt = (Pn)( (Pc)pt + 0x1000 );
+            }
+            pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
+            pd = pt;
+        }
+        pml4[ pml4_i ] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
+        pdpt = pd;
+    }
+    E_main_Q_cr0_P(pml4);
+    for_n_( pml4_i, 512 )
+    {   for_n( pdpt_i, 512 )
+        {   for_n( pd_i, 512 )
+            {   for_n( pt_i, 512 )
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
+                    if( pml4_i >= 8
+                    && !( address & 0xfffff )
+                    && !E_main_I_test_page(address)
+                    )
+                    {   max_free_memory = address;
+                        goto End;
+                    } 
+                }
+            }
+        }
+    }
+End:
+    
+    return 0;
+}
 void
 main( struct E_main_Z_memory_table_entry *memory_table
+, P video_buffer
 ){  E_main_Q_memory_table_I_sort( memory_table );
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
-    __asm__ (
+    if( E_main_I_allocate_page_table( memory_table ))
+        goto End;
+    //N16 *pixel = video_buffer;
+    //for_n( i, 1 )
+        //pixel[i] = 0xffff;
+    
+End:__asm__ (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"
     );
