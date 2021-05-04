@@ -8,6 +8,7 @@
 #*******************************************************************************
 .equiv Q_int_15_e820_S_magic,               0x534d4150
 .equiv Q_vga_color_S_light_gray,            7
+.equiv Q_vesa_S_mode,                       0x11a
 #-------------------------------------------------------------------------------
 .equiv Z_cr0_S_pe,                          ( 1 << 0 )
 .equiv Z_cr0_S_pg,                          ( 1 << 31 )
@@ -73,20 +74,24 @@
     push    %eax
 # Włączenie trybu graficznego ekranu.
     xor     %ax, %ax
-    mov     %sp, %bx
     mov     %ax, %es
-    lea     -256(%bx),%sp
     mov     $0x4f01, %ax
+    mov     %sp, %bx
+    lea     -256(%bx),%sp
+    mov     $Q_vesa_S_mode, %cx
     mov     %sp, %di
-    mov     $0x11a, %cx
     int     $0x10
     mov     %sp, %bx
     lea     256(%bx),%sp
+    cmp     $0x4f, %ax
+    jne     Hlt_16
     pushl   $0
     pushl   0x28(%bx)
     mov     $0x4f02, %ax
-    mov     $0x11a, %bx
+    mov     $Q_vesa_S_mode | ( 1 << 14 ), %bx
     int     $0x10
+    cmp     $0x4f, %ax
+    jne     Hlt_16
 # Inicjowanie ‘page tables’ trybu chronionego.
     mov     $S_pt_32, %bx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
@@ -117,6 +122,9 @@
     mov     %ax, %gs
     movzwl  %sp, %esp
     ljmpl   $1 << 3, $0f
+Hlt_16:
+    hlt
+    jmp     Hlt_16
 .code32
 0:  orl     $S_ldt_32, S_gdt_32 + 3 * 8 + 2 # Adres “S_ldt_32” mniejszy niż 1000000.
     mov     $3 << 3, %ax
