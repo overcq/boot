@@ -18,22 +18,22 @@ build: mbr vbr fileloader
 disk.img:
 	dd if=/dev/zero of=$@ bs=512 count=2812 \
 	&& fdisk $@
-mbr: mbr.S Makefile
+mbr: mbr.S Makefile binary.ld
 	$(AS) -o a.out $< \
 	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7a00 -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7a00 / 512 )) \
 	&& rm $@_
-vbr: vbr.S Makefile
+vbr: vbr.S Makefile binary.ld
 	$(AS) -o a.out $< \
 	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7c00 -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
-fileloader: fileloader.S fileloader.c Makefile
+fileloader: fileloader.S fileloader.c Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
 	&& $(CC) -m64 -march=x86-64 -ffreestanding -c -Os -o b.out fileloader.c \
-	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7e00 -o $@_ a.out b.out \
+	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out b.out \
 	&& rm a.out b.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \
 	&& rm $@_

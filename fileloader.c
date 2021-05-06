@@ -59,6 +59,13 @@ struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
   N32 type;
   N32 extended_attributes;
 };
+struct __attribute__(( __packed__ )) E_main_Z_video
+{ N32 framebuffer;
+  N16 line_width;
+  N16 width, height;
+  N8 bpp;
+  N8 red_start, red_size, green_start, green_size, blue_start, blue_size;
+};
 //==============================================================================
 #define E_simple_Z_p_I_align_up_to_v2(p,v2)     (P)E_simple_Z_n_I_align_up_to_v2( (N)p, v2 )
 _internal
@@ -262,7 +269,7 @@ E_main_Q_cr0_P( P pml4
 _internal
 Pc
 E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
-, N video_buffer
+, struct E_main_Z_video * video
 , N *max_memory
 ){  *max_memory = ~0;
     Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, 0xfff ) - 0x1000 ); // Start poniżej tablicy pamięci, malejąco.
@@ -440,7 +447,7 @@ End:
         }else
             pml4[ pml4_i ] = 0;
     }
-    if( *max_memory <= video_buffer )
+    if( *max_memory <= video->framebuffer )
     {   pml4 = (Pn)( (Pc)*max_memory - 0x1000 );
         pdpt = (Pn)( (Pc)pml4 - 0x1000 );
         end = no;
@@ -448,13 +455,13 @@ End:
         for_n_( pml4_i, 512 )
         {   if( !end )
             {   if( address < *max_memory
-                || address > video_buffer
+                || address > video->framebuffer
                 )
                     pd = (Pn)( (Pc)pdpt - 0x1000 );
                 for_n( pdpt_i, 512 )
                 {   if( !end )
                     {   if( address < *max_memory
-                        || address > video_buffer
+                        || address > video->framebuffer
                         )
                             pt = (Pn)( (Pc)pd - 0x1000 );
                         for_n( pd_i, 512 )
@@ -462,10 +469,10 @@ End:
                             {   for_n( pt_i, 512 )
                                 {   address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
                                     if( !end )
-                                    {   if( address == video_buffer + 0x2000000 - 0x1000 ) //NDFN Rozmiar pamięci.
+                                    {   if( address == video->framebuffer + video->line_width * video->height - 0x1000 ) //NDFN Rozmiar pamięci.
                                             end = yes;
-                                        if( address >= video_buffer )
-                                        {   if( address == video_buffer )
+                                        if( address >= video->framebuffer )
+                                        {   if( address == video->framebuffer )
                                             {   if( !pdpt_i )
                                                     pd = (Pn)( (Pc)pdpt - 0x1000 );
                                                 pt = (Pn)( (Pc)pd - 0x1000 );
@@ -475,22 +482,22 @@ End:
                                     }else
                                         pt[ pt_i ] = 0;
                                 }
-                                if( address > video_buffer )
+                                if( address > video->framebuffer )
                                     pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
                                 if( address < *max_memory
-                                || address > video_buffer
+                                || address > video->framebuffer
                                 )
                                     pt = (Pn)( (Pc)pt - 0x1000 );
                             }else
                                 pd[ pd_i ] = 0;
                         }
-                        if( address > video_buffer )
+                        if( address > video->framebuffer )
                             pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
                         pd = pt;
                     }else
                         pdpt[ pdpt_i ] = 0;
                 }
-                if( address > video_buffer )
+                if( address > video->framebuffer )
                     pml4[ pml4_i ] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
                 pdpt = pt;
             }else
@@ -500,17 +507,50 @@ End:
     E_main_Q_cr0_P(pml4);
     return (Pc)pt + 0x1000;
 }
+_internal
+N
+E_vga_R_video_color( struct E_main_Z_video *video
+, N color
+){  N video_color;
+    if( video->bpp == 16
+    || video->bpp == 15
+    )
+        video_color = ((( color >> 16 ) * (( 1 << video->red_size ) - 1 ) / 255 ) << video->red_start )
+        | (((( color >> 8 ) & 0xff ) * (( 1 << video->green_size ) - 1 ) / 255 ) << video->green_start )
+        | ((( color & 0xff ) * (( 1 << video->blue_size ) - 1 ) / 255 ) << video->blue_start );
+    else
+        video_color = (( color >> 16 ) << video->red_start )
+        | ((( color >> 8 ) & 0xff ) << video->green_start )
+        | (( color & 0xff ) << video->blue_start );
+    return video_color;
+}
+_internal
+void
+E_vga_I_set_pixel( struct E_main_Z_video *video
+, N x
+, N y
+, N video_color
+){  Pc video_address = (Pc)(N)video->framebuffer + video->line_width * y;
+    if( video->bpp == 16
+    || video->bpp == 15
+    )
+    {   video_address += x * 2;
+        *( N16 * )video_address = video_color;
+    }else
+    {   video_address += x * 4;
+        *( N32 * )video_address = video_color;
+    }
+}
 void
 main( struct E_main_Z_memory_table_entry *memory_table
-, P video_buffer
+, struct E_main_Z_video *video
 ){  E_main_Q_memory_table_I_sort( memory_table );
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
     N max_memory;
-    Pc page_tables = E_main_I_allocate_page_table( memory_table, (N)video_buffer, &max_memory );
-    N16 *pixel = video_buffer;
-    for_n( y, 1024 )
-    {   for_n( x, 1280 )
-            pixel[ 1280 * y + x ] = 0xffff;
+    Pc page_tables = E_main_I_allocate_page_table( memory_table, video, &max_memory );
+    for_n( y, video->height )
+    {   for_n( x, video->width )
+            E_vga_I_set_pixel( video, x, y, E_vga_R_video_color( video, 0xcacaca ));
     }
     
 End:__asm__ (
