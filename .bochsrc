@@ -1,1 +1,2 @@
-floppya: 1_44=disk.img, status=inserted
+ata0-master: type=disk, path=disk.img, mode=flat, translation=auto
+boot: disk

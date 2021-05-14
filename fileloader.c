@@ -6,52 +6,12 @@
 *         after protected mode initialization
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 *******************************************************************************/
-typedef char            C;
-typedef unsigned long   N64;
-typedef unsigned        N32;
-typedef unsigned short  N16;
-typedef unsigned char   N8;
-typedef N64             N;
-typedef _Bool               B;
-typedef void            *P;
-typedef C               *Pc;
-typedef N               *Pn;
-//------------------------------------------------------------------------------
-#define false                               0
-#define true                                1
-#define no                                  false
-#define yes                                 true
-//------------------------------------------------------------------------------
-#define _J_ab(a,b)                          a##b
-#define J_ab(a,b)                           _J_ab(a,b)
-#define J_a_b(a,b)                          J_ab(J_ab(a,_),b)
-//------------------------------------------------------------------------------
-#define J_swap(type,a,b)                    { type J_autogen(c) = a; a = b; b = J_autogen(c); }
-//------------------------------------------------------------------------------
-#define J_autogen_S                         _autogen
-#define J_autogen(a)                        J_a_b( a, J_autogen_S )
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define O                                   while(yes)
-#define for_n_(i_var,n)                     for( i_var = 0; i_var != (n); i_var++ )
-#define for_n(i_var,n)                      N i_var; for_n_(i_var,(n))
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define _internal                           static
-#define _inline                             static __attribute__ ((__always_inline__,__unused__))
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include "fileloader.h"
+//==============================================================================
 #define E_main_Z_memory_table_end           0x80000
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define Z_page_entry_S_p                    ( 1 << 0 )
 #define Z_page_entry_S_rw                   ( 1 << 1 )
-//==============================================================================
-#define E_simple_Z_p_I_align_down_to_v2(p,v2) (Pc)E_simple_Z_n_I_align_down_to_v2( (N)p, v2 )
-_inline
-N
-E_simple_Z_n_I_align_down_to_v2( N n
-, N v2
-){  if( !v2 )
-        return n;
-    return n & ~( v2 - 1 );
-}
 //==============================================================================
 struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
 { Pc address;
@@ -59,66 +19,7 @@ struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
   N32 type;
   N32 extended_attributes;
 };
-struct __attribute__(( __packed__ )) E_main_Z_video
-{ N32 framebuffer;
-  N16 line_width;
-  N16 width, height;
-  N8 bpp;
-  N8 red_start, red_size, green_start, green_size, blue_start, blue_size;
-};
 //==============================================================================
-#define E_simple_Z_p_I_align_up_to_v2(p,v2)     (P)E_simple_Z_n_I_align_up_to_v2( (N)p, v2 )
-_internal
-N
-E_simple_Z_n_I_align_up_to_v2( N n
-, N v2
-){  if( !v2 )
-        return n;
-    N a = v2 - 1;
-    return ( n + a ) & ~a;
-}
-_internal
-P
-E_mem_Q_blk_I_copy( P dst
-, P src
-, N l
-){  Pn dst_n = E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N) );
-    Pn src_n = E_simple_Z_p_I_align_up_to_v2( src, sizeof(N) );
-    if( (Pc)src + l >= (Pc)src_n
-    && (Pc)dst_n - (Pc)dst == (Pc)src_n - (Pc)src
-    )
-    {   N l_0 = (Pc)src_n - (Pc)src;
-        N l_1 = ( l - l_0 ) / sizeof(N);
-        N l_2 = ( l - l_0 ) % sizeof(N);
-        Pc dst_c = dst, src_c = src;
-        for_n( i, l_0 )
-        {   *dst_c = *src_c;
-            dst_c++;
-            src_c++;
-        }
-        for_n_( i, l_1 )
-        {   *dst_n = *src_n;
-            dst_n++;
-            src_n++;
-        }
-        dst_c = (Pc)dst_n;
-        src_c = (Pc)src_n;
-        for_n_( i, l_2 )
-        {   *dst_c = *src_c;
-            dst_c++;
-            src_c++;
-        }
-        return dst_c;
-    }
-    Pc dst_c = dst, src_c = src;
-    for_n( i, l )
-    {   *dst_c = *src_c;
-        dst_c++;
-        src_c++;
-    }
-    return dst_c;
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal
 struct E_main_Z_memory_table_entry *
 E_main_Q_memory_table_I_insert( struct E_main_Z_memory_table_entry **memory_table
@@ -269,7 +170,7 @@ E_main_Q_cr0_P( P pml4
 _internal
 Pc
 E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
-, struct E_main_Z_video * video
+, struct E_main_Z_video *video
 , N *max_memory
 ){  *max_memory = ~0;
     Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, 0xfff ) - 0x1000 ); // Start poniżej tablicy pamięci, malejąco.
@@ -302,7 +203,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
 End_loop_1:
     if( ~*max_memory )
         goto End;
-    pml4 = (Pn)0x300000; // Start od czwartego magabajta, rosnąco.
+    pml4 = (Pn)E_memory_S_start; // Start od czwartego mibibajta, rosnąco.
     pdpt = (Pn)( (Pc)pml4 + 0x1000 );
     pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
     pd = (Pn)( (Pc)pdpt + 0x1000 );
@@ -412,6 +313,8 @@ End_loop_3:
         }
     }
 End:
+    if( *max_memory < 0x400000 )
+        return 0;
     pml4 = (Pn)( (Pc)*max_memory - 0x1000 ); // Start od końca pamięci rzeczywistej, malejąco.
     pdpt = (Pn)( (Pc)pml4 - 0x1000 );
     B end = no;
@@ -469,7 +372,7 @@ End:
                             {   for_n( pt_i, 512 )
                                 {   address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * 0x1000 );
                                     if( !end )
-                                    {   if( address == video->framebuffer + video->line_width * video->height - 0x1000 ) //NDFN Rozmiar pamięci.
+                                    {   if( address == video->framebuffer + video->line_width * video->height - 0x1000 )
                                             end = yes;
                                         if( address >= video->framebuffer )
                                         {   if( address == video->framebuffer )
@@ -548,6 +451,9 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
     N max_memory;
     Pc page_tables = E_main_I_allocate_page_table( memory_table, video, &max_memory );
+    if( !page_tables )
+        goto End;
+    //E_memory_M( page_tables, video );
     for_n( y, video->height )
     {   for_n( x, video->width )
             E_vga_I_set_pixel( video, x, y, E_vga_R_video_color( video, 0xcacaca ));

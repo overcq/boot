@@ -18,7 +18,6 @@
 #===============================================================================
 .code16
 .text
-    sti
     cli
     xor     %ax, %ax
     mov     %ax, %ss
@@ -32,7 +31,9 @@
     ljmp    $0, $0f
 0:  push    %dx                             # Numer dysku, z którego ‘bootuje’.
     mov     $Q_print_S_logo, %si
+    push    %bp
     call    Q_vga_I_print
+    pop     %bp
     cld
     mov     $Q_memory_S_vbr + Q_offset_S_file_loader_data, %si
     lodsb
@@ -46,94 +47,68 @@
     push    %cx
     push    %dx
     mov     $Q_print_S_booting_file, %si
+    push    %bp
     call    Q_vga_I_print
+    pop     %bp
     xor     %dx, %dx
     movzbw  -4(%bp), %ax
     mov     $512, %si
     mov     $Q_memory_S_file_loader, %bx
     mul     %si                             # Rozmiar pliku w “dx:ax”.
-    add     %bx, %ax
-    adc     $0,%dx
-    jz      2f                              # Czy nie zostanie przekroczony blok 0x10000?
-    dec     %dx
+
+    inc     %dx                             # DBG
+
     push    %dx
-    xor     %dx,%dx
-    div     %si                             # Liczba sektorów pozostałych w ostatnim bloku 0x10000.
-    mov     %ax, -4(%bp)
-    mov     $Q_memory_S_file_loader, %ax
-    xor     %dx, %dx
-    neg     %ax
-    div     %si
-    push    %ax                             # Liczba sektorów w pierwszym bloku 0x10000.
-1:  mov     -7(%bp), %dh
+1:  push    %ax
+    mov     $1, %al
+    mov     -7(%bp), %dh
     mov     -6(%bp), %cx
     mov     -2(%bp), %dl
     mov     $2, %ah
+    push    %bp
     int     $0x13
     jc      I_print_io_error
-# Zamiana CHS na LBA.
-    mov     -7(%bp), %bl
-    mov     -6(%bp), %ax
-    movzbl  %bl, %ebx                       # head
-    mov     %al, %cl
-    shr     $6, %al
-    xchg    %al, %ah
-    movzwl  %ax, %eax                       # cylinder
+    pop     %bp
+    mov     -6(%bp), %cl
     and     $~( ~0 << 6 ), %cl
-    dec     %cl
-    movzbl  %cl, %ecx                       # sector from 0
-    mov     $255, %esi
-    xor     %edx, %edx
-    mul     %esi
-    add     %ebx, %eax
-    mov     $63, %esi
-    xor     %edx, %edx
-    mul     %esi
-    add     %ecx, %eax
+    inc     %cl
+    test    $~0 << 6, %cl
+    jz      2f
+    inc     %cl
+    and     $~( ~0 << 6 ), %cl
+0:  incb    -7(%bp)
+    testb   $~0xf, -7(%bp)
+    jz      2f
+#    addb    $1, -7(%bp)
+#    jnc     2f
+    movb    $0, -7(%bp)
+    addb    $1, -5(%bp)
+    jnc     2f
+    addb    $1 << 6, -6(%bp)
+2:  andb    $~0 << 6, -6(%bp)
+    or      %cl, -6(%bp)
+    pop     %ax
+    dec     %al
+    jz      0f
+    add     $512, %bx
+    jnc     1b
+    mov     %es, %cx
     pop     %dx
-    movzwl  %dx, %edx                       # Liczba odczytanych sektorów.
-    add     %edx, %eax
-# Zamiana LBA na CHS.
-    mov     $255 * 63, %esi
-    xor     %edx, %edx
-    div     %esi
-    xchg    %al, %ah
-    shl     $6, %al
-    mov     %ax, %cx                        # cylinder without sector
-    mov     %dx, %ax
-    mov     $63, %si
-    xor     %dx, %dx
-    div     %si
-    mov     %al, -7(%bp)                    # head
-    inc     %dl
-    or      %dl, %cl                        # sector
-    mov     %cx, -6(%bp)                    # cylinder with sector
-    mov     %es, %ax
-    pop     %dx
+    add     $1 << 12, %cx
+    test    %dx, %dx
+    mov     %cx, %es
+    jz      0f
+    dec     %dx
+    push    %dx
+    pushw   $0x10000 / 512
+    jmp     1b
+0:  
 #-------------------------------------------------------------------------------
     jmp     0f
 .org Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
-0:  add     $1 << 12, %ax
-    xor     %bx, %bx
-    mov     %ax, %es
-    test    %dx, %dx
-    jz      2f
-    dec     %dx
-    push    %dx
-    mov     $0x10000 / 512, %ax
-    push    %ax
-    jmp     1b
-2:  pop     %dx
-    pop     %cx
-    pop     %ax
-    test    %ax, %ax
-    jz      0f
-    mov     -2(%bp), %dl
-    mov     $2, %ah
-    int     $0x13
-    jc      I_print_io_error
-0:  pop     %dx
+0:  add     $3 * 2, %sp
+    pop     %dx
     mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_print_no_file_loader:

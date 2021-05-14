@@ -266,7 +266,7 @@
     and     $~Z_cr0_S_pg, %eax
     mov     %eax, %cr0
     mov     %cr4, %eax
-    or      $Z_cr4_S_pae | Z_cr4_S_osfxsr | Z_cr4_S_osxmmexcpt | Z_cr4_S_osxsave, %eax
+    or      $Z_cr4_S_pae | Z_cr4_S_osfxsr | Z_cr4_S_osxmmexcpt /* | Z_cr4_S_osxsave */, %eax
     mov     %eax, %cr4
     mov     $S_pml4, %eax
     mov     %eax, %cr3
@@ -346,6 +346,7 @@ Hlt_16:
 0:  hlt
     jmp     0b
 #===============================================================================
+.data
 Q_print_S_logo:
     .asciz  "OUX/C+ OS boot loader. File Boot Loader.\r\n"
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -13,7 +13,7 @@ LD := ld
 all: build
 build: mbr vbr fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build clean distclean install install-mbr install-vbr install-fileloader usb dump
+.PHONY: all build mostlyclean clean distclean install install-mbr install-vbr install-fileloader usb dump
 #===============================================================================
 disk.img:
 	dd if=/dev/zero of=$@ bs=512 count=2812 \
@@ -30,16 +30,19 @@ vbr: vbr.S Makefile binary.ld
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
-fileloader: fileloader.S fileloader.c Makefile binary.ld
+%.o: %.c
+	$(CC) -m64 -march=x86-64 -ffreestanding -c -Os -o $@ $<
+fileloader: fileloader.S fileloader.o mem-blk.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
-	&& $(CC) -m64 -march=x86-64 -ffreestanding -c -Os -o b.out fileloader.c \
-	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out b.out \
-	&& rm a.out b.out \
+	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out fileloader.o mem-blk.o \
+	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \
 	&& rm $@_
 install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mostlyclean:
+	rm -f fileloader.o mem-blk.o
 clean:
 	rm -f mbr vbr fileloader
 distclean: clean
