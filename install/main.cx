@@ -83,10 +83,40 @@ int
 main( int argc
 , char *argv[]
 ){  E_base_M( argc, argv );
-    if( argc != 1 + 2 )
+    Pc device = 0;
+    Pc file = 0;
+    B option = no;
+    B floppy = no;
+    for( int i = 1; i != argc; i++ )
+    {   if( option )
+        {   if( E_text_Z_s0_T_s0_eq( argv[i], "floppy" ))
+                floppy = yes;
+            else if( E_text_Z_s0_T_s0_eq( argv[i], "disk" ))
+                floppy = no;
+            else
+                goto Error;
+            option = no;
+            continue;
+        }
+        if( *argv[i] == '-' )
+        {   if( E_text_Z_s0_T_s0_eq( argv[i] + 1, "o" ))
+            {   option = yes;
+                continue;
+            }
+            goto Error;
+        }
+        if(file)
+            goto Error;
+        if(device)
+            file = argv[i];
+        else
+            device = argv[i];
+    }
+    if( !device
+    || !file
+    || option
+    )
         goto Error;
-    Pc device = argv[1];
-    Pc file = argv[2];
     I device_file_id;
     if( !~( device_file_id = E_mem_Q_file_M( device, no )))
         goto Error;
@@ -212,15 +242,17 @@ main( int argc
     if( !E_simple_Z_n_T_aligned_to_v2( file_pos, 512 ))
         goto Error_2;
     N file_pos_sectors = file_pos / 512;
-    if( file_pos_sectors / ( 255 * 63 ) > 1024 ) /// Za dużo cylindrów dla adresu CHS.
+    N heads = floppy ? 2 : 16;
+    N sectors = floppy ? 18 : 63;
+    if( file_pos_sectors / ( heads * sectors ) > 1024 ) /// Za dużo cylindrów dla adresu CHS 1024/16/63.
         goto Error_2;
     N file_size = file_size_clusters * Q_filesystem_S_size_of_cluster + ( file_size_in_last_cluster & 0xfff );
     if( file_size > 255 * 512 ) /// Za duży rozmiar pliku dla liczby sektorów w bajcie.
         goto Error_2;
-    cylinder = file_pos_sectors / ( 255 * 63 );
-    file_pos_sectors %= 255 * 63;
-    head = file_pos_sectors / 63;
-    file_pos_sectors %= 63;
+    cylinder = file_pos_sectors / ( heads * sectors );
+    file_pos_sectors %= heads * sectors;
+    head = file_pos_sectors / sectors;
+    file_pos_sectors %= sectors;
     sector = (( cylinder & ( 3 << 8 )) >> 2 ) | ( file_pos_sectors + 1 );
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_file_loader_data ))
         goto Error_2;

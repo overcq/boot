@@ -16,8 +16,9 @@ build: mbr vbr fileloader
 .PHONY: all build mostlyclean clean distclean install install-mbr install-vbr install-fileloader usb dump
 #===============================================================================
 disk.img:
-	dd if=/dev/zero of=$@ bs=512 count=2812 \
-	&& fdisk $@
+	dd if=/dev/zero of=$@ bs=$$(( 2 * 18 * 512 )) count=80 \
+	&& fdisk $@ \
+	&& chown inc:inc $@
 mbr: mbr.S Makefile binary.ld
 	$(AS) -o a.out $< \
 	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7a00 -o $@_ a.out \
@@ -54,9 +55,10 @@ install-mbr: mbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=510 seek=510 count=2
 install-vbr: vbr
-	dd conv=notrunc if=$< of=disk.img bs=1 seek=512 count=224 \
-	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( 512 + 228 )) count=$$(( 428 - 228 )) \
-	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 ))
+	start=$$(( $$( fdisk -l disk.img | tail -n 1 | sed -e 's`^disk\.img[^ ]*  *\*  *\([0-9][0-9]*\).*$$`\1`' ) * 512 )); \
+	dd conv=notrunc if=$< of=disk.img bs=1 seek=$$start count=224 \
+	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( $$start + 228 )) count=$$(( 428 - 228 )) \
+	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( $$start + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
 	ocq_mnt=/mnt/oth; \
 	loopdev=$$( losetup -Pf --show disk.img ); \
@@ -71,8 +73,8 @@ install-fileloader: fileloader install/a.out
 	sleep 1; \
 	mkdir -p $$ocq_mnt/boot \
 	&& { install $< $$ocq_mnt/boot/loader || true; } \
-	&& install/a.out "$$loopdev" /boot/loader
-# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
+	&& install/a.out -o floppy "$$loopdev" /boot/loader
+# NDFN Dla kernela Linuksa 5.11.16 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
 	ocq_usb_dev=/dev/sdb; \

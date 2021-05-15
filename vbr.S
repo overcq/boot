@@ -50,7 +50,6 @@
     push    %bp
     call    Q_vga_I_print
     pop     %bp
-    xor     %dx, %dx
     movzbw  -4(%bp), %ax
     mov     $512, %si
     mov     $Q_memory_S_file_loader, %bx
@@ -72,17 +71,27 @@
     mov     -6(%bp), %cl
     and     $~( ~0 << 6 ), %cl
     inc     %cl
-    test    $~0 << 6, %cl
+    testb   $0x80, -2(%bp)
+    jnz     0f
+    cmp     $19, %cl
+    jb      2f
+    mov     $1, %cl
+    incb    -7(%bp)
+    testb   $~0x1, -7(%bp)
+    jz      2f
+    movb    $0, -7(%bp)
+    jmp     2f
+0:  test    $~0 << 6, %cl
     jz      2f
     inc     %cl
     and     $~( ~0 << 6 ), %cl
-0:  incb    -7(%bp)
+    incb    -7(%bp)
     testb   $~0xf, -7(%bp)
     jz      2f
 #    addb    $1, -7(%bp)
 #    jnc     2f
     movb    $0, -7(%bp)
-    addb    $1, -5(%bp)
+0:  addb    $1, -5(%bp)
     jnc     2f
     addb    $1 << 6, -6(%bp)
 2:  andb    $~0 << 6, -6(%bp)

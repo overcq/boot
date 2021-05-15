@@ -3,7 +3,7 @@ Makefile
 mbr.S
 vbr.S
 fileloader.S
-fileloader.h
 simple.h
+fileloader.h
 fileloader.c
 mem-blk.c

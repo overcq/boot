@@ -75,7 +75,37 @@ I_next_boot_loader:
     lodsb
     mov     %al, %dh
     lodsw
-    movw    %ax, %cx
+    mov     %ax, %cx
+# Przeliczenie z CHS 1024/255/63 na 1024/1/18 dla dyskietki lub 1024/16/63 dla dysku.
+    push    %dx
+    and     $~( ~0 << 6 ), %cx
+    xchg    %al, %ah
+    shr     $6, %ah
+    mov     $255, %si
+    mul     %si
+    movzbw  -5(%bp), %dx
+    add     %dx, %ax
+    testb   $0x80, -6(%bp)
+    jnz     0f
+    mov     $63, %si
+    mul     %si
+    add     %cx, %ax
+    xor     %dx, %dx
+    mov     $18, %si
+    div     %si
+    mov     %dx, %cx
+    pop     %dx
+    mov     %al, %dh
+    and     $1, %dh
+    shr     $1, %ax
+    jmp     1f
+0:  pop     %dx
+    mov     %al, %dh
+    and     $0xf, %dh
+    shr     $4, %ax
+1:  xchg    %al, %ah
+    shl     $6, %al
+    or      %ax, %cx
     mov     $Q_memory_S_relocation_from, %bx
     mov     $0x201, %ax
     int     $0x13
@@ -90,7 +120,11 @@ I_next_boot_loader:
     mov     $'4', %al
     sub     %cl, %al
     call    Q_vga_I_putchar
-    mov     $Q_print_S_booting_partition_2, %si
+#-------------------------------------------------------------------------------
+    jmp     0f
+.org Q_offset_S_second_mbr_part
+#-------------------------------------------------------------------------------
+0:  mov     $Q_print_S_booting_partition_2, %si
     call    Q_vga_I_print
     pop     %dx
     jmp     Q_memory_S_relocation_from
@@ -107,8 +141,6 @@ I_print_not_bootable_sector:
 I_hlt:
     hlt
     jmp     I_hlt
-#===============================================================================
-.org Q_offset_S_second_mbr_part
 Q_vga_I_putchar:
     mov     $0xe, %ah
     mov     $Q_vga_color_S_light_gray, %bx

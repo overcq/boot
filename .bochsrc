@@ -1,2 +1,4 @@
-ata0-master: type=disk, path=disk.img, mode=flat, translation=auto
-boot: disk
+floppya: 1_44=disk.img, status=inserted
+boot: floppy
+#ata0-master: type=disk, path=disk.img, mode=flat
+#boot: disk
