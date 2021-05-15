@@ -39,9 +39,9 @@
 .equiv Z_page_entry_S_p,                    ( 1 << 0 )
 .equiv Z_page_entry_S_rw,                   ( 1 << 1 )
 #===============================================================================
-.code16
 .org 0x7e00
 .text
+.code16
     mov     $Q_print_S_logo, %si
     call    Q_vga_I_print
 # Odczytanie obszarów pamięci RAM, jeśli dostępne.
@@ -378,10 +378,11 @@ E_main_Z_video_S_blue_size:
 S_gd:
     .2byte  4 * 8 - 1
     .4byte  S_gdt_32
+    .4byte  0
 S_id:
     .2byte  8 - 1
     .4byte  S_idt_32
-
+    .4byte  0
 #-------------------------------------------------------------------------------
 .macro descriptor base=0, limit=~0, flags
     .2byte  \limit & ~( ~0 << 16 )

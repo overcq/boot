@@ -1,5 +1,6 @@
 SECTIONS
 {
-    .text : { *(.text) }
-    .data : { *(.data) }
+    .text . : { *(.text) }
+    .data . : { *(.data) }
+    .bss . : { *(.bss) }
 }

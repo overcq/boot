@@ -37,79 +37,61 @@
     cld
     mov     $Q_memory_S_vbr + Q_offset_S_file_loader_data, %si
     lodsb
-    mov     %al, %dh                        # head
+    mov     %al, -1(%bp)                    # head
     lodsw
     mov     %ax, %cx                        # sector, cylinder
     lodsb                                   # Liczba sektorów do przeczytania.
     test    %al, %al
     jz      I_print_no_file_loader
-    push    %ax
     push    %cx
-    push    %dx
+    push    %ax
     mov     $Q_print_S_booting_file, %si
     push    %bp
     call    Q_vga_I_print
     pop     %bp
-    movzbw  -4(%bp), %ax
-    mov     $512, %si
     mov     $Q_memory_S_file_loader, %bx
-    mul     %si                             # Rozmiar pliku w “dx:ax”.
-
-    inc     %dx                             # DBG
-
-    push    %dx
-1:  push    %ax
-    mov     $1, %al
-    mov     -7(%bp), %dh
-    mov     -6(%bp), %cx
-    mov     -2(%bp), %dl
-    mov     $2, %ah
+1:  mov     -2(%bp), %dx
+    mov     -4(%bp), %cx
+    mov     $0x201, %ax
     push    %bp
+    push    %bx
     int     $0x13
     jc      I_print_io_error
+    pop     %bx
     pop     %bp
-    mov     -6(%bp), %cl
+    mov     -4(%bp), %cl
     and     $~( ~0 << 6 ), %cl
     inc     %cl
     testb   $0x80, -2(%bp)
     jnz     0f
     cmp     $19, %cl
-    jb      2f
+    jb      3f
     mov     $1, %cl
-    incb    -7(%bp)
-    testb   $~0x1, -7(%bp)
-    jz      2f
-    movb    $0, -7(%bp)
+    incb    -1(%bp)
+    testb   $~1, -1(%bp)
     jmp     2f
 0:  test    $~0 << 6, %cl
-    jz      2f
-    inc     %cl
+    jz      3f
     and     $~( ~0 << 6 ), %cl
-    incb    -7(%bp)
-    testb   $~0xf, -7(%bp)
-    jz      2f
-#    addb    $1, -7(%bp)
-#    jnc     2f
-    movb    $0, -7(%bp)
-0:  addb    $1, -5(%bp)
-    jnc     2f
-    addb    $1 << 6, -6(%bp)
-2:  andb    $~0 << 6, -6(%bp)
-    or      %cl, -6(%bp)
+    inc     %cl
+    incb    -1(%bp)
+    testb   $~0xf, -1(%bp)
+2:  jz      3f
+    movb    $0, -1(%bp)
+    addb    $1, -3(%bp)
+    jnc     3f
+    addb    $1 << 6, -4(%bp)
+3:  andb    $~0 << 6, -4(%bp)
+    or      %cl, -4(%bp)
     pop     %ax
     dec     %al
     jz      0f
+    push    %ax
     add     $512, %bx
     jnc     1b
     mov     %es, %cx
-    pop     %dx
     add     $1 << 12, %cx
-    test    %dx, %dx
     mov     %cx, %es
-    jz      0f
-    dec     %dx
-    push    %dx
-    pushw   $0x10000 / 512
     jmp     1b
 0:  
 #-------------------------------------------------------------------------------

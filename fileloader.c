@@ -453,7 +453,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     Pc page_tables = E_main_I_allocate_page_table( memory_table, video, &max_memory );
     if( !page_tables )
         goto End;
-    //E_memory_M( page_tables, video );
+    E_memory_M( page_tables, video );
     for_n( y, video->height )
     {   for_n( x, video->width )
             E_vga_I_set_pixel( video, x, y, E_vga_R_video_color( video, 0xcacaca ));
