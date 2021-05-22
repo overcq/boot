@@ -7,3 +7,5 @@ simple.h
 fileloader.h
 fileloader.c
 mem-blk.c
+vga.c
+font.c

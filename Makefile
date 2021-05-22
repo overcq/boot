@@ -9,6 +9,7 @@
 AS := as
 CC := /usr/lib/llvm/11/bin/clang
 LD := ld
+CFLAGS := -Os -fwrapv
 #===============================================================================
 all: build
 build: mbr vbr fileloader
@@ -32,10 +33,10 @@ vbr: vbr.S Makefile binary.ld
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
 %.o: %.c
-	$(CC) -m64 -march=x86-64 -ffreestanding -c -Os -o $@ $<
-fileloader: fileloader.S fileloader.o mem-blk.o Makefile binary.ld
+	$(CC) $(CFLAGS) -m64 -march=x86-64 -ffreestanding -c -o $@ $<
+fileloader: fileloader.S fileloader.o mem-blk.o vga.o font.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
-	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out fileloader.o mem-blk.o \
+	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out $(filter %.o,$^) \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \
 	&& rm $@_

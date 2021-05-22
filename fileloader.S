@@ -62,6 +62,7 @@
     jne     0f
     movl    $1, 20(%di)
 0:  mov     $24, %ecx
+    mov     %eax, %edx
     sub     %cx, %di
     mov     $0xe820, %eax
     int     $0x15
