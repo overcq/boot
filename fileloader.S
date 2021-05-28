@@ -14,6 +14,7 @@
 .equiv Q_vga_S_bpp,                         32
 .equiv Q_vga_S_height,                      1050
 .equiv Q_vga_S_width,                       1680
+.equiv Z_map_to_address,                    0x80000
 #-------------------------------------------------------------------------------
 .equiv Z_cr0_S_pe,                          ( 1 << 0 )
 .equiv Z_cr0_S_pg,                          ( 1 << 31 )
@@ -52,28 +53,30 @@
     mov     $24, %ecx
     xor     %ebx, %ebx
     mov     $0xe820, %eax
+    push    %di
     int     $0x15
+    pop     %di
     jc      0f
     cmp     $Q_int_15_e820_S_magic, %eax
     je      1f
 0:  mov     $80000, %eax
     jmp     2f
-1:  cmp     $20, %cl
-    jne     0f
-    movl    $1, 20(%di)
 0:  mov     $24, %ecx
     mov     %eax, %edx
     sub     %cx, %di
     mov     $0xe820, %eax
+    push    %di
     int     $0x15
-    mov     $0, %ax
-    adc     $0, %ax
-    test    %ebx, %ebx
-    jz      0f
-    test    %ax, %ax
-    jz      0b
-    lea     24(%di), %di
-0:  xor     %eax, %eax
+    pop     %di
+    jc      0f
+1:  cmp     $20, %cl
+    jne     1f
+    movl    $1, %es:20(%di)
+1:  test    %ebx, %ebx
+    jz      1f
+    jmp     0b
+0:  lea     24(%di), %di
+1:  xor     %eax, %eax
     mov     %es, %ax
     shl     $4, %eax
     mov     %di, %ax
@@ -208,7 +211,7 @@
 # Inicjowanie ‘page tables’ trybu chronionego.
     mov     $S_pt_32, %bx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
-0:  cmp     $0x80000, %eax
+0:  cmp     $Z_map_to_address, %eax
     ja      0f
     mov     %eax, (%bx)
     lea     0x1000(%eax), %eax
@@ -243,7 +246,7 @@
 # Inicjowanie ‘page tables’ trybu IA-32e.
     mov     $S_pt, %ebx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
-0:  cmp     $0x80000, %eax
+0:  cmp     $Z_map_to_address, %eax
     ja      0f
     mov     %eax, (%ebx)
     movl    $0, 4(%ebx)

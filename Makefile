@@ -32,8 +32,8 @@ vbr: vbr.S Makefile binary.ld
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
-%.o: %.c
-	$(CC) $(CFLAGS) -m64 -march=x86-64 -ffreestanding -c -o $@ $<
+%.o: %.c fileloader.h simple.h Makefile
+	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -c -o $@ $<
 fileloader: fileloader.S fileloader.o mem-blk.o vga.o font.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
 	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out $(filter %.o,$^) \
@@ -44,7 +44,7 @@ install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mostlyclean:
-	rm -f fileloader.o mem-blk.o
+	rm -f fileloader.o mem-blk.o vga.o font.o
 clean:
 	rm -f mbr vbr fileloader
 distclean: clean

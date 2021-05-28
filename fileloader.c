@@ -8,24 +8,113 @@
 *******************************************************************************/
 #include "fileloader.h"
 //==============================================================================
-#define E_main_Z_memory_table_end           0x80000
-enum
-{ E_main_Z_memory_table_Z_memory_type_S_available = 1
-, E_main_Z_memory_table_Z_memory_type_S_reserved
-, E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
-, E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-, E_main_Z_memory_table_Z_memory_type_S_bad
-};
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define Z_page_entry_S_p                    ( 1 << 0 )
 #define Z_page_entry_S_rw                   ( 1 << 1 )
 //==============================================================================
-struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
-{ Pc address;
-  N64 size;
-  N32 type;
-  N32 extended_attributes;
+#define E_main_S_top                        0x80000
+//==============================================================================
+//#define C_text_mode
+#ifdef C_text_mode
+struct __attribute__(( __packed__ )) E_text_Z_c
+{ N8 character;
+  N8 color;
+} *E_text_S_buffer = (P)0xb8000;
+enum
+{ E_text_Z_color_S_black
+, E_text_Z_color_S_blue
+, E_text_Z_color_S_green
+, E_text_Z_color_S_cyan
+, E_text_Z_color_S_red
+, E_text_Z_color_S_magenta
+, E_text_Z_color_S_brown
+, E_text_Z_color_S_light_gray
+, E_text_Z_color_S_dark_gray
+, E_text_Z_color_S_light_blue
+, E_text_Z_color_S_light_green
+, E_text_Z_color_S_light_cyan
+, E_text_Z_color_S_light_red
+, E_text_Z_color_S_pink
+, E_text_Z_color_S_yellow
+, E_text_Z_color_S_white
 };
+N E_text_S_columns = 80;
+N E_text_S_rows = 25;
+N E_text_S_column = 0;
+N E_text_S_row = 0;
+N8 E_text_S_color = ( E_text_Z_color_S_black << 4 ) | E_text_Z_color_S_light_gray;
+void
+E_text_I_clear_row( N y
+){  for_n( x, E_text_S_columns )
+        E_text_S_buffer[ y * E_text_S_columns + x ] = ( struct E_text_Z_c ){ ' ', ( E_text_Z_color_S_black << 4 ) | E_text_Z_color_S_light_gray };
+}
+void
+E_text_I_clear( void
+){  for_n( y, E_text_S_rows )
+        E_text_I_clear_row(y);
+    E_text_S_column = 0;
+    E_text_S_row = 0;
+}
+void
+E_text_I_scroll( void
+){  for_n( y, E_text_S_rows - 1 )
+    {   for_n( x, E_text_S_columns )
+           E_text_S_buffer[ y * E_text_S_columns + x ] = E_text_S_buffer[ ( y + 1 ) * E_text_S_columns + x ];
+    }
+    E_text_I_clear_row( E_text_S_rows - 1 );
+}
+void
+E_text_I_print_c( C c
+){  if( E_text_S_column == E_text_S_columns )
+    {   E_text_S_column = 0;
+        if( E_text_S_row + 1 == E_text_S_rows )
+            E_text_I_scroll();
+        else
+            E_text_S_row++;
+    }
+    if( c == '\n' )
+        E_text_S_column = E_text_S_columns;
+    else
+    {   E_text_S_buffer[ E_text_S_row * E_text_S_columns + E_text_S_column ] = ( struct E_text_Z_c ){ c, E_text_S_color };
+        E_text_S_column++;
+    }
+}
+void
+E_text_I_print( Pc s
+){  while( *s )
+    {   E_text_I_print_c( *s );
+        s++;
+    }
+}
+void
+E_text_I_print_hex( N n
+){  E_text_I_print( "0x" );
+    for_n_rev( i, sizeof(N) * 2 )
+    {   C c = ( n >> ( i * 4 )) & 0xf;
+        if( c < 10 )
+            c += '0';
+        else
+            c += 'a' - 10;
+        E_text_I_print_c(c);
+    }
+}
+void
+E_text_I_print_memory_ranges( struct E_main_Z_memory_table_entry *memory_table
+){  E_text_I_print( "Memory ranges:\n" );
+    for( struct E_main_Z_memory_table_entry *entry = memory_table; entry != ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end; entry++ )
+    {   if( !entry->size
+        || !( entry->extended_attributes & 1 )
+        )
+            continue;
+        E_text_I_print_hex( (N)entry->address );
+        E_text_I_print( ", " );
+        E_text_I_print_hex( entry->size );
+        E_text_I_print( ", " );
+        E_text_I_print_hex( entry->type );
+        E_text_I_print_c( '\n' );
+    }
+    E_text_I_print( "End.\n" );
+}
+#endif
 //==============================================================================
 _internal
 struct E_main_Z_memory_table_entry *
@@ -36,11 +125,12 @@ E_main_Q_memory_table_I_insert( struct E_main_Z_memory_table_entry **memory_tabl
     && ( !entry->size
       || !( entry->extended_attributes & 1 )
     ))
-    {   entry->extended_attributes |= 1;
+    {   entry->extended_attributes = 1;
         return entry;
     }
     E_mem_Q_blk_I_copy( *memory_table - 1, *memory_table, ( entry - *memory_table ) * sizeof( struct E_main_Z_memory_table_entry ));
-    --*memory_table;
+    (*memory_table)--;
+    ( entry - 1 )->extended_attributes = 1;
     return entry - 1;
 }
 //------------------------------------------------------------------------------
@@ -50,8 +140,7 @@ E_main_Q_memory_table_I_sort( struct E_main_Z_memory_table_entry *memory_table
 ){  N n = ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end - memory_table;
     while( n > 1 )
     {   struct E_main_Z_memory_table_entry *entry;
-        N i;
-        for_n_( i, n - 1 )
+        for_n( i, n - 1 )
             if( memory_table[i].size
             && ( memory_table[i].extended_attributes & 1 )
             )
@@ -108,8 +197,11 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
                 ))
                 {   if( entry->address + entry->size > next_entry->address + next_entry->size )
                     {   struct E_main_Z_memory_table_entry *new_entry = E_main_Q_memory_table_I_insert( memory_table, next_entry );
+                        entry--;
+                        next_entry--;
                         new_entry->address = next_entry->address + next_entry->size;
                         new_entry->size = entry->address + entry->size - new_entry->address;
+                        new_entry->type = entry->type;
                     }
                     entry->size = next_entry->address - entry->address;
                 }else if((( entry->type == E_main_Z_memory_table_Z_memory_type_S_reserved
@@ -125,8 +217,11 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
                 ))
                 {   if( entry->address + entry->size > next_entry->address + next_entry->size )
                     {   struct E_main_Z_memory_table_entry *new_entry = E_main_Q_memory_table_I_insert( memory_table, next_entry );
+                        entry--;
+                        next_entry--;
                         new_entry->address = next_entry->address + next_entry->size;
                         new_entry->size = entry->address + entry->size - new_entry->address;
+                        new_entry->type = entry->type;
                     }
                     next_entry->size -= entry->address + entry->size - next_entry->address;
                     next_entry->address = entry->address + entry->size;
@@ -135,6 +230,22 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
             entry = next_entry;
         }
     }
+}
+_internal
+N
+E_main_Q_memory_table_R_max_memory( struct E_main_Z_memory_table_entry *memory_table
+){  N ret = 0;
+    for( struct E_main_Z_memory_table_entry *entry = ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end - 1; entry >= memory_table; entry-- )
+    {   if( !entry->size
+        || !( entry->extended_attributes & 1 )
+        )
+            continue;
+        if( entry->type == E_main_Z_memory_table_Z_memory_type_S_available )
+        {   ret = (N)entry->address + entry->size;
+            break;
+        }
+    }
+    return ret;
 }
 _internal
 P
@@ -159,10 +270,6 @@ E_main_Q_memory_table_I_after_hole( struct E_main_Z_memory_table_entry *memory_t
             }else
                 break;
     }
-    //N video_start = E_simple_Z_n_I_align_down_to_v2( video->framebuffer, E_memory_S_page_size );
-    //N video_end = E_simple_Z_n_I_align_up_to_v2( (N)video->framebuffer + video->line_width * video->height, E_memory_S_page_size );
-    //if( address == (P)video_start )
-        //return (P)video_end;
     return next_address ? E_simple_Z_p_I_align_up_to_v2( next_address, E_memory_S_page_size ) : address;
 }
 _internal
@@ -176,51 +283,39 @@ E_main_Q_memory_table_I_before_hole( struct E_main_Z_memory_table_entry *memory_
         )
             continue;
         if( !prev_address )
-        {   if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) == (P)address )
+        {   if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) == (Pc)address )
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     prev_address = entry->address;
-            }else
+            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) < (Pc)address )
                 break;
         }else
             if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) == E_simple_Z_p_I_align_up_to_v2( prev_address, E_memory_S_page_size ))
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     prev_address = entry->address;
-            }else
+            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) < (Pc)prev_address )
                 break;
     }
-    //N video_start = E_simple_Z_n_I_align_down_to_v2( video->framebuffer, E_memory_S_page_size );
-    //N video_end = E_simple_Z_n_I_align_up_to_v2( (N)video->framebuffer + video->line_width * video->height, E_memory_S_page_size );
-    //if( address == (P)video_end )
-        //return (P)video_start;
     return prev_address ? E_simple_Z_p_I_align_down_to_v2( prev_address, E_memory_S_page_size ) : address;
 }
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal
-B
-E_main_I_test_page( N address_
-){  volatile Pn address = (Pn)address_;
-    N original_data = *address;
-    N data = 0x55aa55aa55aa55aa;
-    *address = data;
-    __asm__ (
-    "\n"    "wbinvd"
-    );
-    if( *address != data )
-    {   *address = original_data;
-        return no;
+void
+E_main_Q_memory_table_I_reduce_by_page_tables( struct E_main_Z_memory_table_entry *memory_table
+, Pc page_tables
+){  struct E_main_Z_memory_table_entry *entry;
+    for( entry = ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end - 1; entry >= memory_table; entry-- )
+    {   if( !entry->size
+        || !( entry->extended_attributes & 1 )
+        || entry->type != E_main_Z_memory_table_Z_memory_type_S_available
+        )
+            continue;
+        if( entry->address > page_tables )
+            entry->type = E_main_Z_memory_table_Z_memory_type_S_reserved;
+        else
+            break;
     }
-    data = 0xaa55aa55aa55aa55;
-    *address = data;
-    __asm__ (
-    "\n"    "wbinvd"
-    );
-    if( *address != data )
-    {   *address = original_data;
-        return no;
-    }
-    *address = original_data;
-    return yes;
+    entry->size = page_tables - entry->address;
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _inline
 void
 E_main_Q_cr0_P( P pml4
@@ -233,8 +328,9 @@ E_main_Q_cr0_P( P pml4
 _internal
 Pc
 E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
-, N *max_memory
-){  *max_memory = ~0;
+, N max_memory
+){  if( max_memory < E_memory_S_start + 0x100000 ) // NDFN
+        return 0;
     Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, E_memory_S_page_size ) - E_memory_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
     Pn pdpt = (Pn)( (Pc)pml4 - E_memory_S_page_size );
     pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
@@ -250,20 +346,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
         pt = (Pn)( (Pc)pt - E_memory_S_page_size );
     }
     E_main_Q_cr0_P(pml4);
-    for_n_( pd_i, 32 )
-    {   for_n( pt_i, 512 )
-        {   N address = pd_i * ( 1 << 21 ) + pt_i * E_memory_S_page_size;
-            if( pd_i > 1
-            && !( address & 0xfffff ) // Sprawdzanie co 1 MiB.
-            && !E_main_I_test_page(address)
-            )
-            {   *max_memory = address;
-                goto End_loop_1;
-            } 
-        }
-    }
-End_loop_1:;
-    if( ~*max_memory )
+    if( max_memory <= 64 * 1024 * 1024 )
         goto End;
     pml4 = E_main_Q_memory_table_I_after_hole( memory_table, (P)E_memory_S_start ); // Start od czwartego mibibajta, rosnąco.
     pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + E_memory_S_page_size );
@@ -283,22 +366,7 @@ End_loop_1:;
         pd = pt;
     }
     E_main_Q_cr0_P(pml4);
-    for_n_( pdpt_i, 16 )
-    {   for_n( pd_i, 512 )
-        {   for_n( pt_i, 512 )
-            {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
-                if( pd_i >= 32
-                && !( address & 0xfffff ) // Sprawdzanie co 1 MiB.
-                && !E_main_I_test_page(address)
-                )
-                {   *max_memory = address;
-                    goto End_loop_2;
-                } 
-            }
-        }
-    }
-End_loop_2:
-    if( ~*max_memory )
+    if( max_memory <= 16UL * 1024 * 1024 * 1024 )
         goto End;
     for_n( pml4_i, 8 ) // 4 TiB pamięci. Tablice stron pamięci zajmują ok. 8 GiB.
     {   pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + E_memory_S_page_size );
@@ -319,24 +387,7 @@ End_loop_2:
         pdpt = pt;
     }
     E_main_Q_cr0_P(pml4);
-    for_n_( pml4_i, 8 )
-    {   for_n( pdpt_i, 512 )
-        {   for_n( pd_i, 512 )
-            {   for_n( pt_i, 512 )
-                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
-                    if( pdpt_i >= 16
-                    && !( address & 0x3fffffff ) // Sprawdzanie co 1 GiB.
-                    && !E_main_I_test_page(address)
-                    )
-                    {   *max_memory = address;
-                        goto End_loop_3;
-                    } 
-                }
-            }
-        }
-    }
-End_loop_3:
-    if( ~*max_memory )
+    if( max_memory <= 4UL * 1024 * 1024 * 1024 * 1024 )
         goto End;
     pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + E_memory_S_page_size );
     for_n_( pml4_i, 512 ) // 256 TiB pamięci. Tablice stron pamięci zajmują ok. 513 GiB.
@@ -358,26 +409,7 @@ End_loop_3:
         pdpt = pt;
     }
     E_main_Q_cr0_P(pml4);
-    for_n_( pml4_i, 512 )
-    {   for_n( pdpt_i, 512 )
-        {   for_n( pd_i, 512 )
-            {   for_n( pt_i, 512 )
-                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
-                    if( pml4_i >= 8
-                    && !( address & 0xffffffffff ) // Sprawdzanie co 1 TiB.
-                    && !E_main_I_test_page(address)
-                    )
-                    {   *max_memory = address;
-                        goto End;
-                    } 
-                }
-            }
-        }
-    }
-End:;
-    if( *max_memory < E_memory_S_start + 0x100000 ) // NDFN
-        return 0;
-    pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)*max_memory ) - E_memory_S_page_size ); // Start od końca pamięci rzeczywistej, malejąco.
+End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory ) - E_memory_S_page_size ); // Start od końca pamięci rzeczywistej, malejąco.
     pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
     B end = no;
     for_n_( pml4_i, 512 )
@@ -391,7 +423,7 @@ End:;
                         {   for_n( pt_i, 512 )
                             {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
                                 if( !end )
-                                {   if( address == *max_memory - E_memory_S_page_size )
+                                {   if( address == max_memory - E_memory_S_page_size )
                                         end = yes;
                                     pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
                                 }else
@@ -413,7 +445,7 @@ End:;
             pml4[ pml4_i ] = 0;
     }
     N video_end = E_simple_Z_n_I_align_up_to_v2( (N)video->framebuffer + video->line_width * video->height, E_memory_S_page_size );
-    if( *max_memory < video_end )
+    if( max_memory < video_end )
     {   N video_start = E_simple_Z_n_I_align_down_to_v2( video->framebuffer, E_memory_S_page_size );
         pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
         end = no;
@@ -423,21 +455,21 @@ End:;
         B pd_inited, pt_inited;
         for_n_( pml4_i, 512 )
         {   if( !end )
-            {   if( address < *max_memory )
+            {   if( address < max_memory )
                     pd_inited = yes;
                 else
                     pd_inited = no;
-                if( address < *max_memory
+                if( address < max_memory
                 || started
                 )
                     pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - E_memory_S_page_size );
                 for_n( pdpt_i, 512 )
                 {   if( !end )
-                    {   if( address < *max_memory )
+                    {   if( address < max_memory )
                             pt_inited = yes;
                         else
                             pt_inited = no;
-                        if( address < *max_memory
+                        if( address < max_memory
                         || started
                         )
                             pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - E_memory_S_page_size );
@@ -446,12 +478,12 @@ End:;
                             {   for_n( pt_i, 512 )
                                 {   address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
                                     if( !end )
-                                    {   if( address == *max_memory )
+                                    {   if( address == max_memory )
                                             ending_max_memory = yes;
-                                        if( address >= *max_memory
+                                        if( address >= max_memory
                                         && address >= video_start
                                         ){  if( !started
-                                            && ( address == *max_memory
+                                            && ( address == max_memory
                                               || address == video_start
                                             ))
                                             {   started = yes;
@@ -477,7 +509,7 @@ End:;
                                 }
                                 if( started )
                                     pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-                                if( address < *max_memory
+                                if( address < max_memory
                                 || ending_max_memory
                                 || started
                                 )
@@ -503,23 +535,55 @@ End:;
     E_main_Q_cr0_P(pml4);
     return (Pc)pt + E_memory_S_page_size;
 }
-//__attribute__ ((__noreturn__))
+__attribute__ ((__noreturn__))
 void
 main( struct E_main_Z_memory_table_entry *memory_table
 , struct E_main_Z_video *video_
 ){  video = video_;
+    memory_table--;
+    *memory_table = ( struct E_main_Z_memory_table_entry )
+    { (Pc)(N)video->framebuffer
+    , video->line_width * video->height
+    , E_main_Z_memory_table_Z_memory_type_S_reserved
+    , 1
+    };
+    memory_table--;
+    *memory_table = ( struct E_main_Z_memory_table_entry )
+    { (Pc)0x200000
+    , 0x100000
+    , E_main_Z_memory_table_Z_memory_type_S_reserved
+    , 1
+    };
+    memory_table--;
+    *memory_table = ( struct E_main_Z_memory_table_entry )
+    { (Pc)0
+    , E_main_S_top
+    , E_main_Z_memory_table_Z_memory_type_S_reserved
+    , 1
+    };
     E_main_Q_memory_table_I_sort( memory_table );
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
-    N max_memory;
-    Pc page_tables = E_main_I_allocate_page_table( memory_table, &max_memory );
+#ifdef C_text_mode
+    E_text_I_clear();
+    E_text_I_print_hex( video->framebuffer );
+    E_text_I_print_c( ',' );
+    E_text_I_print_hex( video->framebuffer + video->line_width * video->height );
+    E_text_I_print_c( '\n' );
+    E_text_I_print_memory_ranges( memory_table );
+#endif
+    N max_memory = E_main_Q_memory_table_R_max_memory( memory_table );
+    Pc page_tables = E_main_I_allocate_page_table( memory_table, max_memory );
     if( !page_tables )
         goto End;
-    //E_mem_M( page_tables );
-    //if( !~E_font_M() )
-        //goto End;
+    E_main_Q_memory_table_I_reduce_by_page_tables( memory_table, page_tables );
+    E_mem_M( memory_table );
+    if( !~E_font_M() )
+        goto End;
+#ifndef C_text_mode
     E_vga_I_fill_rect( 0, 0, video->width, video->height, E_vga_R_video_color( E_vga_S_background_color ));
     E_vga_I_draw_rect( video->width / 4, video->height / 4, video->width / 2, video->height / 2, E_vga_R_video_color(0) );
-    //E_font_I_draw( 100, 100, E_vga_Z_color_M( 0xff, 0, 0 ), 'A' );
+    E_font_I_draw( 100, 100, E_vga_Z_color_M( 0xff, 0, 0 ), 'A' );
+#endif
     
 End:__asm__ (
     "\n0:"  "hlt"
