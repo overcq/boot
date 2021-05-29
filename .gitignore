@@ -5,6 +5,5 @@
 a.out
 E_cplus_S_cx_sources
 *.o
-*.c
-*.h
-!/fileloader.c
+/install/*.c
+/install/*.h

@@ -115,6 +115,30 @@ E_text_I_print_memory_ranges( struct E_main_Z_memory_table_entry *memory_table
     E_text_I_print( "End.\n" );
 }
 #endif
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pc
+E_text_Z_s_Z_utf8_R_u( Pc s
+, U *u
+){  if( (S8)*s >= 0 )
+    {   *u = *s;
+        return s + 1;
+    }
+    U v = ~(S8)*s;
+    N n = E_asm_I_bsr(v);
+    if( n == ~0
+    || n == 6
+    )
+        return s;
+    v = *s & ( _v( v, 1 ) << n ) - 1;
+    for_n( i, 6 - n )
+    {   if(( *++s & 0xc0 ) != 0x80 )
+            return s;
+        v <<= 6;
+        v |= *s & 0x3f;
+    }
+    *u = v;
+    return s + 1;
+}
 //==============================================================================
 _internal
 struct E_main_Z_memory_table_entry *
@@ -309,7 +333,7 @@ E_main_Q_memory_table_I_reduce_by_page_tables( struct E_main_Z_memory_table_entr
         )
             continue;
         if( entry->address > page_tables )
-            entry->type = E_main_Z_memory_table_Z_memory_type_S_reserved;
+            entry->extended_attributes = 0;
         else
             break;
     }
@@ -548,7 +572,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     , 1
     };
     memory_table--;
-    *memory_table = ( struct E_main_Z_memory_table_entry )
+    *memory_table = ( struct E_main_Z_memory_table_entry ) // NDFN
     { (Pc)0x200000
     , 0x100000
     , E_main_Z_memory_table_Z_memory_type_S_reserved
@@ -582,7 +606,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
 #ifndef C_text_mode
     E_vga_I_fill_rect( 0, 0, video->width, video->height, E_vga_R_video_color( E_vga_S_background_color ));
     E_vga_I_draw_rect( video->width / 4, video->height / 4, video->width / 2, video->height / 2, E_vga_R_video_color(0) );
-    E_font_I_draw( 100, 100, E_vga_Z_color_M( 0xff, 0, 0 ), 'A' );
+    E_font_I_draw_Z_s( 100, 100, E_vga_Z_color_M( 0xff, 0, 0 ), "test string" );
 #endif
     
 End:__asm__ (
