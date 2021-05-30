@@ -8,16 +8,19 @@
 *******************************************************************************/
 #include "fileloader.h"
 //==============================================================================
-struct E_x_Q_font_Z
+struct
 { N height;
   N bitmap_n;
-  struct E_x_Q_font_Z_bitmap *bitmap;
+  struct E_font_Q_font_Z_bitmap *bitmap;
 }font;
-struct E_x_Q_font_Z_bitmap
+struct E_font_Q_font_Z_bitmap
 { U u;
   N width;
   N8 *bitmap;
 };
+N E_font_S_x = 1;
+N E_font_S_y = 1;
+N E_font_S_color = E_vga_S_text_color;
 //==============================================================================
 N
 E_font_M( void
@@ -2559,34 +2562,63 @@ E_font_I_draw(
         }
     return ~0;
 }
+void
+E_font_I_scroll( N dy
+){  E_mem_Q_blk_I_copy( (P)(N)E_vga_S_video->framebuffer, (Pc)(N)E_vga_S_video->framebuffer + dy * E_vga_S_video->line_width, E_vga_S_video->framebuffer + ( E_vga_S_video->height - dy ) * E_vga_S_video->line_width );
+    E_vga_I_fill_rect( 0, E_vga_S_video->height - dy, E_vga_S_video->width, dy, E_vga_R_video_color( E_font_S_color ));
+}
+void
+E_font_I_print_nl( void
+){  E_font_S_x = 1;
+    if( E_font_S_y + font.height + 1 > E_vga_S_video->height )
+    {   E_font_I_scroll( font.height + 1 - ( E_vga_S_video->height - E_font_S_y ));
+        E_font_S_y = E_vga_S_video->height - font.height + 1;
+    }else
+        E_font_S_y += font.height + 1;
+}
+void
+E_font_I_print_u( U u
+){  if( u == '\n' )
+    {   E_font_I_print_nl();
+        return;
+    }
+    N dx = 0;
+    for_n( i, font.bitmap_n )
+        if( font.bitmap[i].u == u )
+        {   dx = font.bitmap[i].width;
+            break;
+        }
+    if( !dx )
+    {   u = font.bitmap[0].u;
+        dx = font.bitmap[0].width;
+    }
+    if( E_font_S_x + dx + 1 > E_vga_S_video->width )
+        E_font_I_print_nl();
+    E_font_I_draw( E_font_S_x, E_font_S_y, E_font_S_color, u );
+    E_font_S_x += dx + 1;
+}
 N
-E_font_I_draw_Z_s(
-  N x
-, N y
-, N color
-, Pc s
-){  U u;
-    N x_ = x;
-    while( *s )
-    {   u = ~0;
+E_font_I_print( Pc s
+){  while( *s )
+    {   U u = ~0;
         Pc s_ = E_text_Z_s_Z_utf8_R_u( s, &u );
         if( !~u )
             return ~0;
         s = s_;
-        if( u == '\n' )
-        {   x_ = x;
-            y += font.height + 1;
-            continue;
-        }
-        N dx = E_font_I_draw( x_, y, color, u );
-        if( !~dx )
-        {   u = font.bitmap[0].u;
-            dx = E_font_I_draw( x_, y, color, u );
-            if( !~dx )
-                return ~0;
-        }
-        x_ += dx + 1;
+        E_font_I_print_u(u);
     }
     return 0;
+}
+void
+E_font_I_print_hex( N n
+){  E_font_I_print( "0x" );
+    for_n_rev( i, sizeof(N) * 2 )
+    {   U u = ( n >> ( i * 4 )) & 0xf;
+        if( u < 10 )
+            u += '0';
+        else
+            u += 'a' - 10;
+        E_font_I_print_u(u);
+    }
 }
 /******************************************************************************/

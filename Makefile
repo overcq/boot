@@ -73,9 +73,9 @@ install-fileloader: fileloader install/a.out
 	trap 'umount $$ocq_mnt; losetup -d "$$loopdev"' EXIT; \
 	sleep 1; \
 	mkdir -p $$ocq_mnt/boot \
-	&& { install $< $$ocq_mnt/boot/loader || true; } \
+	&& { install fileloader $$ocq_mnt/boot/loader || true; } \
 	&& install/a.out -o floppy "$$loopdev" /boot/loader
-# NDFN Dla kernela Linuksa 5.11.16 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
+# NDFN Dla kernela Linuksa 5.12.5 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
 	ocq_usb_dev=/dev/sdb; \
@@ -84,16 +84,18 @@ usb: mbr vbr fileloader install/a.out
 	&& dd conv=notrunc if=mbr of=/dev/sdb bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
 	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 seek=512 count=428 \
 	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 )) \
-	&& mkfs.oux $${ocq_usb_dev}1 \
+	|| exit 1; \
+	sleep 4; \
+	mkfs.oux $${ocq_usb_dev}1 \
 	&& mkdir -p $$ocq_usb_mnt \
 	&& ( mount.oux $${ocq_usb_dev}1 $$ocq_usb_mnt 2>/dev/null & ) \
 	|| exit 1; \
 	trap 'umount $$ocq_usb_mnt' EXIT; \
-	sleep 1; \
+	sleep 4; \
 	mkdir -p $$ocq_usb_mnt/boot \
-	&& { install $< /mnt/usb/boot/loader || true; } \
+	&& { install fileloader /mnt/usb/boot/loader || true; } \
 	&& install/a.out $$ocq_usb_dev /boot/loader
-# NDFN Dla kernela Linuksa 5.11.11 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
+# NDFN Dla kernela Linuksa 5.12.5 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
 	part_1=$$( mktemp ); part_2=$$( mktemp ); part_3=$$( mktemp ); \

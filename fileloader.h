@@ -106,23 +106,25 @@ P E_mem_Q_blk_I_insert( P, N, N );
 P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
 #define E_vga_S_background_color            0xcacaca
-enum E_x_Z_aa_pixel
-{ E_x_Z_aa_pixel_S_e = 1 << 0,
-  E_x_Z_aa_pixel_S_se = 1 << 1,
-  E_x_Z_aa_pixel_S_s = 1 << 2,
-  E_x_Z_aa_pixel_S_sw = 1 << 3,
-  E_x_Z_aa_pixel_S_w = 1 << 4,
-  E_x_Z_aa_pixel_S_nw = 1 << 5,
-  E_x_Z_aa_pixel_S_n = 1 << 6,
-  E_x_Z_aa_pixel_S_ne = 1 << 7
+#define E_vga_S_text_color                  0
+enum E_vga_Z_aa_pixel
+{ E_vga_Z_aa_pixel_S_e = 1 << 0,
+  E_vga_Z_aa_pixel_S_se = 1 << 1,
+  E_vga_Z_aa_pixel_S_s = 1 << 2,
+  E_vga_Z_aa_pixel_S_sw = 1 << 3,
+  E_vga_Z_aa_pixel_S_w = 1 << 4,
+  E_vga_Z_aa_pixel_S_nw = 1 << 5,
+  E_vga_Z_aa_pixel_S_n = 1 << 6,
+  E_vga_Z_aa_pixel_S_ne = 1 << 7
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-extern struct E_main_Z_video *video;
+extern struct E_main_Z_video *E_vga_S_video;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N E_vga_Z_color_M( N8, N8, N8 );
 N8 E_vga_Z_color_R_red(N32);
 N8 E_vga_Z_color_R_green(N32);
 N8 E_vga_Z_color_R_blue(N32);
+N E_vga_Z_color_M_gray(N8);
 N E_vga_R_video_color(N);
 N E_vga_R_pixel( N, N );
 void E_vga_P_pixel( N, N, N );
@@ -132,5 +134,8 @@ void E_vga_I_fill_rect( N, N, N, N, N );
 //==============================================================================
 N E_font_M(void);
 N E_font_I_draw( N, N, N, U );
-N E_font_I_draw_Z_s( N, N, N, Pc );
+void E_font_I_print_nl(void);
+void E_font_I_print_u(U);
+N E_font_I_print(Pc);
+void E_font_I_print_hex(N);
 /******************************************************************************/

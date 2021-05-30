@@ -8,7 +8,7 @@
 *******************************************************************************/
 #include "fileloader.h"
 //==============================================================================
-struct E_main_Z_video *video;
+struct E_main_Z_video *E_vga_S_video;
 //==============================================================================
 N
 E_vga_Z_color_M(
@@ -30,44 +30,44 @@ E_vga_Z_color_R_blue( N32 color
 ){  return color & 0xff;
 }
 N
-E_x_Z_color_M_gray( N8 luminance
+E_vga_Z_color_M_gray( N8 luminance
 ){  return E_vga_Z_color_M( luminance, luminance, luminance );
 }
 N
 E_vga_R_video_color( N color
 ){  N video_color;
-    if( video->bpp == 16
-    || video->bpp == 15
+    if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
-        video_color = ((( color >> 16 ) * (( 1 << video->red_size ) - 1 ) / 255 ) << video->red_start )
-        | (((( color >> 8 ) & 0xff ) * (( 1 << video->green_size ) - 1 ) / 255 ) << video->green_start )
-        | ((( color & 0xff ) * (( 1 << video->blue_size ) - 1 ) / 255 ) << video->blue_start );
+        video_color = ((( color >> 16 ) * (( 1 << E_vga_S_video->red_size ) - 1 ) / 255 ) << E_vga_S_video->red_start )
+        | (((( color >> 8 ) & 0xff ) * (( 1 << E_vga_S_video->green_size ) - 1 ) / 255 ) << E_vga_S_video->green_start )
+        | ((( color & 0xff ) * (( 1 << E_vga_S_video->blue_size ) - 1 ) / 255 ) << E_vga_S_video->blue_start );
     else
-        video_color = (( color >> 16 ) << video->red_start )
-        | ((( color >> 8 ) & 0xff ) << video->green_start )
-        | (( color & 0xff ) << video->blue_start );
+        video_color = (( color >> 16 ) << E_vga_S_video->red_start )
+        | ((( color >> 8 ) & 0xff ) << E_vga_S_video->green_start )
+        | (( color & 0xff ) << E_vga_S_video->blue_start );
     return video_color;
 }
 N
 E_vga_R_color( N video_color
-){  if( video->bpp == 16
-    || video->bpp == 15
+){  if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
-        return (((( video_color >> video->red_start ) & (( 1 << video->red_size ) - 1 )) * 255 / (( 1 << video->red_size ) - 1 )) << 16 )
-        | (((( video_color >> video->green_start ) & (( 1 << video->green_size ) - 1 )) * 255 / (( 1 << video->green_size ) - 1 )) << 8 )
-        | ((( video_color >> video->blue_start ) & (( 1 << video->blue_size ) - 1 )) * 255 / (( 1 << video->blue_size ) - 1 ));
-    return ((( video_color >> video->red_start ) & 0xff ) << 16 )
-    | ((( video_color >> video->green_start ) & 0xff ) << 8 )
-    | (( video_color >> video->blue_start ) & 0xff );
+        return (((( video_color >> E_vga_S_video->red_start ) & (( 1 << E_vga_S_video->red_size ) - 1 )) * 255 / (( 1 << E_vga_S_video->red_size ) - 1 )) << 16 )
+        | (((( video_color >> E_vga_S_video->green_start ) & (( 1 << E_vga_S_video->green_size ) - 1 )) * 255 / (( 1 << E_vga_S_video->green_size ) - 1 )) << 8 )
+        | ((( video_color >> E_vga_S_video->blue_start ) & (( 1 << E_vga_S_video->blue_size ) - 1 )) * 255 / (( 1 << E_vga_S_video->blue_size ) - 1 ));
+    return ((( video_color >> E_vga_S_video->red_start ) & 0xff ) << 16 )
+    | ((( video_color >> E_vga_S_video->green_start ) & 0xff ) << 8 )
+    | (( video_color >> E_vga_S_video->blue_start ) & 0xff );
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N
 E_vga_R_pixel(
   N x
 , N y
-){  Pc video_address = (Pc)(N)video->framebuffer + video->line_width * y;
-    if( video->bpp == 16
-    || video->bpp == 15
+){  Pc video_address = (Pc)(N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * y;
+    if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
         return (( N16 * )video_address)[x];
     return (( N32 * )video_address)[x];
@@ -77,9 +77,9 @@ E_vga_P_pixel(
   N x
 , N y
 , N video_color
-){  Pc video_address = (Pc)(N)video->framebuffer + video->line_width * y;
-    if( video->bpp == 16
-    || video->bpp == 15
+){  Pc video_address = (Pc)(N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * y;
+    if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
         (( N16 * )video_address)[x] = video_color;
     else
@@ -95,14 +95,14 @@ E_vga_I_set_pixel_aa(
 ){  N background_red, background_green, background_blue;
     N n = 0;
     N p[8];
-    p[0] = ( get_pixel & E_x_Z_aa_pixel_S_e ) && x + 1 < video->width ? E_vga_R_color( E_vga_R_pixel( x + 1, y )) : color;
-    p[1] = ( get_pixel & E_x_Z_aa_pixel_S_se ) && x + 1 < video->width && y + 1 < video->height ? E_vga_R_color( E_vga_R_pixel( x + 1, y + 1 )) : color;
-    p[2] = ( get_pixel & E_x_Z_aa_pixel_S_s ) && y + 1 < video->height ? E_vga_R_color( E_vga_R_pixel( x, y + 1 )) : color;
-    p[3] = ( get_pixel & E_x_Z_aa_pixel_S_sw ) && x > 0 && y + 1 < video->height ? E_vga_R_color( E_vga_R_pixel( x - 1, y + 1 )) : color;
-    p[4] = ( get_pixel & E_x_Z_aa_pixel_S_w ) && x > 0 ? E_vga_R_color( E_vga_R_pixel( x - 1, y )) : color;
-    p[5] = ( get_pixel & E_x_Z_aa_pixel_S_nw ) && x > 0 && y > 0 ? E_vga_R_color( E_vga_R_pixel( x - 1, y - 1 )) : color;
-    p[6] = ( get_pixel & E_x_Z_aa_pixel_S_n ) && y > 0 ? E_vga_R_color( E_vga_R_pixel( x, y - 1 )) : color;
-    p[7] = ( get_pixel & E_x_Z_aa_pixel_S_ne ) && x + 1 < video->width && y > 0 ? E_vga_R_color( E_vga_R_pixel( x + 1, y - 1 )) : color;
+    p[0] = ( get_pixel & E_vga_Z_aa_pixel_S_e ) && x + 1 < E_vga_S_video->width ? E_vga_R_color( E_vga_R_pixel( x + 1, y )) : color;
+    p[1] = ( get_pixel & E_vga_Z_aa_pixel_S_se ) && x + 1 < E_vga_S_video->width && y + 1 < E_vga_S_video->height ? E_vga_R_color( E_vga_R_pixel( x + 1, y + 1 )) : color;
+    p[2] = ( get_pixel & E_vga_Z_aa_pixel_S_s ) && y + 1 < E_vga_S_video->height ? E_vga_R_color( E_vga_R_pixel( x, y + 1 )) : color;
+    p[3] = ( get_pixel & E_vga_Z_aa_pixel_S_sw ) && x > 0 && y + 1 < E_vga_S_video->height ? E_vga_R_color( E_vga_R_pixel( x - 1, y + 1 )) : color;
+    p[4] = ( get_pixel & E_vga_Z_aa_pixel_S_w ) && x > 0 ? E_vga_R_color( E_vga_R_pixel( x - 1, y )) : color;
+    p[5] = ( get_pixel & E_vga_Z_aa_pixel_S_nw ) && x > 0 && y > 0 ? E_vga_R_color( E_vga_R_pixel( x - 1, y - 1 )) : color;
+    p[6] = ( get_pixel & E_vga_Z_aa_pixel_S_n ) && y > 0 ? E_vga_R_color( E_vga_R_pixel( x, y - 1 )) : color;
+    p[7] = ( get_pixel & E_vga_Z_aa_pixel_S_ne ) && x + 1 < E_vga_S_video->width && y > 0 ? E_vga_R_color( E_vga_R_pixel( x + 1, y - 1 )) : color;
     background_red = background_green = background_blue = 0;
     for_n( i, 8 )
         if( p[i] != color )
@@ -144,18 +144,18 @@ E_vga_I_draw_rect(
 , N width
 , N height
 , N video_color
-){  Pc video_address = (Pc)(N)video->framebuffer + video->line_width * y;
-    if( video->bpp == 16
-    || video->bpp == 15
+){  Pc video_address = (Pc)(N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * y;
+    if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
     {   video_address = (Pc)&(( N16 * )video_address)[x];
         for_n( x_i, width )
             (( N16 * )video_address)[ x_i ] = video_color;
-        video_address += video->line_width;
+        video_address += E_vga_S_video->line_width;
         for_n( y_i, height - 2 )
         {   (( N16 * )video_address)[0] = video_color;
             (( N16 * )video_address)[ width - 1 ] = video_color;
-            video_address += video->line_width;
+            video_address += E_vga_S_video->line_width;
         }
         for_n_( x_i, width )
             (( N16 * )video_address)[ x_i ] = video_color;
@@ -163,11 +163,11 @@ E_vga_I_draw_rect(
     {   video_address = (Pc)&(( N16 * )video_address)[x];
         for_n( x_i, width )
             (( N32 * )video_address)[ x_i ] = video_color;
-        video_address += video->line_width;
+        video_address += E_vga_S_video->line_width;
         for_n( y_i, height - 2 )
         {   (( N32 * )video_address)[0] = video_color;
             (( N32 * )video_address)[ width - 1 ] = video_color;
-            video_address += video->line_width;
+            video_address += E_vga_S_video->line_width;
         }
         for_n_( x_i, width )
             (( N32 * )video_address)[ x_i ] = video_color;
@@ -180,22 +180,22 @@ E_vga_I_fill_rect(
 , N width
 , N height
 , N video_color
-){  Pc video_address = (Pc)(N)video->framebuffer + video->line_width * y;
-    if( video->bpp == 16
-    || video->bpp == 15
+){  Pc video_address = (Pc)(N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * y;
+    if( E_vga_S_video->bpp == 16
+    || E_vga_S_video->bpp == 15
     )
     {   video_address = (Pc)&(( N16 * )video_address)[x];
         for_n( y_i, height )
         {   for_n( x_i, width )
                 (( N16 * )video_address)[ x_i ] = video_color;
-            video_address += video->line_width;
+            video_address += E_vga_S_video->line_width;
         }
     }else
     {   video_address = (Pc)&(( N32 * )video_address)[x];
         for_n( y_i, height )
         {   for_n( x_i, width )
                 (( N32 * )video_address)[ x_i ] = video_color;
-            video_address += video->line_width;
+            video_address += E_vga_S_video->line_width;
         }
     }
 }

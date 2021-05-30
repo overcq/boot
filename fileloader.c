@@ -468,9 +468,9 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
         }else
             pml4[ pml4_i ] = 0;
     }
-    N video_end = E_simple_Z_n_I_align_up_to_v2( (N)video->framebuffer + video->line_width * video->height, E_memory_S_page_size );
+    N video_end = E_simple_Z_n_I_align_up_to_v2( (N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * E_vga_S_video->height, E_memory_S_page_size );
     if( max_memory < video_end )
-    {   N video_start = E_simple_Z_n_I_align_down_to_v2( video->framebuffer, E_memory_S_page_size );
+    {   N video_start = E_simple_Z_n_I_align_down_to_v2( E_vga_S_video->framebuffer, E_memory_S_page_size );
         pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
         end = no;
         B started = no;
@@ -563,11 +563,11 @@ __attribute__ ((__noreturn__))
 void
 main( struct E_main_Z_memory_table_entry *memory_table
 , struct E_main_Z_video *video_
-){  video = video_;
+){  E_vga_S_video = video_;
     memory_table--;
     *memory_table = ( struct E_main_Z_memory_table_entry )
-    { (Pc)(N)video->framebuffer
-    , video->line_width * video->height
+    { (Pc)(N)E_vga_S_video->framebuffer
+    , E_vga_S_video->line_width * E_vga_S_video->height
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     , 1
     };
@@ -589,9 +589,9 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
 #ifdef C_text_mode
     E_text_I_clear();
-    E_text_I_print_hex( video->framebuffer );
+    E_text_I_print_hex( E_vga_S_video->framebuffer );
     E_text_I_print_c( ',' );
-    E_text_I_print_hex( video->framebuffer + video->line_width * video->height );
+    E_text_I_print_hex( E_vga_S_video->framebuffer + E_vga_S_video->line_width * E_vga_S_video->height );
     E_text_I_print_c( '\n' );
     E_text_I_print_memory_ranges( memory_table );
 #endif
@@ -604,9 +604,9 @@ main( struct E_main_Z_memory_table_entry *memory_table
     if( !~E_font_M() )
         goto End;
 #ifndef C_text_mode
-    E_vga_I_fill_rect( 0, 0, video->width, video->height, E_vga_R_video_color( E_vga_S_background_color ));
-    E_vga_I_draw_rect( video->width / 4, video->height / 4, video->width / 2, video->height / 2, E_vga_R_video_color(0) );
-    E_font_I_draw_Z_s( 100, 100, E_vga_Z_color_M( 0xff, 0, 0 ), "test string" );
+    E_vga_I_fill_rect( 0, 0, E_vga_S_video->width, E_vga_S_video->height, E_vga_R_video_color( E_vga_S_background_color ));
+    E_vga_I_draw_rect( E_vga_S_video->width / 4, E_vga_S_video->height / 4, E_vga_S_video->width / 2, E_vga_S_video->height / 2, E_vga_R_video_color(0) );
+    E_font_I_print( "test string" );
 #endif
     
 End:__asm__ (
