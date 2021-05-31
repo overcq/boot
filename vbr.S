@@ -16,6 +16,7 @@
 #-------------------------------------------------------------------------------
 .equiv Q_vga_color_S_light_gray,    7
 #===============================================================================
+.org Q_memory_S_vbr
 .code16
 .text
     cli
@@ -68,19 +69,19 @@
     jb      3f
     mov     $1, %cl
     incb    -1(%bp)
-    testb   $~1, -1(%bp)
+    cmpb    $2, -1(%bp)
     jmp     2f
-0:  test    $~0 << 6, %cl
-    jz      3f
-    and     $~( ~0 << 6 ), %cl
-    inc     %cl
+0:  cmp     $64, %cl
+    jb      3f
+    mov     $1, %cl
     incb    -1(%bp)
-    testb   $~0xf, -1(%bp)
-2:  jz      3f
+    cmpb    $16, -1(%bp)
+2:  jb      3f
     movb    $0, -1(%bp)
     addb    $1, -3(%bp)
     jnc     3f
     addb    $1 << 6, -4(%bp)
+    jc      I_hlt
 3:  andb    $~0 << 6, -4(%bp)
     or      %cl, -4(%bp)
     pop     %ax
@@ -93,23 +94,23 @@
     add     $1 << 12, %cx
     mov     %cx, %es
     jmp     1b
-0:  
-#-------------------------------------------------------------------------------
-    jmp     0f
-.org Q_offset_S_second_mbr_part
-#-------------------------------------------------------------------------------
 0:  add     $3 * 2, %sp
     pop     %dx
     mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
+#-------------------------------------------------------------------------------
+#    jmp     0f
+.org Q_memory_S_vbr + Q_offset_S_second_mbr_part
+#-------------------------------------------------------------------------------
 I_print_no_file_loader:
     mov     $Q_print_S_no_file_loader, %si
     jmp     0f
 I_print_io_error:
     xor     %ax, %ax
-    mov     %ax, %es
     mov     $Q_print_S_io_error, %si
+    mov     %ax, %es
 0:  call    Q_vga_I_print
+I_hlt:
     cli
 0:  hlt
     jmp 0b
@@ -135,6 +136,6 @@ Q_print_S_no_file_loader:
 Q_print_S_booting_file:
     .asciz  "Booting file...\r\n"
 #===============================================================================
-.org Q_offset_S_signature
+.org Q_memory_S_vbr + Q_offset_S_signature
 .byte   0x55, 0xaa
 #*******************************************************************************

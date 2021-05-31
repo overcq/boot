@@ -296,6 +296,7 @@
     ljmp    $1 << 3, $0f
 .code64
 0:  mov     %esp, %esp
+    fninit
     mov     $E_main_S_video, %rsi
     pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
     jmp     main

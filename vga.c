@@ -82,7 +82,11 @@ E_vga_P_pixel(
     || E_vga_S_video->bpp == 15
     )
         (( N16 * )video_address)[x] = video_color;
-    else
+    else if( E_vga_S_video->bpp == 24 )
+    {   *( N16 * )( video_address + E_vga_S_video->bpp / 8 * x ) = video_color & 0xffff;
+        *( N8 * )( video_address + E_vga_S_video->bpp / 8 * x + 2 ) = ( video_color >> 16 ) & 0xff;
+    }
+    else //if( E_vga_S_video->bpp == 32 )
         (( N32 * )video_address)[x] = video_color;
 }
 void
@@ -159,7 +163,25 @@ E_vga_I_draw_rect(
         }
         for_n_( x_i, width )
             (( N16 * )video_address)[ x_i ] = video_color;
-    }else
+    }else if( E_vga_S_video->bpp == 24 )
+    {   video_address = video_address + E_vga_S_video->bpp / 8 * x;
+        for_n( x_i, width )
+        {   *( N16 * )( video_address + E_vga_S_video->bpp / 8 * x_i ) = video_color & 0xffff;
+            *( N8 * )( video_address + E_vga_S_video->bpp / 8 * x_i + 2 ) = ( video_color >> 16 ) & 0xff;
+        }
+        video_address += E_vga_S_video->line_width;
+        for_n( y_i, height - 2 )
+        {   *( N16 * )( video_address ) = video_color & 0xffff;
+            *( N8 * )( video_address + 2 ) = ( video_color >> 16 ) & 0xff;
+            *( N16 * )( video_address + E_vga_S_video->bpp / 8 * ( width - 1 )) = video_color & 0xffff;
+            *( N8 * )( video_address + E_vga_S_video->bpp / 8 * ( width - 1 ) + 2 ) = ( video_color >> 16 ) & 0xff;
+            video_address += E_vga_S_video->line_width;
+        }
+        for_n_( x_i, width )
+        {   *( N16 * )( video_address + E_vga_S_video->bpp / 8 * x_i ) = video_color & 0xffff;
+            *( N8 * )( video_address + E_vga_S_video->bpp / 8 * x_i + 2 ) = ( video_color >> 16 ) & 0xff;
+        }
+    }else //if( E_vga_S_video->bpp == 32 )
     {   video_address = (Pc)&(( N16 * )video_address)[x];
         for_n( x_i, width )
             (( N32 * )video_address)[ x_i ] = video_color;
@@ -190,7 +212,16 @@ E_vga_I_fill_rect(
                 (( N16 * )video_address)[ x_i ] = video_color;
             video_address += E_vga_S_video->line_width;
         }
-    }else
+    }else if( E_vga_S_video->bpp == 24 )
+    {   video_address = video_address + E_vga_S_video->bpp / 8 * x;
+        for_n( y_i, height )
+        {   for_n( x_i, width )
+            {   *( N16 * )( video_address + E_vga_S_video->bpp / 8 * x_i ) = video_color & 0xffff;
+                *( N8 * )( video_address + E_vga_S_video->bpp / 8 * x_i + 2 ) = ( video_color >> 16 ) & 0xff;
+            }
+            video_address += E_vga_S_video->line_width;
+        }
+    }else //if( E_vga_S_video->bpp == 32 )
     {   video_address = (Pc)&(( N32 * )video_address)[x];
         for_n( y_i, height )
         {   for_n( x_i, width )

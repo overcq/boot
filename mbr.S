@@ -17,6 +17,7 @@
 #-------------------------------------------------------------------------------
 .equiv Q_vga_color_S_light_gray,    7
 #===============================================================================
+.org Q_memory_S_relocation_to
 .code16
 .text
 0:  cli
@@ -57,6 +58,7 @@
     mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 I_next_boot_loader:
+    cld
     mov     $Q_memory_S_relocation_from, %si
     mov     %bp, %di
     mov     $512 / 2, %cx
@@ -65,47 +67,42 @@ I_next_boot_loader:
 0:  cld
     mov     $4, %cx
     mov     $Q_memory_S_relocation_to + Q_offset_S_partiton - 15, %si
-0:  add     $15, %si
+0:  lea     15(%si), %si
     lodsb
     cmp     $0x80, %al
     loopne  0b
     jne     I_print_no_bootable_partition
     push    %cx
-    mov     -2(%bp), %dl
-    lodsb
-    mov     %al, %dh
+    lea     7(%si), %si
     lodsw
-    mov     %ax, %cx
-# Przeliczenie z CHS 1024/255/63 na 1024/1/18 dla dyskietki lub 1024/16/63 dla dysku.
-    push    %dx
-    and     $~( ~0 << 6 ), %cx
-    xchg    %al, %ah
-    shr     $6, %ah
-    mov     $255, %si
-    mul     %si
-    movzbw  -5(%bp), %dx
-    add     %dx, %ax
+    push    %ax
+    lodsw
+    mov     %ax, %dx
+    pop     %ax
+# Przeliczenie na 1024/16/63 dla dysku lub 1024/2/18 dla dyskietki.
     testb   $0x80, -6(%bp)
-    jnz     0f
-    mov     $63, %si
-    mul     %si
-    add     %cx, %ax
-    xor     %dx, %dx
-    mov     $18, %si
+    jz      0f
+    mov     $16 * 63, %si
     div     %si
-    mov     %dx, %cx
-    pop     %dx
-    mov     %al, %dh
-    and     $1, %dh
-    shr     $1, %ax
-    jmp     1f
-0:  pop     %dx
-    mov     %al, %dh
-    and     $0xf, %dh
-    shr     $4, %ax
-1:  xchg    %al, %ah
+    xchg    %al, %ah
     shl     $6, %al
-    or      %ax, %cx
+    mov     %ax, %cx
+    mov     %dx, %ax
+    mov     $63, %si
+    jmp     1f
+0:  mov     $2 * 18, %si
+    div     %si
+    xchg    %al, %ah
+    shl     $6, %al
+    mov     %ax, %cx
+    mov     %dx, %ax
+    mov     $18, %si
+1:  xor     %dx, %dx
+    div     %si
+    inc     %dl
+    mov     %al, %dh
+    or      %dl, %cl
+    mov     -2(%bp), %dl
     mov     $Q_memory_S_relocation_from, %bx
     mov     $0x201, %ax
     int     $0x13
@@ -122,7 +119,7 @@ I_next_boot_loader:
     call    Q_vga_I_putchar
 #-------------------------------------------------------------------------------
     jmp     0f
-.org Q_offset_S_second_mbr_part
+.org Q_memory_S_relocation_to + Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
 0:  mov     $Q_print_S_booting_partition_2, %si
     call    Q_vga_I_print
@@ -137,10 +134,10 @@ I_print_no_bootable_partition:
 I_print_not_bootable_sector:
     mov     $Q_print_S_not_bootable_sector, %si
 0:  call    Q_vga_I_print
-    cli
 I_hlt:
-    hlt
-    jmp     I_hlt
+    cli
+0:  hlt
+    jmp     0b
 Q_vga_I_putchar:
     mov     $0xe, %ah
     mov     $Q_vga_color_S_light_gray, %bx
@@ -172,6 +169,6 @@ Q_print_S_booting_partition_1:
 Q_print_S_booting_partition_2:
     .asciz  "...\r\n"
 #===============================================================================
-.org Q_offset_S_signature
+.org Q_memory_S_relocation_to + Q_offset_S_signature
 .byte   0x55, 0xaa
 #*******************************************************************************

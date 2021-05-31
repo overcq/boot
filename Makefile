@@ -22,13 +22,13 @@ disk.img:
 	&& chown inc:inc $@
 mbr: mbr.S Makefile binary.ld
 	$(AS) -o a.out $< \
-	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7a00 -o $@_ a.out \
+	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7a00 / 512 )) \
 	&& rm $@_
 vbr: vbr.S Makefile binary.ld
 	$(AS) -o a.out $< \
-	&& $(LD) -T binary.ld --oformat binary -Ttext 0x7c00 -o $@_ a.out \
+	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
@@ -53,11 +53,13 @@ distclean: clean
 install: disk.img install-mbr install-vbr install-fileloader
 install-mbr: mbr
 	dd conv=notrunc if=$< of=disk.img bs=1 count=218 \
+	&& dd conv=notrunc if=/dev/zero of=disk.img bs=1 seek=224 count=$$(( 228 - 224 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=510 seek=510 count=2
 install-vbr: vbr
-	start=$$(( $$( fdisk -l disk.img | tail -n 1 | sed -e 's`^disk\.img[^ ]*  *\*  *\([0-9][0-9]*\).*$$`\1`' ) * 512 )); \
+	start=$$(( $$( fdisk -l disk.img | tail -n 1 | sed -e 's`^[^ ][^ ]*  *\*  *\([0-9][0-9]*\).*$$`\1`' ) * 512 )); \
 	dd conv=notrunc if=$< of=disk.img bs=1 seek=$$start count=224 \
+	&& dd conv=notrunc if=/dev/zero of=disk.img bs=1 seek=$$(( $$start + 224 )) count=$$(( 228 - 224 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=228 seek=$$(( $$start + 228 )) count=$$(( 428 - 228 )) \
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( $$start + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
@@ -74,16 +76,20 @@ install-fileloader: fileloader install/a.out
 	sleep 1; \
 	mkdir -p $$ocq_mnt/boot \
 	&& { install fileloader $$ocq_mnt/boot/loader || true; } \
-	&& install/a.out -o floppy "$$loopdev" /boot/loader
+	&& install/a.out -o disk "$$loopdev" /boot/loader
 # NDFN Dla kernela Linuksa 5.12.5 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
 	ocq_usb_dev=/dev/sdb; \
 	ocq_usb_mnt=/mnt/usb; \
-	dd conv=notrunc if=mbr of=/dev/sdb bs=1 count=218 \
-	&& dd conv=notrunc if=mbr of=/dev/sdb bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
-	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 seek=512 count=428 \
-	&& dd conv=notrunc if=vbr of=/dev/sdb bs=1 skip=440 seek=$$(( 512 + 440 )) count=$$(( 512 - 440 )) \
+	start=$$(( $$( fdisk -l $$ocq_usb_dev | tail -n 1 | sed -e 's`^[^ ][^ ]*  *\*  *\([0-9][0-9]*\).*$$`\1`' ) * 512 )); \
+	dd conv=notrunc if=mbr of=$$ocq_usb_dev bs=1 count=218 \
+	&& dd conv=notrunc if=/dev/zero of=$$ocq_usb_dev bs=1 seek=224 count=$$(( 228 - 224 )) \
+	&& dd conv=notrunc if=mbr of=$$ocq_usb_dev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
+	&& dd conv=notrunc if=vbr of=$$ocq_usb_dev bs=1 seek=$$start count=224 \
+	&& dd conv=notrunc if=/dev/zero of=$$ocq_usb_dev bs=1 seek=$$(( $$start + 224 )) count=$$(( 228 - 224 )) \
+	&& dd conv=notrunc if=vbr of=$$ocq_usb_dev bs=1 skip=228 seek=$$(( $$start + 228 )) count=$$(( 428 - 228 )) \
+	&& dd conv=notrunc if=vbr of=$$ocq_usb_dev bs=1 skip=440 seek=$$(( $$start + 440 )) count=$$(( 512 - 440 )) \
 	|| exit 1; \
 	sleep 4; \
 	mkfs.oux $${ocq_usb_dev}1 \
