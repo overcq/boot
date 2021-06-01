@@ -13,109 +13,6 @@
 //==============================================================================
 #define E_main_S_top                        0x80000
 //==============================================================================
-//#define C_text_mode
-#ifdef C_text_mode
-struct __attribute__(( __packed__ )) E_text_Z_c
-{ N8 character;
-  N8 color;
-} *E_text_S_buffer = (P)0xb8000;
-enum
-{ E_text_Z_color_S_black
-, E_text_Z_color_S_blue
-, E_text_Z_color_S_green
-, E_text_Z_color_S_cyan
-, E_text_Z_color_S_red
-, E_text_Z_color_S_magenta
-, E_text_Z_color_S_brown
-, E_text_Z_color_S_light_gray
-, E_text_Z_color_S_dark_gray
-, E_text_Z_color_S_light_blue
-, E_text_Z_color_S_light_green
-, E_text_Z_color_S_light_cyan
-, E_text_Z_color_S_light_red
-, E_text_Z_color_S_pink
-, E_text_Z_color_S_yellow
-, E_text_Z_color_S_white
-};
-N E_text_S_columns = 80;
-N E_text_S_rows = 25;
-N E_text_S_column = 0;
-N E_text_S_row = 0;
-N8 E_text_S_color = ( E_text_Z_color_S_black << 4 ) | E_text_Z_color_S_light_gray;
-void
-E_text_I_clear_row( N y
-){  for_n( x, E_text_S_columns )
-        E_text_S_buffer[ y * E_text_S_columns + x ] = ( struct E_text_Z_c ){ ' ', ( E_text_Z_color_S_black << 4 ) | E_text_Z_color_S_light_gray };
-}
-void
-E_text_I_clear( void
-){  for_n( y, E_text_S_rows )
-        E_text_I_clear_row(y);
-    E_text_S_column = 0;
-    E_text_S_row = 0;
-}
-void
-E_text_I_scroll( void
-){  for_n( y, E_text_S_rows - 1 )
-    {   for_n( x, E_text_S_columns )
-           E_text_S_buffer[ y * E_text_S_columns + x ] = E_text_S_buffer[ ( y + 1 ) * E_text_S_columns + x ];
-    }
-    E_text_I_clear_row( E_text_S_rows - 1 );
-}
-void
-E_text_I_print_c( C c
-){  if( E_text_S_column == E_text_S_columns )
-    {   E_text_S_column = 0;
-        if( E_text_S_row + 1 == E_text_S_rows )
-            E_text_I_scroll();
-        else
-            E_text_S_row++;
-    }
-    if( c == '\n' )
-        E_text_S_column = E_text_S_columns;
-    else
-    {   E_text_S_buffer[ E_text_S_row * E_text_S_columns + E_text_S_column ] = ( struct E_text_Z_c ){ c, E_text_S_color };
-        E_text_S_column++;
-    }
-}
-void
-E_text_I_print( Pc s
-){  while( *s )
-    {   E_text_I_print_c( *s );
-        s++;
-    }
-}
-void
-E_text_I_print_hex( N n
-){  E_text_I_print( "0x" );
-    for_n_rev( i, sizeof(N) * 2 )
-    {   C c = ( n >> ( i * 4 )) & 0xf;
-        if( c < 10 )
-            c += '0';
-        else
-            c += 'a' - 10;
-        E_text_I_print_c(c);
-    }
-}
-void
-E_text_I_print_memory_ranges( struct E_main_Z_memory_table_entry *memory_table
-){  E_text_I_print( "Memory ranges:\n" );
-    for( struct E_main_Z_memory_table_entry *entry = memory_table; entry != ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end; entry++ )
-    {   if( !entry->size
-        || !( entry->extended_attributes & 1 )
-        )
-            continue;
-        E_text_I_print_hex( (N)entry->address );
-        E_text_I_print( ", " );
-        E_text_I_print_hex( entry->size );
-        E_text_I_print( ", " );
-        E_text_I_print_hex( entry->type );
-        E_text_I_print_c( '\n' );
-    }
-    E_text_I_print( "End.\n" );
-}
-#endif
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Pc
 E_text_Z_s_Z_utf8_R_u( Pc s
 , U *u
@@ -582,19 +479,11 @@ main( struct E_main_Z_memory_table_entry *memory_table
     *memory_table = ( struct E_main_Z_memory_table_entry )
     { (Pc)0
     , E_main_S_top
-    , E_main_Z_memory_table_Z_memory_type_S_reserved
+    , E_main_Z_memory_table_Z_memory_type_S_boot_loader
     , 1
     };
     E_main_Q_memory_table_I_sort( memory_table );
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
-#ifdef C_text_mode
-    E_text_I_clear();
-    E_text_I_print_hex( E_vga_S_video->framebuffer );
-    E_text_I_print_c( ',' );
-    E_text_I_print_hex( E_vga_S_video->framebuffer + E_vga_S_video->line_width * E_vga_S_video->height );
-    E_text_I_print_c( '\n' );
-    E_text_I_print_memory_ranges( memory_table );
-#endif
     N max_memory = E_main_Q_memory_table_R_max_memory( memory_table );
     Pc page_tables = E_main_I_allocate_page_table( memory_table, max_memory );
     if( !page_tables )
@@ -603,11 +492,17 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_mem_M( memory_table );
     if( !~E_font_M() )
         goto End;
-#ifndef C_text_mode
     E_vga_I_fill_rect( 0, 0, E_vga_S_video->width, E_vga_S_video->height, E_vga_R_video_color( E_vga_S_background_color ));
-    E_vga_I_draw_rect( E_vga_S_video->width / 4, E_vga_S_video->height / 4, E_vga_S_video->width / 2, E_vga_S_video->height / 2, E_vga_R_video_color(0) );
-    E_font_I_print( "test string" );
-#endif
+    E_vga_I_fill_rect( E_vga_S_video->width / 2 - 50, E_vga_S_video->height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2 - 50, E_vga_S_video->height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 + 4, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 + 4 + 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2 - 38, E_vga_S_video->height / 2 - 37, 38 + 34, 37 + 36, E_vga_R_video_color( 0x43864f ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2 - 50, E_vga_S_video->height / 2 + 4, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2 - 50, E_vga_S_video->height / 2 + 4 + 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
+    E_font_I_print( "OUX/C+ OS boot loader. File Boot Loader. ©overcq <ocq@tutanota.com>. http://github.com/overcq/boot\n" );
     
 End:__asm__ (
     "\n0:"  "hlt"

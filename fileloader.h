@@ -70,6 +70,7 @@ enum
 , E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
 , E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
 , E_main_Z_memory_table_Z_memory_type_S_bad
+, E_main_Z_memory_table_Z_memory_type_S_boot_loader
 };
 struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
 { Pc address;
