@@ -127,8 +127,8 @@
     ja      1f
     jne     2f
     inc     %bp
-2:  cmp     $8, %cl                         # Pomija tryby 8-bitowe (paletowe).
-    je      1f
+2:  cmp     $8, %cl                         # Pomija tryby 8-bitowe (paletowe) i mniejsze.
+    jna     1f
     sub     $Q_vga_S_bpp, %cl
     ja      1f
     jne     2f

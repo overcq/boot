@@ -1,4 +1,7 @@
 # OUX/C+ OS boot loader
+
+![OUX/C+ boot loader in bochs emulator](blob/main/OUX_C+-boot-loader-bochs.png)
+
 ## Specyfikacja
 
 Dostępne są następujace moduły:
