@@ -61,7 +61,7 @@ typedef N                   *Pn;
 #include "simple.h"
 //==============================================================================
 #define E_memory_S_page_size                0x1000
-#define E_memory_S_start                    0x300000
+#define E_memory_S_start                    0x100000
 //==============================================================================
 #define E_main_Z_memory_table_end           0x80000
 enum

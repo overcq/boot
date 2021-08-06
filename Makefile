@@ -75,9 +75,8 @@ install-fileloader: fileloader install/a.out
 	trap 'umount $$ocq_mnt; losetup -d "$$loopdev"' EXIT; \
 	sleep 1; \
 	mkdir -p $$ocq_mnt/boot \
-	&& { install fileloader $$ocq_mnt/boot/loader || true; } \
+	&& install fileloader $$ocq_mnt/boot/loader \
 	&& install/a.out -o disk "$$loopdev" /boot/loader
-# NDFN Dla kernela Linuksa 5.12.5 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
 	ocq_usb_dev=/dev/sdb; \
@@ -99,9 +98,8 @@ usb: mbr vbr fileloader install/a.out
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	sleep 4; \
 	mkdir -p $$ocq_usb_mnt/boot \
-	&& { install fileloader /mnt/usb/boot/loader || true; } \
+	&& install fileloader /mnt/usb/boot/loader \
 	&& install/a.out $$ocq_usb_dev /boot/loader
-# NDFN Dla kernela Linuksa 5.12.5 “install” wraca z błędem zamknięcia pliku przy poprawnej jego instalacji, więc ‘workaround’: “true”.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
 	part_1=$$( mktemp ); part_2=$$( mktemp ); part_3=$$( mktemp ); \

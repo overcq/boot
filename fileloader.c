@@ -250,7 +250,7 @@ _internal
 Pc
 E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
 , N max_memory
-){  if( max_memory < E_memory_S_start + 0x100000 ) // NDFN
+){  if( max_memory < 0x400000 ) // NDFN
         return 0;
     Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, E_memory_S_page_size ) - E_memory_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
     Pn pdpt = (Pn)( (Pc)pml4 - E_memory_S_page_size );
@@ -463,9 +463,9 @@ main( struct E_main_Z_memory_table_entry *memory_table
 ){  E_vga_S_video = video_;
     memory_table--;
     *memory_table = ( struct E_main_Z_memory_table_entry )
-    { (Pc)(N)E_vga_S_video->framebuffer
-    , E_vga_S_video->line_width * E_vga_S_video->height
-    , E_main_Z_memory_table_Z_memory_type_S_reserved
+    { (Pc)0
+    , E_main_S_top
+    , E_main_Z_memory_table_Z_memory_type_S_boot_loader
     , 1
     };
     memory_table--;
@@ -477,9 +477,9 @@ main( struct E_main_Z_memory_table_entry *memory_table
     };
     memory_table--;
     *memory_table = ( struct E_main_Z_memory_table_entry )
-    { (Pc)0
-    , E_main_S_top
-    , E_main_Z_memory_table_Z_memory_type_S_boot_loader
+    { (Pc)(N)E_vga_S_video->framebuffer
+    , E_vga_S_video->line_width * E_vga_S_video->height
+    , E_main_Z_memory_table_Z_memory_type_S_reserved
     , 1
     };
     E_main_Q_memory_table_I_sort( memory_table );
