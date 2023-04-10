@@ -69,7 +69,7 @@ E_main_Q_filesystem_R_dir_inode( N device_file_id
             {   W(s);
                 return 0;
             }
-            if( E_text_Z_s0_T_s0_eq( file, s ))
+            if( E_text_Z_s0_T_eq_s0( file, s ))
             {   W(s);
                 return inode;
             }
@@ -89,9 +89,9 @@ main( int argc
     B floppy = no;
     for( int i = 1; i != argc; i++ )
     {   if( option )
-        {   if( E_text_Z_s0_T_s0_eq( argv[i], "floppy" ))
+        {   if( E_text_Z_s0_T_eq_s0( argv[i], "floppy" ))
                 floppy = yes;
-            else if( E_text_Z_s0_T_s0_eq( argv[i], "disk" ))
+            else if( E_text_Z_s0_T_eq_s0( argv[i], "disk" ))
                 floppy = no;
             else
                 goto Error;
@@ -99,7 +99,7 @@ main( int argc
             continue;
         }
         if( *argv[i] == '-' )
-        {   if( E_text_Z_s0_T_s0_eq( argv[i] + 1, "o" ))
+        {   if( E_text_Z_s0_T_eq_s0( argv[i] + 1, "o" ))
             {   option = yes;
                 continue;
             }
@@ -118,7 +118,7 @@ main( int argc
     )
         goto Error;
     I device_file_id;
-    if( !~( device_file_id = E_mem_Q_file_M( device, no )))
+    if( !~( device_file_id = E_mem_Q_file_M( device, no, 0 )))
         goto Error;
     N i = 0;
     O{  if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_partiton + i * 16 ))
@@ -166,14 +166,14 @@ main( int argc
     if( *file != E_mem_Q_file_S_filename_separator )
         goto Error_2;
     Pc node = file + 1;
-    Pc sep = E_text_Z_s0_R_c_search( node, E_mem_Q_file_S_filename_separator );
+    Pc sep = E_text_Z_s0_R_search_c( node, E_mem_Q_file_S_filename_separator );
     while( *sep )
     {   *sep = '\0';
         parent_dir = E_main_Q_filesystem_R_dir_inode( device_file_id, parent_dir, node );
         if( !parent_dir )
             goto Error_2;
         node = sep + 1;
-        sep = E_text_Z_s0_R_c_search( node, E_mem_Q_file_S_filename_separator );
+        sep = E_text_Z_s0_R_search_c( node, E_mem_Q_file_S_filename_separator );
     }
     N inode = FUSE_ROOT_ID;
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_start + Q_filesystem_S_table_of_files_offset ))
@@ -222,7 +222,7 @@ main( int argc
             {   W(s);
                 goto Error_2;
             }
-            if( E_text_Z_s0_T_s0_eq( node, s ))
+            if( E_text_Z_s0_T_eq_s0( node, s ))
             {   W(s);
                 if( flags_1 & Z_inode_flags_1_S_directory )
                     goto Error_2;
