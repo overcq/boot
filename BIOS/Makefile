@@ -91,15 +91,15 @@ usb: mbr vbr fileloader install/a.out
 	&& dd conv=notrunc if=vbr of=$$ocq_usb_dev bs=1 skip=440 seek=$$(( $$start + 440 )) count=$$(( 512 - 440 )) \
 	|| exit 1; \
 	sleep 4; \
-	mkfs.oux $${ocq_usb_dev}1 \
+	oux mkfs.oux $${ocq_usb_dev}1 \
 	&& mkdir -p $$ocq_usb_mnt \
-	&& ( mount.oux $${ocq_usb_dev}1 $$ocq_usb_mnt 2>/dev/null & ) \
+	&& ( oux mount.oux $${ocq_usb_dev}1 $$ocq_usb_mnt 2>/dev/null & ) \
 	|| exit 1; \
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	sleep 4; \
 	mkdir -p $$ocq_usb_mnt/boot \
 	&& install fileloader /mnt/usb/boot/loader \
-	&& install/a.out $$ocq_usb_dev /boot/loader
+	&& oux install/a.out $$ocq_usb_dev /boot/loader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
 	part_1=$$( mktemp ); part_2=$$( mktemp ); part_3=$$( mktemp ); \
