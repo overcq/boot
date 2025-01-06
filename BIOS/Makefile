@@ -7,7 +7,7 @@
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
 AS := as
-CC := /usr/lib/llvm/14/bin/clang
+CC := clang
 LD := ld
 CFLAGS := -Os -fwrapv
 #===============================================================================
@@ -33,7 +33,7 @@ vbr: vbr.S Makefile binary.ld
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
 %.o: %.c fileloader.h simple.h Makefile
-	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -c -o $@ $<
+	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -fno-stack-protector -c -o $@ $<
 fileloader: fileloader.S fileloader.o mem-blk.o vga.o font.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
 	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out $(filter %.o,$^) \
@@ -64,19 +64,19 @@ install-vbr: vbr
 	&& dd conv=notrunc if=$< of=disk.img bs=1 skip=440 seek=$$(( $$start + 440 )) count=$$(( 512 - 440 ))
 install-fileloader: fileloader install/a.out
 	ocq_mnt=/mnt/oth; \
-	loopdev=$$( losetup -Pf --show disk.img ); \
+	loopdev=$$( losetup -LPf --show disk.img ); \
 	[ -n "$$loopdev" ] || exit 1; \
 	trap 'losetup -d "$$loopdev"' EXIT; \
 	[ -e "$${loopdev}p1" ] || exit 1; \
-	mkfs.oux "$${loopdev}p1" \
+	oux mkfs.oux "$${loopdev}p1" \
 	&& mkdir -p $$ocq_mnt \
-	&& ( mount.oux "$${loopdev}p1" $$ocq_mnt 2>/dev/null & ) \
+	&& ( oux mount.oux "$${loopdev}p1" $$ocq_mnt 2>/dev/null & ) \
 	|| exit 1; \
 	trap 'umount $$ocq_mnt; losetup -d "$$loopdev"' EXIT; \
 	sleep 1; \
 	mkdir -p $$ocq_mnt/boot \
 	&& install fileloader $$ocq_mnt/boot/loader \
-	&& install/a.out -o disk "$$loopdev" /boot/loader
+	&& oux install/a.out -o disk "$$loopdev" /boot/loader
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
 	ocq_usb_dev=/dev/sdb; \

@@ -1,9 +1,9 @@
-/disk.img
-/fileloader
-/mbr
-/vbr
+/BIOS/disk.img
+/BIOS/fileloader
+/BIOS/mbr
+/BIOS/vbr
 a.out
 E_cplus_S_cx_sources
 *.o
-/install/*.c
-/install/*.h
+/BIOS/install/*.c
+/BIOS/install/*.h
