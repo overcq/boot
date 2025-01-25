@@ -2,7 +2,7 @@
 *   ___   publicplace
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   file boot loader
+*   ---   BIOS file boot loader
 *         VGA driver
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒16 K
 *******************************************************************************/

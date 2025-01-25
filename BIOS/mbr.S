@@ -2,7 +2,7 @@
 #   ___   publicplace
 #  ¦OUX¦  16-bit assembly
 #  ¦/C+¦  OUX/C+ OS
-#   ---   MBR boot loader
+#   ---   BIOS MBR boot loader
 #         entry
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************

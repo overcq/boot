@@ -1,8 +1,8 @@
 #*******************************************************************************
-#   ___   publicplacex
+#   ___   publicplace
 #  ¦OUX¦  ‟GNU” “make”
 #  ¦/C+¦  OUX/C+ OS
-#   ---   boot loader
+#   ---   BIOS boot loader
 #         program makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
@@ -45,7 +45,7 @@ install/a.out: install/main.cx
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mostlyclean:
 	rm -f fileloader.o mem-blk.o vga.o font.o
-clean:
+clean: mostlyclean
 	rm -f mbr vbr fileloader
 distclean: clean
 	rm -f disk.img

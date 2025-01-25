@@ -2,7 +2,7 @@
 *   ___   publicplace
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   file boot loader
+*   ---   BIOS file boot loader
 *         after protected mode initialization
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 *******************************************************************************/
@@ -37,24 +37,6 @@ E_text_Z_s_Z_utf8_R_u( Pc s
     return s + 1;
 }
 //==============================================================================
-_internal
-struct E_main_Z_memory_table_entry *
-E_main_Q_memory_table_I_insert( struct E_main_Z_memory_table_entry **memory_table
-, struct E_main_Z_memory_table_entry *entry
-){  entry++;
-    if((N)entry != E_main_Z_memory_table_end
-    && ( !entry->size
-      || !( entry->extended_attributes & 1 )
-    ))
-    {   entry->extended_attributes = 1;
-        return entry;
-    }
-    E_mem_Q_blk_I_copy( *memory_table - 1, *memory_table, ( entry - *memory_table ) * sizeof( struct E_main_Z_memory_table_entry ));
-    (*memory_table)--;
-    ( entry - 1 )->extended_attributes = 1;
-    return entry - 1;
-}
-//------------------------------------------------------------------------------
 _internal
 void
 E_main_Q_memory_table_I_sort( struct E_main_Z_memory_table_entry *memory_table
@@ -117,9 +99,12 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
                   && next_entry->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                 ))
                 {   if( entry->address + entry->size > next_entry->address + next_entry->size )
-                    {   struct E_main_Z_memory_table_entry *new_entry = E_main_Q_memory_table_I_insert( memory_table, next_entry );
-                        entry--;
-                        next_entry--;
+                    {   N entry_i = entry - *memory_table;
+                        N next_entry_i = next_entry - *memory_table;
+                        struct E_main_Z_memory_table_entry *new_entry = E_mem_Q_blk_I_insert( memory_table, next_entry_i, 1 );
+                        entry = *memory_table + entry_i;
+                        next_entry = *memory_table + next_entry_i + 1;
+                        new_entry->extended_attributes = 1;
                         new_entry->address = next_entry->address + next_entry->size;
                         new_entry->size = entry->address + entry->size - new_entry->address;
                         new_entry->type = entry->type;
@@ -137,9 +122,12 @@ E_main_Q_memory_table_I_remove_overlapping( struct E_main_Z_memory_table_entry *
                   && next_entry->type == E_main_Z_memory_table_Z_memory_type_S_available
                 ))
                 {   if( entry->address + entry->size > next_entry->address + next_entry->size )
-                    {   struct E_main_Z_memory_table_entry *new_entry = E_main_Q_memory_table_I_insert( memory_table, next_entry );
-                        entry--;
-                        next_entry--;
+                    {   N entry_i = entry - *memory_table;
+                        N next_entry_i = next_entry - *memory_table;
+                        struct E_main_Z_memory_table_entry *new_entry = E_mem_Q_blk_I_insert( memory_table, next_entry_i, 1 );
+                        entry = *memory_table + entry_i;
+                        next_entry = *memory_table + next_entry_i + 1;
+                        new_entry->extended_attributes = 1;
                         new_entry->address = next_entry->address + next_entry->size;
                         new_entry->size = entry->address + entry->size - new_entry->address;
                         new_entry->type = entry->type;
@@ -482,6 +470,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     , 1
     };
+    E_mem_M( memory_table );
     E_main_Q_memory_table_I_sort( memory_table );
     E_main_Q_memory_table_I_remove_overlapping( &memory_table );
     N max_memory = E_main_Q_memory_table_R_max_memory( memory_table );
@@ -489,7 +478,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     if( !page_tables )
         goto End;
     E_main_Q_memory_table_I_reduce_by_page_tables( memory_table, page_tables );
-    E_mem_M( memory_table );
+    E_mem_M_free( memory_table );
     if( !~E_font_M() )
         goto End;
     E_vga_I_fill_rect( 0, 0, E_vga_S_video->width, E_vga_S_video->height, E_vga_R_video_color( E_vga_S_background_color ));

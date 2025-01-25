@@ -2,7 +2,7 @@
 *   ___   publicplace
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   file boot loader
+*   ---   BIOS file boot loader
 *         include file
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 f
 *******************************************************************************/
@@ -63,6 +63,7 @@ typedef N                   *Pn;
 #define E_memory_S_page_size                0x1000
 #define E_memory_S_start                    0x100000
 //==============================================================================
+#define E_main_Z_memory_start               0x10000
 #define E_main_Z_memory_table_end           0x80000
 enum
 { E_main_Z_memory_table_Z_memory_type_S_available = 1
@@ -72,7 +73,7 @@ enum
 , E_main_Z_memory_table_Z_memory_type_S_bad
 , E_main_Z_memory_table_Z_memory_type_S_boot_loader
 };
-struct __attribute__(( __packed__ )) E_main_Z_memory_table_entry
+struct __attribute__(( __packed__ ))  E_main_Z_memory_table_entry
 { Pc address;
   N64 size;
   N32 type;
@@ -89,6 +90,7 @@ struct __attribute__(( __packed__ )) E_main_Z_video
 Pc E_text_Z_s_Z_utf8_R_u( Pc, U * );
 //==============================================================================
 void E_mem_M( struct E_main_Z_memory_table_entry * );
+void E_mem_M_free( struct E_main_Z_memory_table_entry * );
 B E_mem_Q_blk_T_eq( P, P, N );
 P E_mem_Q_blk_I_copy( P, P, N );
 P E_mem_Q_blk_I_copy_rev( P, P, N );
@@ -96,12 +98,15 @@ P E_mem_Q_blk_I_copy_auto( P, P, N );
 P E_mem_Q_blk_P_fill_c( P, N, C );
 P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );
-P E_mem_Q_blk_M_replace_tab( P *, N, N );
+P E_mem_Q_blk_M_align( N, N );
+P E_mem_Q_blk_M_align_tab( N, N, N );
+P E_mem_Q_blk_M_replace_tab( P, N, N );
 P E_mem_Q_blk_M_replace( P, N );
 P E_mem_Q_blk_M_split( P, N );
+N E_mem_Q_blk_W(P);
 P E_mem_Q_blk_I_add( P, N, N *, N * );
 P E_mem_Q_blk_I_prepend_append( P, N, N );
-P E_mem_Q_blk_I_append( P, N );
+P E_mem_Q_blk_I_append( P, N, N );
 P E_mem_Q_blk_I_prepend( P, N );
 P E_mem_Q_blk_I_insert( P, N, N );
 P E_mem_Q_blk_I_remove( P, N, N );

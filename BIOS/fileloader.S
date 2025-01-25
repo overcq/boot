@@ -2,7 +2,7 @@
 #   ___   publicplace
 #  ¦OUX¦  assembly
 #  ¦/C+¦  OUX/C+ OS
-#   ---   file boot loader
+#   ---   BIOS file boot loader
 #         IA-32e mode initialization
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 #*******************************************************************************

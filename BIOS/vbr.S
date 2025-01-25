@@ -2,7 +2,7 @@
 #   ___   publicplace
 #  ¦OUX¦  16-bit assembly
 #  ¦/C+¦  OUX/C+ OS
-#   ---   VBR boot loader
+#   ---   BIOS VBR boot loader
 #         entry
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒11 T
 #*******************************************************************************
@@ -43,7 +43,7 @@
     mov     %ax, %cx                        # sector, cylinder
     lodsb                                   # Liczba sektorów do przeczytania.
     test    %al, %al
-    jz      I_print_no_file_loader
+    jz      I_print_S_no_file_loader
     push    %cx
     push    %ax
     mov     $Q_print_S_booting_file, %si
@@ -57,7 +57,7 @@
     push    %bp
     push    %bx
     int     $0x13
-    jc      I_print_io_error
+    jc      I_print_S_io_error
     pop     %bx
     pop     %bp
     mov     -4(%bp), %cl
@@ -102,10 +102,10 @@
 #    jmp     0f
 .org Q_memory_S_vbr + Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
-I_print_no_file_loader:
+I_print_S_no_file_loader:
     mov     $Q_print_S_no_file_loader, %si
     jmp     0f
-I_print_io_error:
+I_print_S_io_error:
     xor     %ax, %ax
     mov     $Q_print_S_io_error, %si
     mov     %ax, %es
