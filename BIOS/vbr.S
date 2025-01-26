@@ -38,9 +38,9 @@
     cld
     mov     $Q_memory_S_vbr + Q_offset_S_file_loader_data, %si
     lodsb
-    mov     %al, -1(%bp)                    # head
+    mov     %al, -1(%bp)                    # ‘head’
     lodsw
-    mov     %ax, %cx                        # sector, cylinder
+    mov     %ax, %cx                        # ‘sector’, cylinder
     lodsb                                   # Liczba sektorów do przeczytania.
     test    %al, %al
     jz      I_print_S_no_file_loader
@@ -94,8 +94,8 @@
     add     $1 << 12, %cx
     mov     %cx, %es
     jmp     1b
-0:  add     $3 * 2, %sp
-    pop     %dx
+0:  pop     %cx
+    pop     %dx                             # Do ewentualnego użycia tylko “%dl”, ponieważ w “%dh” znajduje się numer ‘head’.
     mov     $Q_memory_S_file_loader, %sp    # Ustawienie większego stosu.
     jmp     Q_memory_S_file_loader
 #-------------------------------------------------------------------------------

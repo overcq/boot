@@ -92,7 +92,7 @@
     movl    $Q_int_10_4f00_S_magic_call, (%di)
     int     $0x10
     cmp     $0x4f, %ax
-    jne     Hlt_16
+    jne     I_hlt_16
     mov     %sp, %bx
     cmpl    $Q_int_10_4f00_S_magic_ret, (%bx)
     jne     4f
@@ -108,7 +108,7 @@
     push    %si
     int     $0x10
     cmp     $0x4f, %al
-    jne     Hlt_16
+    jne     I_hlt_16
     pop     %si
     test    %ah, %ah
     jnz     3f
@@ -180,10 +180,10 @@
     mov     %sp, %di
     int     $0x10
     cmp     $0x4f, %ax
-    jne     Hlt_16
+    jne     I_hlt_16
     mov     %sp, %bx
     testb   $1 << 7, (%bx)
-    jz      Hlt_16
+    jz      I_hlt_16
     mov     0x12(%bx), %ax
     mov     0x14(%bx), %dx
     mov     0x19(%bx), %cl
@@ -209,7 +209,7 @@
     or      $1 << 14, %bx                   # Włączenie ‘linear video buffer’.
     int     $0x10
     cmp     $0x4f, %ax
-    jne     Hlt_16
+    jne     I_hlt_16
 # Inicjowanie ‘page tables’ trybu chronionego.
     mov     $S_pt_32, %bx
     mov     $Z_page_entry_S_p | Z_page_entry_S_rw, %eax
@@ -348,7 +348,7 @@ Q_vga_I_print:
     pop     %si
     jmp     0b
 0:  ret
-Hlt_16:
+I_hlt_16:
     cli
 0:  hlt
     jmp     0b
