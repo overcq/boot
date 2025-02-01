@@ -19,14 +19,10 @@
 .org Q_memory_S_vbr
 .code16
 .text
-    cli
     xor     %ax, %ax
+    cli
     mov     %ax, %ss
     mov     $Q_memory_S_vbr, %sp
-    push    %ax
-    pop     %ds
-    push    %ax
-    pop     %es
     sti
     mov     %sp, %bp
     ljmp    $0, $0f

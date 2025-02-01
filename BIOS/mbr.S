@@ -20,8 +20,8 @@
 .org Q_memory_S_relocation_to
 .code16
 .text
-0:  cli
-    xor     %ax, %ax
+0:  xor     %ax, %ax
+    cli
     mov     %ax, %ss
     mov     $Q_memory_S_relocation_to, %sp
     push    %ax

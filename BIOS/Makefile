@@ -36,7 +36,7 @@ vbr: vbr.S Makefile binary.ld
 	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -fno-stack-protector -c -o $@ $<
 fileloader: fileloader.S fileloader.o mem-blk.o vga.o font.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
-	&& $(LD) -T binary.ld --oformat binary -o $@_ a.out $(filter %.o,$^) \
+	&& $(LD) -T binary.ld --oformat=binary -o $@_ a.out $(filter %.o,$^) \
 	&& rm a.out \
 	&& dd if=$@_ of=$@ skip=$$(( 0x7e00 / 512 )) \
 	&& rm $@_
@@ -79,7 +79,7 @@ install-fileloader: fileloader install/a.out
 	&& oux install/a.out -o disk "$$loopdev" /boot/loader
 #-------------------------------------------------------------------------------
 usb: mbr vbr fileloader install/a.out
-	ocq_usb_dev=/dev/sdb; \
+	ocq_usb_dev=/dev/sdc; \
 	ocq_usb_mnt=/mnt/usb; \
 	start=$$(( $$( fdisk -l $$ocq_usb_dev | tail -n 1 | sed -e 's`^[^ ][^ ]*  *\*  *\([0-9][0-9]*\).*$$`\1`' ) * 512 )); \
 	dd conv=notrunc if=mbr of=$$ocq_usb_dev bs=1 count=218 \
@@ -98,7 +98,7 @@ usb: mbr vbr fileloader install/a.out
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	sleep 4; \
 	mkdir -p $$ocq_usb_mnt/boot \
-	&& install fileloader /mnt/usb/boot/loader \
+	&& install fileloader $$ocq_usb_mnt/boot/loader \
 	&& oux install/a.out $$ocq_usb_dev /boot/loader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dump: mbr vbr
