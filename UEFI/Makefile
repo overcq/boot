@@ -8,7 +8,6 @@
 #*******************************************************************************
 AS := as
 CC := clang
-LD := ld
 CFLAGS := -Os -fwrapv
 #===============================================================================
 all: build
@@ -20,12 +19,8 @@ disk.img:
 	dd if=/dev/zero of=$@ bs=$$(( 2 * 18 * 512 )) count=80 \
 	&& mkfs.fat $@ \
 	&& chown inc:inc $@
-%.o: %.c fileloader.h Makefile
-	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fpic -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Werror -c -o $@ $<
-fileloader: fileloader.o Makefile efi.ld
-	$(LD) -T efi.ld -nostdlib -z nocombreloc --warn-common --fatal-warnings --no-undefined -shared -s -o $@ $(filter %.o,$^) \
-	&& objcopy -j .text -j .data -j .reloc --target=efi-app-x86_64 $@ \
-	&& ./set_pe_flags.py
+fileloader: fileloader.c Makefile
+	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Wno-unused-parameter -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_efi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mostlyclean:
 	rm -f fileloader.o
