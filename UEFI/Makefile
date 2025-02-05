@@ -21,10 +21,11 @@ disk.img:
 	&& mkfs.fat $@ \
 	&& chown inc:inc $@
 %.o: %.c fileloader.h Makefile
-	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-red-zone -mno-sse -ffreestanding -fpic -fshort-wchar -fno-stack-protector -c -o $@ $<
+	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fpic -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Werror -c -o $@ $<
 fileloader: fileloader.o Makefile efi.ld
-	$(LD) -T efi.ld -Bsymbolic -nostdlib -z nocombreloc --warn-common --fatal-warnings -shared -s -o $@ $(filter %.o,$^) \
-	&& objcopy -j .text -j .data -j .reloc --target=efi-app-x86_64 $@
+	$(LD) -T efi.ld -nostdlib -z nocombreloc --warn-common --fatal-warnings --no-undefined -shared -s -o $@ $(filter %.o,$^) \
+	&& objcopy -j .text -j .data -j .reloc --target=efi-app-x86_64 $@ \
+	&& ./set_pe_flags.py
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mostlyclean:
 	rm -f fileloader.o
@@ -52,5 +53,5 @@ usb: fileloader
 	|| exit 1; \
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	mkdir -p $$ocq_usb_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTx64.EFI
+	&& install BOOTX64.EFI $$ocq_usb_mnt/EFI/BOOT/BOOTx64.EFI
 #*******************************************************************************

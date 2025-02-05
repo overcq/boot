@@ -27,7 +27,11 @@ SECTIONS
         *( .bss* )
         *(COMMON)
         *(.rel.local)
+        LONG(0); LONG(0);
     }
     . = ALIGN(4096);
-    .reloc : { KEEP( *(.reloc) ) }
+    .reloc :
+    {   KEEP( *(.reloc) )
+        LONG(0); LONG(0);
+    }
 }

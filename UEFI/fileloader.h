@@ -61,6 +61,8 @@ typedef N                   *Pn;
 #define _internal                           static
 //==============================================================================
 #define H_efi_Z_api __attribute__(( ms_abi ))
+#define H_efi_S_error(e) ( (S)0x8000000000000000 | e )
+//------------------------------------------------------------------------------
 struct H_efi_Z_guid
 { N32 data_1;
   N16 data_2;
@@ -141,6 +143,7 @@ enum H_efi_Z_reset_type
 , H_efi_Z_reset_type_Z_warm
 , H_efi_Z_reset_type_Z_shutdown
 };
+//------------------------------------------------------------------------------
 struct H_efi_Z_runtime_services
 { struct H_efi_Z_table_header header;
   S ( H_efi_Z_api *R_time )( struct H_efi_Z_time *time, struct H_efi_Z_time_capabilities *capabilities );

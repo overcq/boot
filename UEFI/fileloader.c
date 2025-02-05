@@ -8,7 +8,7 @@
 *******************************************************************************/
 #include "fileloader.h"
 //==============================================================================
-N
+S
 H_efi_Z_api
 H_efi_I_main(
   P image_handle
@@ -27,7 +27,7 @@ H_efi_I_main(
     if( status < 0 )
         return status;
     struct H_efi_Z_input_key key;
-    while(( status = system_table->input->read_key_stroke( system_table->input, &key )) == -6 );
+    while(( status = system_table->input->read_key_stroke( system_table->input, &key )) == H_efi_S_error(6) );
     return status;
 }
 /******************************************************************************/
