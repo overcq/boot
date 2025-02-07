@@ -9,5 +9,3 @@ E_cplus_S_cx_sources
 /BIOS/install/*.h
 /UEFI/disk.img
 /UEFI/fileloader
-/UEFI/RELEASEX64_OVMF.fd
-/UEFI/uefi.img

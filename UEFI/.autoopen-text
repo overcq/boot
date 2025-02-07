@@ -1,9 +1,5 @@
 .
 Makefile
-mbr.S
-vbr.S
-fileloader.S
-simple.h
 fileloader.h
 fileloader.c
 *.c

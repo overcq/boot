@@ -3,7 +3,7 @@
 #  ¦OUX¦  ‟GNU” “make”
 #  ¦/C+¦  OUX/C+ OS
 #   ---   BIOS boot loader
-#         program makefile
+#         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
 AS := as

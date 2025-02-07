@@ -3,7 +3,7 @@
 #  ¦OUX¦  ‟GNU” “make”
 #  ¦/C+¦  OUX/C+ OS
 #   ---   UEFI boot loader
-#         program makefile
+#         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
 AS := as
@@ -13,17 +13,15 @@ CFLAGS := -Os -fwrapv
 all: build
 build: fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build mostlyclean clean distclean install install-fileloader usb
+.PHONY: all build clean distclean install install-fileloader usb
 #===============================================================================
 disk.img:
 	dd if=/dev/zero of=$@ bs=$$(( 2 * 18 * 512 )) count=80 \
 	&& mkfs.fat $@ \
 	&& chown inc:inc $@
-fileloader: fileloader.c Makefile
-	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Wno-unused-parameter -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_efi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
+fileloader: fileloader.h fileloader.c text.c Makefile
+	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-mostlyclean:
-	rm -f fileloader.o
 clean: mostlyclean
 	rm -f fileloader
 distclean: clean
@@ -48,5 +46,5 @@ usb: fileloader
 	|| exit 1; \
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	mkdir -p $$ocq_usb_mnt/EFI/BOOT \
-	&& install BOOTX64.EFI $$ocq_usb_mnt/EFI/BOOT/BOOTx64.EFI
+	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTx64.EFI
 #*******************************************************************************

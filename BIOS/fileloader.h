@@ -3,7 +3,7 @@
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
 *   ---   BIOS file boot loader
-*         include file
+*         include
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 f
 *******************************************************************************/
 typedef unsigned char       N8;
