@@ -113,7 +113,7 @@ struct H_uefi_Z_table_header
 { N64 signature;
   N32 revision;
   N32 header_l;
-  N32 CRC32;
+  N32 crc32;
   N32 reserved;
 };
 struct H_uefi_Z_memory_descriptor
@@ -182,6 +182,7 @@ enum H_uefi_Z_reset
 { H_uefi_Z_reset_Z_cold
 , H_uefi_Z_reset_Z_warm
 , H_uefi_Z_reset_Z_shutdown
+, H_uefi_Z_reset_Z_platform_specific
 };
 enum H_uefi_Z_allocate
 { H_uefi_Z_allocate_Z_any
