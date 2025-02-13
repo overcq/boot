@@ -117,8 +117,7 @@ H_uefi_Z_api
 H_uefi_I_main(
   P image_handle
 , struct H_uefi_Z_system_table *system_table
-){  E_main_S_system_table = system_table;
-    S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader\r\n" );
+){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader\r\n" );
     if( status < 0 )
         return status;
     P event;
@@ -179,13 +178,14 @@ H_uefi_I_main(
         memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
     }
     //N64 last_address = next_virtual_address;
+    status = system_table->boot_services->exit_boot_services( image_handle, map_key );
+    if( status < 0 )
+        return status;
     __asm__ volatile (
     "\n mov %%rsp,%0"
     : "=m" ( E_main_S_loader_stack )
     );
-    status = system_table->boot_services->exit_boot_services( image_handle, map_key );
-    if( status < 0 )
-        return status;
+    E_main_S_system_table = system_table;
     status = system_table->runtime_services->P_virtual_address_map( memory_map_l, descriptor_l, descriptor_version, memory_map );
     if( status < 0 )
         goto Loop;

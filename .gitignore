@@ -1,11 +1,11 @@
-/BIOS/disk.img
+*.fd
+*.img
+*.o
+a.out
+E_cplus_S_cx_sources
 /BIOS/fileloader
 /BIOS/mbr
 /BIOS/vbr
-a.out
-E_cplus_S_cx_sources
-*.o
 /BIOS/install/*.c
 /BIOS/install/*.h
-/UEFI/disk.img
 /UEFI/fileloader
