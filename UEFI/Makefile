@@ -8,7 +8,7 @@
 #*******************************************************************************
 AS := as
 CC := clang
-CFLAGS := -Os -fwrapv
+CFLAGS := -Os
 #===============================================================================
 all: build
 build: fileloader
@@ -20,7 +20,7 @@ disk.img:
 	&& mkfs.fat $@ \
 	&& chown inc:inc $@
 fileloader: fileloader.h fileloader.c text.c Makefile
-	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -Wall -Wextra -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
+	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean: mostlyclean
 	rm -f fileloader

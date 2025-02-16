@@ -60,6 +60,8 @@ typedef N                   *Pn;
 #define _inline                             static __attribute__ ((__always_inline__,__unused__))
 #define _internal                           static
 //==============================================================================
+#define E_memory_S_page_size                0x1000
+//==============================================================================
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
 //==============================================================================
@@ -100,7 +102,6 @@ N E_text_Z_n_N_s_G( N, N, N );
 #define H_uefi_Z_error_S_compromised_data   H_uefi_S_error(33)
 #define H_uefi_Z_error_S_ip_address_confilct H_uefi_S_error(34)
 #define H_uefi_Z_error_S_http_error         H_uefi_S_error(35)
-
 //------------------------------------------------------------------------------
 #define H_uefi_S_page_size 0x1000
 struct H_uefi_Z_guid

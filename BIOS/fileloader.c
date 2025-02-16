@@ -227,16 +227,16 @@ E_main_Q_memory_table_I_reduce_by_page_tables( struct E_main_Z_memory_table_entr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _inline
 void
-E_main_Q_cr0_P( P pml4
+E_main_Q_cr3_P( P pml4
 ){  __asm__(
-    "\n"    "mov    %0, %%cr3"
+    "\n"    "mov    %0,%%cr3"
     :
     : "r" (pml4)
     );
 }
 _internal
 Pc
-E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
+E_main_I_allocate_page_table( struct E_main_Z_memory_table_entry *memory_table
 , N max_memory
 ){  if( max_memory < 0x400000 ) // NDFN
         return 0;
@@ -254,7 +254,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
         pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
         pt = (Pn)( (Pc)pt - E_memory_S_page_size );
     }
-    E_main_Q_cr0_P(pml4);
+    E_main_Q_cr3_P(pml4);
     if( max_memory <= 64 * 1024 * 1024 )
         goto End;
     pml4 = E_main_Q_memory_table_I_after_hole( memory_table, (P)E_memory_S_start ); // Start od czwartego mibibajta, rosnąco.
@@ -274,7 +274,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
         pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
         pd = pt;
     }
-    E_main_Q_cr0_P(pml4);
+    E_main_Q_cr3_P(pml4);
     if( max_memory <= 16UL * 1024 * 1024 * 1024 )
         goto End;
     for_n( pml4_i, 8 ) // 4 TiB pamięci. Tablice stron pamięci zajmują ok. 8 GiB.
@@ -295,7 +295,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
         pml4[ pml4_i ] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
         pdpt = pt;
     }
-    E_main_Q_cr0_P(pml4);
+    E_main_Q_cr3_P(pml4);
     if( max_memory <= 4UL * 1024 * 1024 * 1024 * 1024 )
         goto End;
     pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + E_memory_S_page_size );
@@ -317,7 +317,7 @@ E_main_I_allocate_page_table(  struct E_main_Z_memory_table_entry *memory_table
         pml4[ pml4_i ] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
         pdpt = pt;
     }
-    E_main_Q_cr0_P(pml4);
+    E_main_Q_cr3_P(pml4);
 End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory ) - E_memory_S_page_size ); // Start od końca pamięci rzeczywistej, malejąco.
     pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
     B end = no;
@@ -441,7 +441,7 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
                 pml4[ pml4_i ] = 0;
         }
     }
-    E_main_Q_cr0_P(pml4);
+    E_main_Q_cr3_P(pml4);
     return (Pc)pt + E_memory_S_page_size;
 }
 __attribute__ ((__noreturn__))
@@ -492,10 +492,10 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_font_I_print( "OUX/C+ OS boot loader. File Boot Loader. ©overcq <overcq@int.pl>. http://github.com/overcq/boot\n" );
-    
 End:__asm__ (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"
     );
+    __builtin_unreachable();
 }
 /******************************************************************************/
