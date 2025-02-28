@@ -265,7 +265,9 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         //DFN Stos jest w pamięci typu “H_uefi_Z_memory_Z_boot_services_data”.
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map_->type == H_uefi_Z_memory_Z_boot_services_data )
+        {   if( memory_map_->type == H_uefi_Z_memory_Z_loader_data
+            || memory_map_->type == H_uefi_Z_memory_Z_boot_services_data
+            )
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
@@ -314,7 +316,9 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         //DFN Stos jest w pamięci typu “H_uefi_Z_memory_Z_boot_services_data”.
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map_->type == H_uefi_Z_memory_Z_boot_services_data )
+        {   if( memory_map_->type == H_uefi_Z_memory_Z_loader_data
+            || memory_map_->type == H_uefi_Z_memory_Z_boot_services_data
+            )
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
@@ -335,7 +339,7 @@ E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **en
 , B reserved_from_end
 , N *pages
 ){  if( reserved_from_end )
-    {   if( !*pages-- )
+    {   if( !(*pages)-- )
         {   *entry = (P)( (Pc)*entry + descriptor_l );
             if( *entry == memory_map_end )
                 return ~0;
@@ -343,9 +347,8 @@ E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **en
             && (*entry)->type != H_uefi_Z_memory_Z_conventional
             )
             {   while( *entry != memory_map_end
-                && ( (*entry)->type == H_uefi_Z_memory_Z_loader_code
-                  || (*entry)->type == H_uefi_Z_memory_Z_loader_data
-                ))
+                && (*entry)->type == H_uefi_Z_memory_Z_loader_code
+                )
                     *entry = (P)( (Pc)*entry + descriptor_l );
                 if( *entry == memory_map_end
                 || ( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
@@ -364,9 +367,8 @@ E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **en
             && (*entry)->type != H_uefi_Z_memory_Z_conventional
             )
             {   while( *entry != memory_map_end
-                && ( (*entry)->type == H_uefi_Z_memory_Z_loader_code
-                  || (*entry)->type == H_uefi_Z_memory_Z_loader_data
-                ))
+                && (*entry)->type == H_uefi_Z_memory_Z_loader_code
+                )
                     *entry = (P)( (Pc)*entry + descriptor_l );
                 if( *entry == memory_map_end
                 || ( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
@@ -486,7 +488,7 @@ H_uefi_I_main(
     )
         return status;
     memory_map_l += ( 2 + 1 ) * descriptor_l; // 2 na możliwość wstawienia w następującym “M_pool”, 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów.
-    status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_boot_services_data, memory_map_l, ( P * )&memory_map );
+    status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_loader_data, memory_map_l, ( P * )&memory_map );
     if( status < 0 )
         return status;
     status = system_table->boot_services->R_memory_map( &memory_map_l, memory_map, &map_key, &descriptor_l, &descriptor_version );
@@ -497,7 +499,7 @@ H_uefi_I_main(
     E_main_Q_memory_map_R_loader_location( memory_map, descriptor_l, memory_map_l / descriptor_l, &loader_begin, &loader_end );
     N reserved_size = E_main_Q_memory_map_R_reserved_size( memory_map, descriptor_l, memory_map_l / descriptor_l );
     B reserved_from_end = loader_begin < E_memory_S_page_size + reserved_size;
-    //reserved_from_end = yes;
+    reserved_from_end = yes;
     N memory_size = E_main_Q_memory_map_R_size( memory_map, descriptor_l, memory_map_l / descriptor_l );
     B has_memory_map_new_entry;
     E_main_Q_memory_map_I_set_virtual( memory_map, descriptor_l, memory_map_l / descriptor_l, reserved_from_end, loader_begin, loader_end, memory_size, &has_memory_map_new_entry );
@@ -528,6 +530,29 @@ H_uefi_I_main(
     status = system_table->boot_services->exit_boot_services( image_handle, map_key );
     if( status < 0 )
         return status;
+    N pml4, first_last_address;
+    status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &first_last_address );
+    if( status < 0 )
+        goto End;
+    __asm__ volatile (
+    "\n"    "mov    %%rsp,%0"
+    : "=m" ( E_main_S_loader_stack )
+    );
+    E_main_S_system_table = system_table;
+    status = system_table->runtime_services->P_virtual_address_map( memory_map_l, descriptor_l, descriptor_version, memory_map );
+    if( status < 0 )
+        goto End;
+    __asm__ volatile (
+    "\n"    "mov    %0,%%cr3"
+    :
+    : "r" (pml4)
+    );
+    __asm__ volatile (
+    "\n"    "mov    %0,%%rsp"
+    :
+    : "m" ( E_main_S_loader_stack )
+    );
+    system_table = E_main_S_system_table;
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_data_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_data_S_write | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 //#define E_main_J_local_descriptor_1( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
@@ -566,29 +591,6 @@ H_uefi_I_main(
     :
     : "p" ( &gd.limit ), "p" ( &id.limit )
     : "ax"
-    );
-    N pml4, first_last_address;
-    status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &first_last_address );
-    if( status < 0 )
-        goto End;
-    __asm__ volatile (
-    "\n"    "mov    %%rsp,%0"
-    : "=m" ( E_main_S_loader_stack )
-    );
-    E_main_S_system_table = system_table;
-    status = system_table->runtime_services->P_virtual_address_map( memory_map_l, descriptor_l, descriptor_version, memory_map );
-    if( status < 0 )
-        goto End;
-    __asm__ volatile (
-    "\n"    "mov    %0,%%rsp"
-    :
-    : "m" ( E_main_S_loader_stack )
-    );
-    system_table = E_main_S_system_table;
-    __asm__ volatile (
-    "\n"    "mov    %0,%%cr3"
-    :
-    : "r" (pml4)
     );
     system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
 End:
