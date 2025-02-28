@@ -28,6 +28,7 @@
 //==============================================================================
 N E_main_S_loader_stack;
 struct H_uefi_Z_system_table *E_main_S_system_table;
+struct H_uefi_Z_memory_descriptor *E_main_S_memory_map;
 N64 gdt[3], ldt[2], idt[2];
 //==============================================================================
 S
@@ -67,6 +68,7 @@ E_main_I_virtual_address_change( P event
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
     runtime_services->convert_pointer( 0, ( P * )&E_main_S_loader_stack );
     runtime_services->convert_pointer( 0, ( P * )&E_main_S_system_table );
+    runtime_services->convert_pointer( 0, ( P * )&E_main_S_memory_map );
 }
 //------------------------------------------------------------------------------
 void
@@ -110,12 +112,12 @@ void
 E_main_Q_memory_map_R_loader_location( struct H_uefi_Z_memory_descriptor *memory_map
 , N descriptor_l
 , N memory_map_n
-, N *loader_begin
+, N *loader_start
 , N *loader_end
 ){  struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
     for_n( i, memory_map_n )
     {   if( memory_map_->type == H_uefi_Z_memory_Z_loader_code )
-        {   *loader_begin = memory_map_->physical_start;
+        {   *loader_start = memory_map_->physical_start;
             *loader_end = memory_map_->physical_start + memory_map_->pages * E_memory_S_page_size;
             break;
         }
@@ -156,7 +158,7 @@ void
 E_main_Q_memory_map_I_set_virtual_I_entry_from_end( struct H_uefi_Z_memory_descriptor *memory_map_
 , struct H_uefi_Z_memory_descriptor *memory_map_end
 , N descriptor_l
-, N loader_begin
+, N loader_start
 , N loader_end
 , B *has_memory_map_new_entry
 , N *next_virtual_address
@@ -173,10 +175,10 @@ E_main_Q_memory_map_I_set_virtual_I_entry_from_end( struct H_uefi_Z_memory_descr
             memory_map_new_entry->pages = ( loader_end - *next_virtual_address ) / H_uefi_S_page_size;
             memory_map_->physical_start += loader_end - *next_virtual_address;
             memory_map_->pages -= memory_map_new_entry->pages;
-            memory_map_->virtual_start = loader_end;
-            memory_map_new_entry->virtual_start = *next_virtual_address -= loader_end - loader_begin;
+            memory_map_new_entry->virtual_start = *next_virtual_address -= loader_end - loader_start;
         }else
-            *next_virtual_address -= loader_end - loader_begin;
+            *next_virtual_address -= loader_end - loader_start;
+        memory_map_->virtual_start = loader_end;
         *loader_computed = yes;
     }else
         memory_map_->virtual_start = *next_virtual_address;
@@ -185,7 +187,7 @@ void
 E_main_Q_memory_map_I_set_virtual_I_entry_from_start( struct H_uefi_Z_memory_descriptor *memory_map_
 , struct H_uefi_Z_memory_descriptor *memory_map_end
 , N descriptor_l
-, N loader_begin
+, N loader_start
 , N loader_end
 , B *has_memory_map_new_entry
 , N *next_virtual_address
@@ -193,19 +195,18 @@ E_main_Q_memory_map_I_set_virtual_I_entry_from_start( struct H_uefi_Z_memory_des
 ){  memory_map_->virtual_start = *next_virtual_address;
     *next_virtual_address += memory_map_->pages * H_uefi_S_page_size;
     if( !*loader_computed
-    && *next_virtual_address >= loader_begin
+    && *next_virtual_address >= loader_start
     )
-    {   if( *next_virtual_address != loader_begin )
+    {   if( *next_virtual_address != loader_start )
         {   *has_memory_map_new_entry = yes;
             struct H_uefi_Z_memory_descriptor *memory_map_new_entry = memory_map_end;
             memory_map_new_entry->type = memory_map_->type;
-            memory_map_new_entry->pages = ( *next_virtual_address - loader_begin ) / H_uefi_S_page_size;
+            memory_map_new_entry->pages = ( *next_virtual_address - loader_start ) / H_uefi_S_page_size;
             memory_map_->pages -= memory_map_new_entry->pages;
             memory_map_new_entry->physical_start = memory_map_->physical_start + memory_map_->pages * H_uefi_S_page_size;
             memory_map_new_entry->virtual_start = loader_end;
-            *next_virtual_address += loader_end - loader_begin;
-        }else
-            *next_virtual_address += loader_end - loader_begin;
+        }
+        *next_virtual_address += loader_end - loader_start;
         *loader_computed = yes;
     }
 }
@@ -214,7 +215,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
 , N descriptor_l
 , N memory_map_n
 , B reserved_from_end
-, N loader_begin
+, N loader_start
 , N loader_end
 , N memory_size
 , B *has_memory_map_new_entry
@@ -231,7 +232,8 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
     {   next_virtual_address = memory_size;
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map_->type != H_uefi_Z_memory_Z_loader_code
+        {   if( memory_map_->type != H_uefi_Z_memory_Z_reserved
+            && memory_map_->type != H_uefi_Z_memory_Z_loader_code
             && memory_map_->type != H_uefi_Z_memory_Z_loader_data
             && memory_map_->type != H_uefi_Z_memory_Z_boot_services_code
             && memory_map_->type != H_uefi_Z_memory_Z_boot_services_data
@@ -240,7 +242,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -255,7 +257,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -271,7 +273,20 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
+                , has_memory_map_new_entry
+                , &next_virtual_address
+                , &loader_computed
+                );
+            memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
+        }
+        memory_map_ = memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map_->type == H_uefi_Z_memory_Z_reserved )
+                E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
+                , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
+                , descriptor_l
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -291,7 +306,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -306,7 +321,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -322,7 +337,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
-                , loader_begin, loader_end
+                , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
                 , &loader_computed
@@ -335,47 +350,39 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
 S
 E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **entry
 , N descriptor_l
-, P memory_map_end
+, P memory_map_start_end
 , B reserved_from_end
 , N *pages
 ){  if( reserved_from_end )
     {   if( !(*pages)-- )
-        {   *entry = (P)( (Pc)*entry + descriptor_l );
-            if( *entry == memory_map_end )
+        {   if( *entry == memory_map_start_end )
                 return ~0;
+            *entry = (P)( (Pc)*entry - descriptor_l );
+            if( (*entry)->type == H_uefi_Z_memory_Z_loader_code )
+            {   if( *entry == memory_map_start_end )
+                    return ~0;
+                *entry = (P)( (Pc)*entry - descriptor_l );
+            }
             if( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
             && (*entry)->type != H_uefi_Z_memory_Z_conventional
             )
-            {   while( *entry != memory_map_end
-                && (*entry)->type == H_uefi_Z_memory_Z_loader_code
-                )
-                    *entry = (P)( (Pc)*entry + descriptor_l );
-                if( *entry == memory_map_end
-                || ( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
-                  && (*entry)->type != H_uefi_Z_memory_Z_conventional
-                ))
-                    return ~0;
-            }
+                return ~0;
             *pages = (*entry)->pages - 1;
         }
     }else
         if( ++*pages == (*entry)->pages )
         {   *entry = (P)( (Pc)*entry + descriptor_l );
-            if( *entry == memory_map_end )
+            if( *entry == memory_map_start_end )
                 return ~0;
+            if( (*entry)->type == H_uefi_Z_memory_Z_loader_code )
+            {   *entry = (P)( (Pc)*entry + descriptor_l );
+                if( *entry == memory_map_start_end )
+                    return ~0;
+            }
             if( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
             && (*entry)->type != H_uefi_Z_memory_Z_conventional
             )
-            {   while( *entry != memory_map_end
-                && (*entry)->type == H_uefi_Z_memory_Z_loader_code
-                )
-                    *entry = (P)( (Pc)*entry + descriptor_l );
-                if( *entry == memory_map_end
-                || ( (*entry)->type != H_uefi_Z_memory_Z_boot_services_code
-                  && (*entry)->type != H_uefi_Z_memory_Z_conventional
-                ))
-                    return ~0;
-            }
+                return ~0;
             *pages = 0;
         }
     return 0;
@@ -400,33 +407,48 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
 , N max_memory
 , B reserved_from_end
 , N *pml4_
-, N *first_last_address
+, N *start_end_address
 ){  P memory_map_end = (Pc)memory_map + memory_map_l;
-    struct H_uefi_Z_memory_descriptor *memory_map_entry_conventional = memory_map;
-    while( memory_map_entry_conventional->type != H_uefi_Z_memory_Z_boot_services_code
-    && memory_map_entry_conventional->type != H_uefi_Z_memory_Z_conventional
-    )
-        memory_map_entry_conventional = (P)( (Pc)memory_map_entry_conventional + descriptor_l );
-    N pages = reserved_from_end ? memory_map_entry_conventional->pages - 1 : 0;
+    struct H_uefi_Z_memory_descriptor *memory_map_entry_conventional;
+    P memory_map_start_end;
+    N pages;
+    //DFN Jest co najmniej jeden blok pamięci z typów: “H_uefi_Z_memory_Z_boot_services_code”, “H_uefi_Z_memory_Z_conventional”.
+    if( reserved_from_end )
+    {   memory_map_entry_conventional = (P)( (Pc)memory_map_end - descriptor_l );
+        while( memory_map_entry_conventional->type != H_uefi_Z_memory_Z_boot_services_code
+        && memory_map_entry_conventional->type != H_uefi_Z_memory_Z_conventional
+        )
+            memory_map_entry_conventional = (P)( (Pc)memory_map_entry_conventional - descriptor_l );
+        memory_map_start_end = memory_map;
+        pages = memory_map_entry_conventional->pages - 1;
+    }else
+    {   memory_map_entry_conventional = memory_map;
+        while( memory_map_entry_conventional->type != H_uefi_Z_memory_Z_boot_services_code
+        && memory_map_entry_conventional->type != H_uefi_Z_memory_Z_conventional
+        )
+            memory_map_entry_conventional = (P)( (Pc)memory_map_entry_conventional + descriptor_l );
+        memory_map_start_end = memory_map_end;
+        pages = 0;
+    }
+    Pn pml4 = (P)( memory_map_entry_conventional->physical_start + pages * E_memory_S_page_size );
     N physical_pages = -1;
-    Pn pml4 = (P)memory_map_entry_conventional->physical_start + pages * E_memory_S_page_size;
     B end = no;
     const N table_n = E_memory_S_page_size / sizeof(N);
     for_n( pml4_i, table_n )
     {   if( !end )
-        {   S status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_end, reserved_from_end, &pages );
+        {   S status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
             if( status < 0 )
                 return status;
             Pn pdpt = (P)( memory_map_entry_conventional->physical_start + pages * E_memory_S_page_size );
             for_n( pdpt_i, table_n )
             {   if( !end )
-                {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_end, reserved_from_end, &pages );
+                {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
                     if( status < 0 )
                         return status;
                     Pn pd = (P)( memory_map_entry_conventional->physical_start + pages * E_memory_S_page_size );
                     for_n( pd_i, table_n )
                     {   if( !end )
-                        {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_end, reserved_from_end, &pages );
+                        {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
                             if( status < 0 )
                                 return status;
                             Pn pt = (P)( memory_map_entry_conventional->physical_start + pages * E_memory_S_page_size );
@@ -435,11 +457,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                 {   N virtual_address = ( pml4_i * ( 1ULL << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
                                     if( virtual_address == max_memory - E_memory_S_page_size )
                                         end = yes;
-                                    if( !pml4_i
-                                    && !pdpt_i
-                                    && !pd_i
-                                    && !pt_i
-                                    )
+                                    if( !virtual_address )
                                         pt[ pt_i ] = 0;
                                     else
                                     {   status = E_main_I_allocate_page_table_I_next_physical_address( &memory_map, descriptor_l, memory_map_end, &physical_pages );
@@ -462,7 +480,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
             pml4[ pml4_i ] = 0;
     }
     *pml4_ = (N)pml4;
-    *first_last_address = memory_map_entry_conventional->virtual_start + ( reserved_from_end ? 0 : ( pages + 1 ) * E_memory_S_page_size );
+    *start_end_address = memory_map_entry_conventional->virtual_start + ( pages + ( reserved_from_end ? 0 : 1 )) * E_memory_S_page_size;
     return 0;
 }
 //------------------------------------------------------------------------------
@@ -494,20 +512,22 @@ H_uefi_I_main(
     status = system_table->boot_services->R_memory_map( &memory_map_l, memory_map, &map_key, &descriptor_l, &descriptor_version );
     if( status < 0 )
         return status;
-    E_main_Q_memory_map_I_sort_physical( memory_map, descriptor_l, memory_map_l / descriptor_l );
-    N loader_begin, loader_end;
-    E_main_Q_memory_map_R_loader_location( memory_map, descriptor_l, memory_map_l / descriptor_l, &loader_begin, &loader_end );
-    N reserved_size = E_main_Q_memory_map_R_reserved_size( memory_map, descriptor_l, memory_map_l / descriptor_l );
-    B reserved_from_end = loader_begin < E_memory_S_page_size + reserved_size;
-    reserved_from_end = yes;
-    N memory_size = E_main_Q_memory_map_R_size( memory_map, descriptor_l, memory_map_l / descriptor_l );
+    N memory_map_n = memory_map_l / descriptor_l;
+    E_main_Q_memory_map_I_sort_physical( memory_map, descriptor_l, memory_map_n );
+    N loader_start, loader_end;
+    E_main_Q_memory_map_R_loader_location( memory_map, descriptor_l, memory_map_n, &loader_start, &loader_end );
+    N reserved_size = E_main_Q_memory_map_R_reserved_size( memory_map, descriptor_l, memory_map_n );
+    B reserved_from_end = loader_start < E_memory_S_page_size + reserved_size;
+    N memory_size = E_main_Q_memory_map_R_size( memory_map, descriptor_l, memory_map_n );
     B has_memory_map_new_entry;
-    E_main_Q_memory_map_I_set_virtual( memory_map, descriptor_l, memory_map_l / descriptor_l, reserved_from_end, loader_begin, loader_end, memory_size, &has_memory_map_new_entry );
+    E_main_Q_memory_map_I_set_virtual( memory_map, descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, memory_size, &has_memory_map_new_entry );
     if( has_memory_map_new_entry )
-        memory_map_l += descriptor_l;
-    E_main_Q_memory_map_I_sort_virtual( memory_map, descriptor_l, memory_map_l / descriptor_l );
+    {   memory_map_l += descriptor_l;
+        memory_map_n++;
+    }
+    E_main_Q_memory_map_I_sort_virtual( memory_map, descriptor_l, memory_map_n );
     /*struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
-    for_n( i, memory_map_l / descriptor_l )
+    for_n( i, memory_map_n )
     {   H_uefi_I_print( system_table, i, sizeof(i), 10 );
         system_table->output->output( system_table->output, L". " );
         H_uefi_I_print( system_table, memory_map_->type, sizeof( memory_map_->type ), 10 );
@@ -530,8 +550,8 @@ H_uefi_I_main(
     status = system_table->boot_services->exit_boot_services( image_handle, map_key );
     if( status < 0 )
         return status;
-    N pml4, first_last_address;
-    status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &first_last_address );
+    N pml4, start_end_address;
+    status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
         goto End;
     __asm__ volatile (
@@ -539,20 +559,18 @@ H_uefi_I_main(
     : "=m" ( E_main_S_loader_stack )
     );
     E_main_S_system_table = system_table;
+    E_main_S_memory_map = memory_map;
     status = system_table->runtime_services->P_virtual_address_map( memory_map_l, descriptor_l, descriptor_version, memory_map );
     if( status < 0 )
         goto End;
     __asm__ volatile (
     "\n"    "mov    %0,%%cr3"
+    "\n"    "mov    %1,%%rsp"
     :
-    : "r" (pml4)
-    );
-    __asm__ volatile (
-    "\n"    "mov    %0,%%rsp"
-    :
-    : "m" ( E_main_S_loader_stack )
+    : "r" (pml4), "m" ( E_main_S_loader_stack )
     );
     system_table = E_main_S_system_table;
+    memory_map = E_main_S_memory_map;
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_data_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_data_S_write | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 //#define E_main_J_local_descriptor_1( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
@@ -585,8 +603,8 @@ H_uefi_I_main(
     "\n"    "mov    %%ax,%%gs"
     "\n"    "movw   $1 << 3,-8(%%rsp)"
     "\n"    "movq   $0f,-16(%%rsp)"
-    //"\n"    ".byte  0x48"
-    //"\n"    "ljmp   *-16(%%rsp)"
+    "\n"    ".byte  0x48"
+    "\n"    "ljmp   *-16(%%rsp)"
     "\n0:"
     :
     : "p" ( &gd.limit ), "p" ( &id.limit )
