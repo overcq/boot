@@ -62,6 +62,9 @@ typedef N                   *Pn;
 //==============================================================================
 #define E_memory_S_page_size                0x1000
 //==============================================================================
+#define H_oux_J_align_up_p(p,t)             (( void * )(( N64 )(p) + sizeof(t) - 1 - (( N64 )(p) + sizeof(t) - 1 ) % sizeof(t) ))
+//------------------------------------------------------------------------------
+B E_text_Z_sl_T_eq( Pc, Pc, N );
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
 //==============================================================================
@@ -209,6 +212,7 @@ enum H_uefi_Z_memory
 , H_uefi_Z_memory_Z_persistent
 , H_uefi_Z_memory_Z_unaccepted
 , H_uefi_Z_memory_Z_n
+, H_uefi_Z_memory_Z_kernel = 0x80000000U
 };
 #define H_uefi_Z_memory_protection_S_write      0x1000
 #define H_uefi_Z_memory_protection_S_read       0x2000
@@ -234,6 +238,7 @@ struct H_uefi_Z_device_path
   N8 function;
   N8 device;
 };
+#define H_uefi_Z_open_protocol_Z_attribute_S_by_handle_protocol 1U
 struct H_uefi_Z_open_protocol_information_entry
 { P agent_handle;
   P controller_handle;
@@ -269,7 +274,7 @@ struct H_uefi_Z_boot_services
   S ( H_uefi_Z_api *Q_tpl_I_raise )( N tpl );
   S ( H_uefi_Z_api *Q_tpl_I_restore )( N tpl );
   S ( H_uefi_Z_api *M_pages )( enum H_uefi_Z_allocate type, enum H_uefi_Z_memory memory_type, N pages_n, N64 *physical_address );
-  S ( H_uefi_Z_api *W_pages )( N64 *physical_address, N pages_n );
+  S ( H_uefi_Z_api *W_pages )( N64 physical_address, N pages_n );
   S ( H_uefi_Z_api *R_memory_map )( N *memory_map_l, struct H_uefi_Z_memory_descriptor *memory_map, N *map_key, N *descriptor_l, N32 *descriptor_version );
   S ( H_uefi_Z_api *M_pool )( enum H_uefi_Z_memory memory_type, N l, P *buffer );
   S ( H_uefi_Z_api *W_pool )( P buffer );
@@ -302,7 +307,7 @@ struct H_uefi_Z_boot_services
   S ( H_uefi_Z_api *close_protocol )( P handle, struct H_uefi_Z_guid *protocol, P agent_handle, P controller_handle );
   S ( H_uefi_Z_api *open_protocol_information )( P handle, struct H_uefi_Z_guid *protocol, struct H_uefi_Z_open_protocol_information_entry **entry_buffer, N *entry_n );
   S ( H_uefi_Z_api *protocols_per_handle )( P handle, struct H_uefi_Z_guid **protocol_buffer, N *protocol_n );
-  S ( H_uefi_Z_api *locate_handle_buffer )( enum H_uefi_Z_locate_search type, struct H_uefi_Z_guid *protocol, P search_key, N *handles_n, P *handles_buffer );
+  S ( H_uefi_Z_api *locate_handle_buffer )( enum H_uefi_Z_locate_search type, struct H_uefi_Z_guid *protocol, P search_key, N *handles_n, P **handles_buffer );
   S ( H_uefi_Z_api *locate_protocol )( struct H_uefi_Z_guid *protocol, P registration, P *interface );
   S ( H_uefi_Z_api *install_multiple_protocol_interfaces )( P *handle, ... );
   S ( H_uefi_Z_api *uninstall_multiple_protocol_interfaces )( P handle, ... );
@@ -327,4 +332,35 @@ struct H_uefi_Z_system_table
   N configuration_table_n;
   struct H_uefi_Z_configuration_table_entry *configuration_table;
 };
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
+struct H_uefi_Z_protocol_Z_disk_io
+{ N64 revision;
+  S ( H_uefi_Z_api *read )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
+  S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
+};
+//------------------------------------------------------------------------------
+#define H_uefi_Z_guid_S_block_io { 0x964e5b21, 0x6459, 0x11d2, { 0x8e, 0x39, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
+struct H_uefi_Z_protocol_Z_block_io_Z_media
+{ N32 media_id;
+  B removable, present, logical_partition, read_only, write_caching;
+  N32 block_size;
+  N32 io_align;
+  N64 last_block;
+  N64 lowest_aligned_lba;
+  N32 logical_blocks_per_physical_block;
+  N32 optimal_transfer_lenght_granularity;
+};
+struct H_uefi_Z_protocol_Z_block_io
+{ N64 revision;
+  struct H_uefi_Z_protocol_Z_block_io_Z_media *media;
+  S ( H_uefi_Z_api *reset )( struct H_uefi_Z_protocol_Z_block_io *this );
+  S ( H_uefi_Z_api *read )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
+  S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
+};
+//==============================================================================
+S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
+S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
+N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
+S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 /******************************************************************************/

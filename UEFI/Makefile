@@ -13,31 +13,35 @@ CFLAGS := -Os
 all: build
 build: fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build clean distclean install install-fileloader usb
+.PHONY: all build clean distclean disk.img install usb
 #===============================================================================
 disk.img:
-	dd if=/dev/zero of=$@ bs=$$(( 2 * 18 * 512 )) count=80 \
-	&& mkfs.fat $@ \
-	&& chown inc:inc $@
-fileloader: fileloader.h fileloader.c text.c Makefile
+	ocq_mnt=/mnt/oth; \
+	mkdir -p $$ocq_mnt \
+	&& trap '/opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& /opt/vmware2/bin/vmware-mount -f ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk $$ocq_mnt \
+	&& parted $$ocq_mnt/flat \
+	|| exit 1; \
+	loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ); \
+	trap 'losetup -d $$loopdev && /opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT; \
+	mkfs.fat $${loopdev}p1 \
+	&& ~inc/moje/programy/ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
+fileloader: fileloader.h fileloader.c text.c ouxfs.c Makefile
 	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-clean: mostlyclean
+clean:
 	rm -f fileloader
 distclean: clean
 	rm -f disk.img
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-install: disk.img install-fileloader
-install-fileloader: fileloader
+install:
 	ocq_mnt=/mnt/oth; \
-	loopdev=$$( losetup -LPf --show disk.img ); \
-	trap 'losetup -d "$$loopdev"' EXIT; \
 	mkdir -p $$ocq_mnt \
-	&& mount "$$loopdev" $$ocq_mnt \
+	&& trap '/opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& /opt/vmware2/bin/vmware-mount ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
 	|| exit 1; \
-	trap 'umount $$ocq_mnt; losetup -d "$$loopdev"' EXIT; \
 	mkdir -p $$ocq_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTx64.EFI	
+	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI	
 #-------------------------------------------------------------------------------
 usb: fileloader
 	ocq_usb_dev=/dev/sdc; \
@@ -46,5 +50,5 @@ usb: fileloader
 	|| exit 1; \
 	trap 'umount $$ocq_usb_mnt' EXIT; \
 	mkdir -p $$ocq_usb_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTx64.EFI
+	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
 #*******************************************************************************

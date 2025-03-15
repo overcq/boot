@@ -26,6 +26,7 @@
 #define E_cpu_Z_gdt_Z_type_S_ldt        ( 1ULL << ( 32 + 9 ))
 #define E_cpu_Z_gdt_Z_type_S_tss        ( 011ULL << ( 32 + 8 ))
 //==============================================================================
+Pc E_main_S_kernel;
 N E_main_S_loader_stack;
 struct H_uefi_Z_system_table *E_main_S_system_table;
 struct H_uefi_Z_memory_descriptor *E_main_S_memory_map;
@@ -66,6 +67,7 @@ E_main_I_virtual_address_change( P event
 , P context
 ){  struct H_uefi_Z_system_table *system_table = E_main_S_system_table;
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
+    runtime_services->convert_pointer( 0, ( P * )&E_main_S_kernel );
     runtime_services->convert_pointer( 0, ( P * )&E_main_S_loader_stack );
     runtime_services->convert_pointer( 0, ( P * )&E_main_S_system_table );
     runtime_services->convert_pointer( 0, ( P * )&E_main_S_memory_map );
@@ -251,6 +253,21 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         }
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
+        {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
+            {   E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
+                , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
+                , descriptor_l
+                , loader_start, loader_end
+                , has_memory_map_new_entry
+                , &next_virtual_address
+                , &loader_computed
+                );
+                break;
+            }
+            memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
+        }
+        memory_map_ = memory_map;
+        for_n_( i, memory_map_n )
         {   if( memory_map_->type == H_uefi_Z_memory_Z_boot_services_code
             || memory_map_->type == H_uefi_Z_memory_Z_conventional
             )
@@ -311,6 +328,21 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 , &next_virtual_address
                 , &loader_computed
                 );
+            memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
+        }
+        memory_map_ = memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
+            {   E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
+                , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
+                , descriptor_l
+                , loader_start, loader_end
+                , has_memory_map_new_entry
+                , &next_virtual_address
+                , &loader_computed
+                );
+                break;
+            }
             memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
         }
         memory_map_ = memory_map;
@@ -492,6 +524,67 @@ H_uefi_I_main(
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader\r\n" );
     if( status < 0 )
         return status;
+    N disk_io_handles_n;
+    P *disk_io_handles;
+    struct H_uefi_Z_guid H_uefi_Z_guid_S_disk_io_S = H_uefi_Z_guid_S_disk_io;
+    status = system_table->boot_services->locate_handle_buffer( H_uefi_Z_locate_search_Z_by_protocol, &H_uefi_Z_guid_S_disk_io_S, 0, &disk_io_handles_n, &disk_io_handles );
+    if( status < 0 )
+        return status;
+    struct H_uefi_Z_guid H_uefi_Z_guid_S_block_io_S = H_uefi_Z_guid_S_block_io;
+    N kernel_size;
+    for_n( disk_io_handles_i, disk_io_handles_n )
+    {   struct H_uefi_Z_protocol_Z_block_io *block_io;
+        status = system_table->boot_services->open_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_block_io_S, ( P * )&block_io, image_handle, 0, H_uefi_Z_open_protocol_Z_attribute_S_by_handle_protocol );
+        if( status < 0 )
+            continue;
+        N32 media_id = block_io->media->media_id;
+        status = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_block_io_S, image_handle, 0 );
+        if( status < 0 )
+            break;
+        struct H_uefi_Z_protocol_Z_disk_io *disk_io;
+        status = system_table->boot_services->open_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, ( P * )&disk_io, image_handle, 0, H_uefi_Z_open_protocol_Z_attribute_S_by_handle_protocol );
+        if( status < 0 )
+            continue;
+        status = H_oux_E_fs_Q_disk_M( system_table, disk_io, media_id );
+        if( status < 0 )
+        {   system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            if( !~status // Brak lub błąd systemu plików.
+            || status == H_uefi_Z_error_S_no_media
+            || status == H_uefi_Z_error_S_media_changed
+            )
+                continue;
+            break;
+        }
+        kernel_size = H_oux_E_fs_Q_kernel_R_size( system_table, disk_io, media_id );
+        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / E_memory_S_page_size + ( kernel_size % E_memory_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel );
+        if( status < 0 )
+        {   H_oux_E_fs_Q_disk_W( system_table );
+            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            break;
+        }
+        status = H_oux_E_fs_Q_kernel_I_read( system_table, disk_io, media_id, E_main_S_kernel );
+        if( status < 0 )
+        {   system_table->boot_services->W_pages(( N64 )E_main_S_kernel, kernel_size / E_memory_S_page_size + ( kernel_size % E_memory_S_page_size ? 1 : 0 ));
+            H_oux_E_fs_Q_disk_W( system_table );
+            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            break;
+        }
+        status = H_oux_E_fs_Q_disk_W( system_table );
+        if( status < 0 )
+        {   system_table->boot_services->W_pages(( N64 )E_main_S_kernel, kernel_size / E_memory_S_page_size + ( kernel_size % E_memory_S_page_size ? 1 : 0 ));
+            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            break;
+        }
+        status = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+        if( status < 0 )
+            system_table->boot_services->W_pages(( N64 )E_main_S_kernel, kernel_size / E_memory_S_page_size + ( kernel_size % E_memory_S_page_size ? 1 : 0 ));
+        break;
+    }
+    system_table->boot_services->W_pool( disk_io_handles );
+    if( status < 0 )
+        return status;
+    if( disk_io_handles_i == disk_io_handles_n )
+        return ~0;
     P event;
     status = system_table->boot_services->M_event( 0x60000202, 8, E_main_I_virtual_address_change, 0, &event );
     if( status < 0 )
@@ -511,7 +604,9 @@ H_uefi_I_main(
         return status;
     status = system_table->boot_services->R_memory_map( &memory_map_l, memory_map, &map_key, &descriptor_l, &descriptor_version );
     if( status < 0 )
+    {   system_table->boot_services->W_pool( memory_map );
         return status;
+    }
     N memory_map_n = memory_map_l / descriptor_l;
     E_main_Q_memory_map_I_sort_physical( memory_map, descriptor_l, memory_map_n );
     N loader_start, loader_end;
@@ -526,7 +621,7 @@ H_uefi_I_main(
         memory_map_n++;
     }
     E_main_Q_memory_map_I_sort_virtual( memory_map, descriptor_l, memory_map_n );
-    /*struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
+    struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
     for_n( i, memory_map_n )
     {   H_uefi_I_print( system_table, i, sizeof(i), 10 );
         system_table->output->output( system_table->output, L". " );
@@ -545,11 +640,13 @@ H_uefi_I_main(
     system_table->output->output( system_table->output, L", from_end=" );
     H_uefi_I_print( system_table, reserved_from_end, sizeof( reserved_from_end ), 10 );
     struct H_uefi_Z_input_key key;
-    while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready );
-    goto End;*/
+    while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
+    goto End;
     status = system_table->boot_services->exit_boot_services( image_handle, map_key );
     if( status < 0 )
+    {   system_table->boot_services->W_pool( memory_map );
         return status;
+    }
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
