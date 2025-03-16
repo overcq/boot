@@ -196,7 +196,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
                     }
         }
     }while( data != sector + H_oux_E_fs_S_sector_size );
-End_loop_0:;
+End_loop_0:
     for( N64 block_table_i_read = 0; block_table_i_read != block_table_block_table_n; block_table_i_read++ ) // Czyta wszystkie pozostałe wpisy pliku tablicy bloków.
     {   if( block_table_i_read > block_table_i ) //NDFN Przemyśleć i zagwarantować, by zawsze starczało.
             goto Error_1;
@@ -778,8 +778,6 @@ End_loop_0:;
             );
         }
     }
-    if( ~continue_from )
-        goto Error_1;
 End_loop_1:
     if( directory_table_i == block_table_directory_table_n )
         goto Error_1;
@@ -1076,8 +1074,6 @@ End_loop_1:
             );
         }
     }
-    if( ~continue_from )
-        goto Error_1;
 End_loop_2:
     if( file_table_i == block_table_file_table_n )
         goto Error_1;
