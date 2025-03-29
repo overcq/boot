@@ -524,6 +524,70 @@ H_uefi_I_main(
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader\r\n" );
     if( status < 0 )
         return status;
+    struct H_uefi_Z_guid guid_;
+#define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_text_Z_sl_T_eq( (Pc)&variable, (Pc)&guid_, sizeof(variable) ))
+    for_n( i, system_table->configuration_table_n )
+    {   Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi_table )
+        {   system_table->output->output( system_table->output, L"ACPI, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi1_table )
+        {   system_table->output->output( system_table->output, L"ACPI 1, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_sal_system_table )
+        {   system_table->output->output( system_table->output, L"SAL, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios_table )
+        {   system_table->output->output( system_table->output, L"SMBIOS, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios3_table )
+        {   system_table->output->output( system_table->output, L"SMBIOS 3, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_mps_table )
+        {   system_table->output->output( system_table->output, L"MPS, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_dtb_table )
+        {   system_table->output->output( system_table->output, L"DTB, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_rt_properties_table )
+        {   system_table->output->output( system_table->output, L"RT_PROPERTIES, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_attributes_table )
+        {   system_table->output->output( system_table->output, L"MEMORY_ATTRIBUTES, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_conformance_profiles_table )
+        {   system_table->output->output( system_table->output, L"CONFORMANCE_PROFILES, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_range_capsule )
+        {   system_table->output->output( system_table->output, L"MEMORY_RANGE_CAPSULE, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_debug_image_info_table )
+        {   system_table->output->output( system_table->output, L"DEBUG_IMAGE_INFO, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_system_resource_table )
+        {   system_table->output->output( system_table->output, L"SYSTEM_RESOURCE, " );
+            continue;
+        }
+        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_image_security_database )
+        {   system_table->output->output( system_table->output, L"IMAGE_SECURITY_DATABASE, " );
+            continue;
+        }
+        system_table->output->output( system_table->output, L"unknown, " );
+    }
+    struct H_uefi_Z_input_key key;
+    while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
+    goto End;
     N disk_io_handles_n;
     P *disk_io_handles;
     struct H_uefi_Z_guid H_uefi_Z_guid_S_disk_io_S = H_uefi_Z_guid_S_disk_io;
@@ -621,7 +685,7 @@ H_uefi_I_main(
         memory_map_n++;
     }
     E_main_Q_memory_map_I_sort_virtual( memory_map, descriptor_l, memory_map_n );
-    struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
+    /*struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
     for_n( i, memory_map_n )
     {   H_uefi_I_print( system_table, i, sizeof(i), 10 );
         system_table->output->output( system_table->output, L". " );
@@ -641,7 +705,7 @@ H_uefi_I_main(
     H_uefi_I_print( system_table, reserved_from_end, sizeof( reserved_from_end ), 10 );
     struct H_uefi_Z_input_key key;
     while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
-    goto End;
+    goto End;*/
     status = system_table->boot_services->exit_boot_services( image_handle, map_key );
     if( status < 0 )
     {   system_table->boot_services->W_pool( memory_map );
