@@ -60,6 +60,8 @@ typedef N                   *Pn;
 #define _inline                             static __attribute__ ((__always_inline__,__unused__))
 #define _internal                           static
 //==============================================================================
+#include "simple.h"
+//==============================================================================
 #define E_memory_S_page_size                0x1000
 //==============================================================================
 #define H_oux_J_align_up_p(p,t)             (( void * )(( N64 )(p) + sizeof(t) - 1 - (( N64 )(p) + sizeof(t) - 1 ) % sizeof(t) ))
@@ -67,6 +69,27 @@ typedef N                   *Pn;
 B E_text_Z_sl_T_eq( Pc, Pc, N );
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
+//------------------------------------------------------------------------------
+void E_mem_M( B, N, N, N, N, N, N, N );
+B E_mem_Q_blk_T_eq( P, P, N );
+P E_mem_Q_blk_I_copy( P, P, N );
+P E_mem_Q_blk_I_copy_rev( P, P, N );
+P E_mem_Q_blk_I_copy_auto( P, P, N );
+P E_mem_Q_blk_P_fill_c( P, N, C );
+P E_mem_Q_blk_M(N);
+P E_mem_Q_blk_M_tab( N, N );
+P E_mem_Q_blk_M_align( N, N );
+P E_mem_Q_blk_M_align_tab( N, N, N );
+P E_mem_Q_blk_M_replace_tab( P, N, N );
+P E_mem_Q_blk_M_replace( P, N );
+P E_mem_Q_blk_M_split( P, N );
+N E_mem_Q_blk_W(P);
+P E_mem_Q_blk_I_add( P, N, N *, N * );
+P E_mem_Q_blk_I_prepend_append( P, N, N );
+P E_mem_Q_blk_I_append( P, N, N );
+P E_mem_Q_blk_I_prepend( P, N );
+P E_mem_Q_blk_I_insert( P, N, N );
+P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
 #define H_uefi_Z_api __attribute__(( ms_abi ))
 #define H_uefi_S_error(e) ( (S)( 1LL << 63 ) | e )

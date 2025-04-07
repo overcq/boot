@@ -9,6 +9,7 @@
 AS := as
 CC := clang
 CFLAGS := -Os
+VMWARE_DIR := /opt/vmware2
 #===============================================================================
 all: build
 build: fileloader
@@ -18,16 +19,16 @@ build: fileloader
 disk.img:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \
-	&& trap '/opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT \
-	&& /opt/vmware2/bin/vmware-mount -f ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk $$ocq_mnt \
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& $(VMWARE_DIR)/bin/vmware-mount -f ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk $$ocq_mnt \
 	&& parted $$ocq_mnt/flat \
 	|| exit 1; \
 	loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ); \
-	trap 'losetup -d $$loopdev && /opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT; \
+	trap 'losetup -d $$loopdev && $(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT; \
 	mkfs.fat $${loopdev}p1 \
 	&& ~inc/moje/programy/ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
-fileloader: fileloader.h fileloader.c text.c ouxfs.c Makefile
-	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
+fileloader: fileloader.h fileloader.c text.c ouxfs.c mem-blk.c Makefile
+	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
 	rm -f fileloader
@@ -37,8 +38,8 @@ distclean: clean
 install:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \
-	&& trap '/opt/vmware2/bin/vmware-mount -d $$ocq_mnt' EXIT \
-	&& /opt/vmware2/bin/vmware-mount ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& $(VMWARE_DIR)/bin/vmware-mount ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
 	|| exit 1; \
 	mkdir -p $$ocq_mnt/EFI/BOOT \
 	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI	

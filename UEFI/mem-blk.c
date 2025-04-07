@@ -2,9 +2,9 @@
 *   ___   publicplace
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   BIOS file boot loader
-*         memory blocks manager
-* ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 e
+*   ---   UEFI boot loader
+*         memory manager
+* ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒4‒6 W
 *******************************************************************************/
 #include "fileloader.h"
 //==============================================================================
@@ -14,15 +14,20 @@ struct E_base_Z
   N *E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[2];
   N E_mem_Q_blk_Q_table_M_from_free_S_table_id[2];
   N E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n;
-} *E_base_S = (P)E_memory_S_start;
+  N E_mem_S_memory_size;
+  N E_mem_S_reserved_size;
+  P E_mem_S_kernel;
+  P E_mem_S_page_table;
+  B E_mem_S_reserved_from_end;
+} *E_base_S;
 struct E_mem_Q_blk_Z_free
 { Pc p;
   N l;
 };
 struct E_mem_Q_blk_Z_allocated
 { Pc p;
-  N u;
   N n;
+  N u;
 };
 //==============================================================================
 _internal N E_mem_Q_blk_Q_sys_table_R_last( N, N );
@@ -31,53 +36,62 @@ _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
 void
-E_mem_M( struct E_main_Z_memory_table_entry *memory_table
-){  E_base_S->E_mem_Q_blk_S_free_id = 0;
+E_mem_M(
+  B reserved_from_end
+, N start_end_address
+, N page_table_size
+, N memory_size
+, N reserved_size
+, N reserved_size_from_start
+, N kernel_address
+, N kernel_size
+){  E_base_S = (P)( reserved_from_end
+    ? start_end_address - sizeof( *E_base_S )
+    : start_end_address
+    );
+    E_base_S->E_mem_S_memory_size = memory_size;
+    E_base_S->E_mem_S_reserved_size = reserved_size;
+    E_base_S->E_mem_S_kernel = (P)kernel_address;
+    E_base_S->E_mem_S_page_table = (P)( reserved_from_end
+    ? start_end_address
+    : start_end_address - page_table_size
+    );
+    E_base_S->E_mem_S_reserved_from_end = reserved_from_end;
+    E_base_S->E_mem_Q_blk_S_free_id = 0;
     E_base_S->E_mem_Q_blk_S_allocated_id = 1;
     E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n = 0;
-    E_base_S->E_mem_Q_blk_S_allocated = (P)( (Pc)E_base_S + sizeof( *E_base_S ));
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p = (P)(
-      (Pc)E_base_S + sizeof( *E_base_S )
-    + ( (Pc)E_main_Z_memory_table_end - (Pc)memory_table ? 4 : 3 ) * sizeof( struct E_mem_Q_blk_Z_allocated )
+    E_base_S->E_mem_Q_blk_S_allocated = (P)( reserved_from_end
+    ? (Pc)E_base_S - ( 2 * sizeof( struct E_mem_Q_blk_Z_free ) + 5 * sizeof( struct E_mem_Q_blk_Z_allocated ))
+    : (Pc)E_base_S + sizeof( *E_base_S ) + 2 * sizeof( struct E_mem_Q_blk_Z_free )
     );
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = 1;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = 2;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p = (P)( reserved_from_end
+    ? (Pc)E_base_S - E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
+    : (Pc)E_base_S + sizeof( *E_base_S )
+    );
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p = (P)E_base_S->E_mem_Q_blk_S_allocated;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = (Pc)E_main_Z_memory_table_end - (Pc)memory_table ? 4 : 3;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = 5;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].p = (P)E_base_S;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].u = 1;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].n = sizeof( *E_base_S );
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].p = (P)kernel_address;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].u = 1;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].n = kernel_size;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 3 ].p = E_base_S->E_mem_S_page_table;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 3 ].u = 1;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 3 ].n = page_table_size;
     struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    // Przed przetworzeniem obszarów pamięci tymczasowo przypisana wolna pamięć przyległa od dołu do tablicy obszarów pamięci.
-    free_p[0].p = (P)E_main_Z_memory_start;
-    free_p[0].l = (Pc)memory_table - (Pc)E_main_Z_memory_start;
-    if( (Pc)E_main_Z_memory_table_end - (Pc)memory_table )
-    {   E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].p = (P)memory_table;
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].u = sizeof( struct E_main_Z_memory_table_entry );
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].n = ( (Pc)E_main_Z_memory_table_end - (Pc)memory_table ) / sizeof( struct E_main_Z_memory_table_entry );
+    if( reserved_from_end )
+    {   free_p[0].p = (P)( E_memory_S_page_size + reserved_size_from_start );
+        free_p[0].l = (Pc)E_base_S->E_mem_Q_blk_S_allocated - (Pc)free_p[0].p;
+    }else
+    {   free_p[0].p = (P)( E_base_S->E_mem_Q_blk_S_allocated + E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n );
+        free_p[0].l = memory_size - (N)free_p[0].p;
     }
-}
-void
-E_mem_M_free( struct E_main_Z_memory_table_entry *memory_table
-){  struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    // Przetwarzanie obszarów pamięci z pominięciem tymczasowo przypisanej wolnej pamięci.
-    N free_i = 0;
-    for( struct E_main_Z_memory_table_entry *entry = memory_table; entry != ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end; entry++ )
-    {   if( !entry->size
-        || !( entry->extended_attributes & 1 )
-        || entry->type != E_main_Z_memory_table_Z_memory_type_S_available
-        )
-            continue;
-        free_p[ free_i ].p = entry->address;
-        free_p[ free_i ].l = entry->size;
-        free_i++;
-    }
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = free_i;
-    if( E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n == 4 )
-    {   E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].p = 0; // Usunięcie przydzielenia pamięci na nie używaną już tablicę obszarów.
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n--;
-    }
+    free_p[1].l = E_memory_S_page_size - kernel_size % E_memory_S_page_size;
+    free_p[1].p = free_p[1].l ? (Pc)kernel_address + kernel_size : 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 B
@@ -178,15 +192,6 @@ E_mem_Q_blk_I_copy_auto( P dst
         return E_mem_Q_blk_I_copy( dst, src, l );
     return E_mem_Q_blk_I_copy_rev( dst, src, l );
 }
-P
-memmove( P dst
-, P src
-, N l
-){  E_mem_Q_blk_I_copy_auto( dst, src, l );
-    return dst;
-}
-__attribute__ ((__alias__( "memmove" )))
-P memcpy( P, P, N );
 P
 E_mem_Q_blk_P_fill_c( P p
 , N l
@@ -892,18 +897,34 @@ _internal
 __attribute__ ((__malloc__))
 P
 E_mem_Q_blk_M_new_0( N *allocated_i_sorted_pos
-){  Pc p_end = (P)E_memory_S_start;
-    Pc p = (P)1;
-    N allocated_i = 0;
-    struct E_mem_Q_blk_Z_allocated allocated_p;
-    N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
-    do
-    {   if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p != p )
-            break;
-        if( ++p == p_end )
-            return 0;
-    }while( allocated_i++ != allocated_max );
-    *allocated_i_sorted_pos = allocated_i;
+){  Pc p;
+    if( E_base_S->E_mem_S_reserved_from_end )
+    {   Pc p_start = (P)( E_base_S->E_mem_S_memory_size - E_base_S->E_mem_S_reserved_size );
+        p = (P)~0;
+        struct E_mem_Q_blk_Z_allocated allocated_p;
+        N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+        N allocated_i = allocated_max;
+        do
+        {   if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p != p )
+                break;
+            if( --p == p_start )
+                return 0;
+        }while( allocated_i-- );
+        *allocated_i_sorted_pos = ~allocated_i ? allocated_i : 0;
+    }else
+    {   Pc p_end = (P)( E_memory_S_page_size + E_base_S->E_mem_S_reserved_size );
+        p = (P)1;
+        struct E_mem_Q_blk_Z_allocated allocated_p;
+        N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+        N allocated_i = 0;
+        do
+        {   if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p != p )
+                break;
+            if( ++p == p_end )
+                return 0;
+        }while( allocated_i++ != allocated_max );
+        *allocated_i_sorted_pos = allocated_i;
+    }
     return p;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -940,7 +961,6 @@ E_mem_Q_sys_table_I_reduce( void
     return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-P E_mem_Q_blk_M_align_tab( N, N, N );
 P
 E_mem_Q_blk_M( N l
 ){  return E_mem_Q_blk_M_tab( 1, l );
@@ -968,8 +988,7 @@ E_mem_Q_blk_M_align_tab(
         return 0;
     if( !E_mem_Q_blk_Q_table_M_from_free( &allocated_i, u, n, 0, 0, 0, align ))
         return 0;
-    P p_ = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
-    return p_;
+    return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
 }
 P
 E_mem_Q_blk_M_replace( P p
@@ -1214,6 +1233,7 @@ E_mem_Q_blk_I_add( P p
     }
     return (P)~0;
 }
+_internal
 P
 E_mem_Q_blk_I_prepend_append( P p
 , N n_prepend
