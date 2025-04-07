@@ -268,7 +268,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
         {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
-            {   E_main_Q_memory_map_I_set_virtual_I_entry_from_start( memory_map_
+            {   E_main_Q_memory_map_I_set_virtual_I_entry_from_end( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
                 , descriptor_l
                 , loader_start, loader_end
