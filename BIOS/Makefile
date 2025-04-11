@@ -9,7 +9,7 @@
 AS := as
 CC := clang
 LD := ld
-CFLAGS := -Os -fwrapv
+CFLAGS := -Os
 #===============================================================================
 all: build
 build: mbr vbr fileloader
@@ -33,7 +33,7 @@ vbr: vbr.S Makefile binary.ld
 	&& dd if=$@_ of=$@ skip=$$(( 0x7c00 / 512 )) \
 	&& rm $@_
 %.o: %.c fileloader.h simple.h Makefile
-	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -fno-stack-protector -c -o $@ $<
+	$(CC) $(CFLAGS) -m64 -march=x86-64 -mno-sse -ffreestanding -fno-stack-protector -fwrapv -c -o $@ $<
 fileloader: fileloader.S fileloader.o mem-blk.o vga.o font.o Makefile binary.ld
 	$(AS) -o a.out fileloader.S \
 	&& $(LD) -T binary.ld --oformat=binary -o $@_ a.out $(filter %.o,$^) \

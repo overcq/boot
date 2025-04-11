@@ -449,22 +449,19 @@ void
 main( struct E_main_Z_memory_table_entry *memory_table
 , struct E_main_Z_video *video_
 ){  E_vga_S_video = video_;
-    memory_table--;
-    *memory_table = ( struct E_main_Z_memory_table_entry )
+    *--memory_table = ( struct E_main_Z_memory_table_entry )
     { (Pc)0
     , E_main_S_top
     , E_main_Z_memory_table_Z_memory_type_S_boot_loader
     , 1
     };
-    memory_table--;
-    *memory_table = ( struct E_main_Z_memory_table_entry ) // NDFN
+    *--memory_table = ( struct E_main_Z_memory_table_entry ) // NDFN
     { (Pc)0x200000
     , 0x100000
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     , 1
     };
-    memory_table--;
-    *memory_table = ( struct E_main_Z_memory_table_entry )
+    *--memory_table = ( struct E_main_Z_memory_table_entry )
     { (Pc)(N)E_vga_S_video->framebuffer
     , E_vga_S_video->line_width * E_vga_S_video->height
     , E_main_Z_memory_table_Z_memory_type_S_reserved

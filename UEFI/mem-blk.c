@@ -1010,7 +1010,10 @@ E_mem_Q_blk_M_replace_tab( P p
                 E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
                 if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                    E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
+                }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
                 E_mem_Q_blk_Q_table_I_put_end();
             }
@@ -1809,7 +1812,10 @@ E_mem_Q_blk_I_remove( P p
                 , *( P * )p
                 , l
                 ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                    E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
+                }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
                 E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n = 0;
                 *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = p_;
@@ -1821,7 +1827,10 @@ E_mem_Q_blk_I_remove( P p
                 , *( Pc * )p + l_0 - l
                 , l
                 ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                    E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
+                }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
                 E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
             }else if( !i ) // Usuwane na początku bloku.
@@ -1832,7 +1841,10 @@ E_mem_Q_blk_I_remove( P p
                 , p_
                 , l
                 ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                    E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
+                }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
                 E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
                 *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p += l;
@@ -1848,7 +1860,10 @@ E_mem_Q_blk_I_remove( P p
                 , *( Pc * )p + l_0 - l
                 , l
                 ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                    E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
+                }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
                 E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
             }

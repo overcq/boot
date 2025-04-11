@@ -26,10 +26,11 @@
 #define E_cpu_Z_gdt_Z_type_S_ldt        ( 1ULL << ( 32 + 9 ))
 #define E_cpu_Z_gdt_Z_type_S_tss        ( 011ULL << ( 32 + 8 ))
 //==============================================================================
-N E_main_S_kernel;
-N E_main_S_loader_stack;
-struct H_uefi_Z_system_table *E_main_S_system_table;
 struct H_uefi_Z_memory_descriptor *E_main_S_memory_map;
+N E_main_S_descriptor_l, E_main_S_memory_map_n;
+N E_main_S_kernel;
+struct H_uefi_Z_system_table *E_main_S_system_table;
+N E_main_S_loader_stack;
 N64 gdt[3], ldt[2], idt[2];
 //==============================================================================
 S
@@ -62,15 +63,40 @@ H_uefi_I_print( struct H_uefi_Z_system_table *system_table
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void
+E_main_I_convert_pointer( struct H_uefi_Z_memory_descriptor *memory_map
+, N descriptor_l
+, N memory_map_n
+, P *p
+){  for_n( i, memory_map_n )
+    {   if( (N)*p >= memory_map->physical_start
+        && (N)*p < memory_map->physical_start + memory_map->pages * E_memory_S_page_size
+        )
+        {   *p = (P)(( memory_map->virtual_start + (( (N)*p & ~0xfff ) - memory_map->physical_start )) | ( (N)*p & 0xfff ));
+            break;
+        }
+        memory_map = (P)( (Pc)memory_map + descriptor_l );
+    }
+}
+void
+E_main_I_virtual_address_change_I_convert_pointer( struct H_uefi_Z_runtime_services *runtime_services
+, struct H_uefi_Z_memory_descriptor *memory_map
+, N descriptor_l
+, N memory_map_n
+, P *p
+){  S status = runtime_services->convert_pointer( 0, p );
+    if( status < 0 )
+        E_main_I_convert_pointer( E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n, p );
+}
+void
 H_uefi_Z_api
 E_main_I_virtual_address_change( P event
 , P context
 ){  struct H_uefi_Z_system_table *system_table = E_main_S_system_table;
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
-    runtime_services->convert_pointer( 0, ( P * )&E_main_S_kernel );
-    runtime_services->convert_pointer( 0, ( P * )&E_main_S_loader_stack );
-    runtime_services->convert_pointer( 0, ( P * )&E_main_S_system_table );
-    runtime_services->convert_pointer( 0, ( P * )&E_main_S_memory_map );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services, E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n, ( P * )&E_main_S_kernel );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services, E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n, ( P * )&E_main_S_system_table );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services, E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n, ( P * )&E_main_S_loader_stack );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services, E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n, ( P * )&E_main_S_memory_map );
 }
 //------------------------------------------------------------------------------
 void
@@ -753,32 +779,18 @@ H_uefi_I_main(
     status = E_main_I_allocate_page_table( memory_map, descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
         goto End;
+    E_main_S_memory_map = memory_map;
+    E_main_S_descriptor_l = descriptor_l;
+    E_main_S_memory_map_n = memory_map_n;
+    E_main_S_system_table = system_table;
+    E_main_S_memory_map = memory_map;
     __asm__ volatile (
     "\n"    "mov    %%rsp,%0"
     : "=m" ( E_main_S_loader_stack )
     );
-    E_main_S_system_table = system_table;
-    E_main_S_memory_map = memory_map;
     status = system_table->runtime_services->P_virtual_address_map( memory_map_l, descriptor_l, descriptor_version, memory_map );
     if( status < 0 )
         goto End;
-    N rsp;
-    __asm__ volatile (
-    "\n"    "mov    %%rsp,%0"
-    : "=r" (rsp)
-    );
-    if( rsp == E_main_S_loader_stack )
-        goto End;
-    struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
-    for_n( i, memory_map_n )
-    {   if( rsp >= memory_map_->physical_start
-        && rsp < memory_map_->physical_start + memory_map_->pages * E_memory_S_page_size
-        )
-        {   E_main_S_loader_stack = ( memory_map_->virtual_start + (( rsp & ~0xfff ) - memory_map_->physical_start )) | ( rsp & 0xfff );
-            break;
-        }
-        memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
-    }
     __asm__ volatile (
     "\n"    "mov    %0,%%cr3"
     "\n"    "mov    %1,%%rsp"
