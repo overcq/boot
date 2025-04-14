@@ -93,8 +93,6 @@ void E_mem_M( struct E_main_Z_memory_table_entry * );
 void E_mem_M_free( struct E_main_Z_memory_table_entry * );
 B E_mem_Q_blk_T_eq( P, P, N );
 P E_mem_Q_blk_I_copy( P, P, N );
-P E_mem_Q_blk_I_copy_rev( P, P, N );
-P E_mem_Q_blk_I_copy_auto( P, P, N );
 P E_mem_Q_blk_P_fill_c( P, N, C );
 P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );

@@ -35,6 +35,8 @@ typedef N                   *Pn;
 #define _J_ab(a,b)                          a##b
 #define J_ab(a,b)                           _J_ab(a,b)
 #define J_a_b(a,b)                          J_ab(J_ab(a,_),b)
+#define J_s0_R_l(s)                         ( sizeof(s) - 1 )
+#define J_a_R_n(a)                          ( sizeof(a) / sizeof( (a)[0] ))
 //------------------------------------------------------------------------------
 #define J_swap(type,a,b)                    { type J_autogen(c) = a; a = b; b = J_autogen(c); }
 //------------------------------------------------------------------------------
@@ -73,8 +75,6 @@ N E_text_Z_n_N_s_G( N, N, N );
 void E_mem_M( B, N, N, N, N, N, N, N );
 B E_mem_Q_blk_T_eq( P, P, N );
 P E_mem_Q_blk_I_copy( P, P, N );
-P E_mem_Q_blk_I_copy_rev( P, P, N );
-P E_mem_Q_blk_I_copy_auto( P, P, N );
 P E_mem_Q_blk_P_fill_c( P, N, C );
 P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );
@@ -372,6 +372,151 @@ struct H_uefi_Z_system_table
   struct H_uefi_Z_boot_services *boot_services;
   N configuration_table_n;
   struct H_uefi_Z_configuration_table *configuration_table;
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+struct __attribute__ ((packed)) H_acpi_Z_rsdp
+{ C signature[8];
+  C checksum;
+  C OEM_id[6];
+  C revision;
+  N32 RSDT_address;
+  N32 length;
+  N64 XSDT_address;
+  C checksum_2;
+  C reserved[3];
+};
+struct __attribute__ ((packed)) H_acpi_Z_table_header
+{ C signature[4];
+  N32 length;
+  C revision;
+  C checksum;
+  C OEM_id[6];
+  C OEM_table_id[8];
+  N32 OEM_revision;
+  N32 creator_id;
+  N32 creator_revision;
+};
+struct __attribute__ ((packed)) H_acpi_Z_xsdt
+{ struct H_acpi_Z_table_header header;
+  N64 table_address[];
+};
+enum H_acpi_Z_generic_address_Z_space
+{ H_acpi_Z_generic_address_Z_space_S_memory
+, H_acpi_Z_generic_address_Z_space_S_io
+, H_acpi_Z_generic_address_Z_space_S_pci_configuration
+, H_acpi_Z_generic_address_Z_space_S_embedded_controller
+, H_acpi_Z_generic_address_Z_space_S_smbus
+, H_acpi_Z_generic_address_Z_space_S_pci_bar_target
+, H_acpi_Z_generic_address_Z_space_S_ipmi
+, H_acpi_Z_generic_address_Z_space_S_gpio
+, H_acpi_Z_generic_address_Z_space_S_generic_serial_bus
+, H_acpi_Z_generic_address_Z_space_S_platform_com_channel
+, H_acpi_Z_generic_address_Z_space_S_platform_runtime_machanism
+, H_acpi_Z_generic_address_Z_space_S_functional_fixed_hw = 0x7f
+};
+enum H_acpi_Z_generic_address_Z_access_size
+{ H_acpi_Z_generic_address_Z_access_size_S_undefined
+, H_acpi_Z_generic_address_Z_access_size_S_1
+, H_acpi_Z_generic_address_Z_access_size_S_2
+, H_acpi_Z_generic_address_Z_access_size_S_4
+, H_acpi_Z_generic_address_Z_access_size_S_8
+};
+struct __attribute__ ((packed)) H_acpi_Z_generic_address
+{ C space;
+  C width;
+  C offset;
+  C access_size;
+  N64 address;
+};
+enum H_acpi_Z_fadt_Z_preferred_pm_profile
+{ H_acpi_Z_fadt_Z_preferred_pm_profile_S_unspecified
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_desktop
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_mobile
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_workstation
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_enterprise_server
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_soho_server
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_appliance_pc
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_performance_server
+, H_acpi_Z_fadt_Z_preferred_pm_profile_S_tablet
+};
+struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
+{ struct H_acpi_Z_table_header header;
+  N32 firmware_ctrl;
+  N32 dsdt;
+  C reserved_1;
+  C preferred_pm_profile;
+  N16 SCI_interrupt;
+  N32 SMI_command;
+  C SMI_ACPI_enable, SMI_ACPI_disable;
+  C SMI_S4BIOS_request;
+  C SMI_PSTATE_ACPI_control;
+  N32 PM1a_event_block, PM1b_event_block;
+  N32 PM1a_control_block, PM1b_control_block;
+  N32 PM2_control_block;
+  N32 PM_timer_block;
+  N32 GPE0_block, GPE1_block;
+  C PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  C GPE1_base;
+  C SMI_CST_ACPI_control;
+  N16 PM_level2_latency, PM_level3_latency;
+  N16 memory_cache_flush_size, memory_cache_flush_stride;
+  C CPU_duty_offset, CPU_duty_width;
+  C CMOS_alarm_day, CMOS_alarm_month;
+  C CMOS_century;
+  N16 IA_PC_boot_architecture_flags;
+  C reserved_2;
+  N32 flags;
+  struct H_acpi_Z_generic_address reset_register;
+  C reset_value;
+  C reserved[3];
+  N64 ex_firmware_ctrl;
+  N64 ex_dsdt;
+  struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
+  struct H_acpi_Z_generic_address ex_PM1a_control_block, ex_PM1b_control_block;
+  struct H_acpi_Z_generic_address ex_PM2_control_block;
+  struct H_acpi_Z_generic_address ex_PM_timer_block;
+  struct H_acpi_Z_generic_address ex_GPE0_block, ex_GPE1_block;
+};
+struct __attribute__ ((packed)) H_acpi_Z_fadt
+{ struct H_acpi_Z_table_header header;
+  N32 firmware_ctrl;
+  N32 dsdt;
+  C reserved_1;
+  C preferred_pm_profile;
+  N16 SCI_interrupt;
+  N32 SMI_command;
+  C SMI_ACPI_enable, SMI_ACPI_disable;
+  C SMI_S4BIOS_request;
+  C SMI_PSTATE_ACPI_control;
+  N32 PM1a_event_block, PM1b_event_block;
+  N32 PM1a_control_block, PM1b_control_block;
+  N32 PM2_control_block;
+  N32 PM_timer_block;
+  N32 GPE0_block, GPE1_block;
+  C PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  C GPE1_base;
+  C SMI_CST_ACPI_control;
+  N16 PM_level2_latency, PM_level3_latency;
+  N16 memory_cache_flush_size, memory_cache_flush_stride;
+  C CPU_duty_offset, CPU_duty_width;
+  C CMOS_alarm_day, CMOS_alarm_month;
+  C CMOS_century;
+  N16 IA_PC_boot_architecture_flags;
+  C reserved_2;
+  N32 flags;
+  struct H_acpi_Z_generic_address reset_register;
+  C reset_value;
+  N16 ARM_boot_architecture_flags;
+  C table_minor_version;
+  N64 ex_firmware_ctrl;
+  N64 ex_dsdt;
+  struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
+  struct H_acpi_Z_generic_address ex_PM1a_control_block, ex_PM1b_control_block;
+  struct H_acpi_Z_generic_address ex_PM2_control_block;
+  struct H_acpi_Z_generic_address ex_PM_timer_block;
+  struct H_acpi_Z_generic_address ex_GPE0_block, ex_GPE1_block;
+  struct H_acpi_Z_generic_address sleep_control_register, sleep_status_register;
+  N64 hypervisor_vendor_identity;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }

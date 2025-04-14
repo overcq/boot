@@ -103,13 +103,15 @@ E_mem_Q_blk_T_eq( P p_1
             return no;
     return yes;
 }
+_internal
 P
-E_mem_Q_blk_I_copy( P dst
+E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
 ){  Pn dst_n = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N) );
     Pn src_n = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof(N) );
-    if( (Pc)src + l >= (Pc)src_n
+    if( l >= sizeof(N)
+    && dst_n != src_n
     && (Pc)dst_n - (Pc)dst == (Pc)src_n - (Pc)src
     )
     {   N l_0 = (Pc)src_n - (Pc)src;
@@ -143,13 +145,15 @@ E_mem_Q_blk_I_copy( P dst
     }
     return dst_c;
 }
+_internal
 P
 E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
 ){  Pn dst_n = (P)E_simple_Z_p_I_align_down_to_v2( (Pc)dst + l, sizeof(N) );
     Pn src_n = (P)E_simple_Z_p_I_align_down_to_v2( (Pc)src + l, sizeof(N) );
-    if( (Pc)src <= (Pc)src_n
+    if( l >= sizeof(N)
+    && dst_n != src_n
     && (Pc)dst + l - (Pc)dst_n == (Pc)src + l - (Pc)src_n
     )
     {   N l_0 = (Pc)src + l - (Pc)src_n;
@@ -183,13 +187,15 @@ E_mem_Q_blk_I_copy_rev( P dst
     return dst_c;
 }
 P
-E_mem_Q_blk_I_copy_auto( P dst
+E_mem_Q_blk_I_copy( P dst
 , P src
 , N l
-){  if( (Pc)dst < (Pc)src
+){  if( !l )
+        return dst;
+    if( (Pc)dst < (Pc)src
     || (Pc)dst >= (Pc)src + l
     )
-        return E_mem_Q_blk_I_copy( dst, src, l );
+        return E_mem_Q_blk_I_copy_fwd( dst, src, l );
     return E_mem_Q_blk_I_copy_rev( dst, src, l );
 }
 P
@@ -1314,7 +1320,7 @@ E_mem_Q_blk_I_prepend_append( P p
                                     free_p[ free_i ].l -= l_1;
                                     if( !free_p[ free_i ].l )
                                         E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                                    E_mem_Q_blk_I_copy_auto( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p - ( l_1 - n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                                    E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p - ( l_1 - n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
                                     , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p
                                     , l_0
                                     );
