@@ -110,12 +110,13 @@ E_mem_Q_blk_I_copy_fwd( P dst
 , N l
 ){  Pn dst_n = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N) );
     Pn src_n = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof(N) );
+    N l_0 = (Pc)src_n - (Pc)src;
     if( l >= sizeof(N)
+    && l - l_0 >= sizeof(N)
     && dst_n != src_n
     && (Pc)dst_n - (Pc)dst == (Pc)src_n - (Pc)src
     )
-    {   N l_0 = (Pc)src_n - (Pc)src;
-        N l_1 = ( l - l_0 ) / sizeof(N);
+    {   N l_1 = ( l - l_0 ) / sizeof(N);
         N l_2 = ( l - l_0 ) % sizeof(N);
         Pc dst_c = dst, src_c = src;
         for_n( i, l_0 )
@@ -152,12 +153,13 @@ E_mem_Q_blk_I_copy_rev( P dst
 , N l
 ){  Pn dst_n = (P)E_simple_Z_p_I_align_down_to_v2( (Pc)dst + l, sizeof(N) );
     Pn src_n = (P)E_simple_Z_p_I_align_down_to_v2( (Pc)src + l, sizeof(N) );
+    N l_0 = (Pc)src + l - (Pc)src_n;
     if( l >= sizeof(N)
+    && l - l_0 >= sizeof(N)
     && dst_n != src_n
     && (Pc)dst + l - (Pc)dst_n == (Pc)src + l - (Pc)src_n
     )
-    {   N l_0 = (Pc)src + l - (Pc)src_n;
-        N l_1 = ( l - l_0 ) / sizeof(N);
+    {   N l_1 = ( l - l_0 ) / sizeof(N);
         Pc dst_c = (Pc)dst + l, src_c = (Pc)src + l;
         for_n( i, l_0 )
         {   dst_c--;
@@ -202,10 +204,66 @@ P
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
-){  Pc s = p;
+){
+        #ifdef __SSE2__
+    N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof(N128) );
+    N l_0_ = (Pc)p_x - (Pc)p;
+    if( l >= sizeof(N128)
+    && l - l_0_ >= sizeof(N128)
+    )
+    {   N l_1 = ( l - l_0_ ) / sizeof(N128);
+        N l_2 = ( l - l_0_ ) % sizeof(N128);
+        Pc p_c = p;
+        for_n( i, l_0_ )
+            *p_c++ = c;
+        N128 x = c;
+        for_n_( i, sizeof(N64) - 1 )
+            x |= (N128)c << ( i + 1 ) * 8;
+        __asm__ volatile (
+        "\n"    "movdqa     %0,%%xmm0"
+        "\n"    "punpcklbw  %%xmm0,%%xmm0"
+        "\n"    "punpckhbw  %%xmm0,%%xmm0"
+        :
+        : "m" (x)
+        : "xmm0"
+        );
+        for_n_( i, l_1 )
+            __asm__ volatile (
+            "\n"    "movdqa %%xmm0,(%0)"
+            :
+            : "r"( p_x++ )
+            : "xmm0"
+            );
+        p_c = (Pc)p_x;
+        for_n_( i, l_2 )
+            *p_c++ = c;
+        return p_c;
+    }
+        #endif
+    Pn p_n = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof(N) );
+    N l_0 = (Pc)p_n - (Pc)p;
+    if( l >= sizeof(N)
+    && l - l_0 >= sizeof(N)
+    )
+    {   N l_1 = ( l - l_0 ) / sizeof(N);
+        N l_2 = ( l - l_0 ) % sizeof(N);
+        Pc p_c = p;
+        for_n( i, l_0 )
+            *p_c++ = c;
+        N n = c;
+        for_n_( i, sizeof(N) - 1 )
+            n |= (N)c << ( i + 1 ) * 8;
+        for_n_( i, l_1 )
+            *p_n++ = n;
+        p_c = (Pc)p_n;
+        for_n_( i, l_2 )
+            *p_c++ = c;
+        return p_c;
+    }
+    Pc p_c = p;
     for_n( i, l )
-        *s++ = c;
-    return s;
+        *p_c++ = c;
+    return p_c;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal

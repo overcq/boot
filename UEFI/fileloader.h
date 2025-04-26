@@ -25,6 +25,10 @@ typedef void                *P;
 typedef C                   *Pc;
 typedef C16                 *Pc16;
 typedef N                   *Pn;
+    #ifdef __SSE__
+typedef unsigned __int128   N128;
+typedef __int128            S128;
+    #endif
 //------------------------------------------------------------------------------
 #define false                               0
 #define true                                1
@@ -441,7 +445,7 @@ enum H_acpi_Z_fadt_Z_preferred_pm_profile
 };
 struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
 { struct H_acpi_Z_table_header header;
-  N32 firmware_ctrl;
+  N32 facs;
   N32 dsdt;
   C reserved_1;
   C preferred_pm_profile;
@@ -469,7 +473,7 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
   struct H_acpi_Z_generic_address reset_register;
   C reset_value;
   C reserved[3];
-  N64 ex_firmware_ctrl;
+  N64 ex_facs;
   N64 ex_dsdt;
   struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
   struct H_acpi_Z_generic_address ex_PM1a_control_block, ex_PM1b_control_block;
@@ -479,7 +483,7 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
 };
 struct __attribute__ ((packed)) H_acpi_Z_fadt
 { struct H_acpi_Z_table_header header;
-  N32 firmware_ctrl;
+  N32 facs;
   N32 dsdt;
   C reserved_1;
   C preferred_pm_profile;
@@ -508,7 +512,7 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt
   C reset_value;
   N16 ARM_boot_architecture_flags;
   C table_minor_version;
-  N64 ex_firmware_ctrl;
+  N64 ex_facs;
   N64 ex_dsdt;
   struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
   struct H_acpi_Z_generic_address ex_PM1a_control_block, ex_PM1b_control_block;
@@ -517,6 +521,41 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt
   struct H_acpi_Z_generic_address ex_GPE0_block, ex_GPE1_block;
   struct H_acpi_Z_generic_address sleep_control_register, sleep_status_register;
   N64 hypervisor_vendor_identity;
+};
+struct __attribute__ ((packed)) H_acpi_Z_facs_v0
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  C reserved_1[8];
+  C version;
+  C reserved_2[31];
+};
+struct __attribute__ ((packed)) H_acpi_Z_facs_v1
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  N64 ex_firmware_waking_vector;
+  C version;
+  C reserved[31];
+};
+struct __attribute__ ((packed)) H_acpi_Z_facs
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  N64 ex_firmware_waking_vector;
+  C version;
+  C reserved_1[3];
+  N32 OS_flags;
+  C reserved_2[24];
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }

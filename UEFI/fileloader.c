@@ -33,8 +33,9 @@ struct E_main_Z_kernel_args
   N memory_map_n;
   P kernel;
   struct
-  { N64 dsdt;
-    
+  { P dsdt_content;
+    N dsdt_content_l;
+    P facs;
   }acpi;
 } E_main_S_kernel_args;
 struct H_uefi_Z_system_table *E_main_S_system_table;
@@ -116,14 +117,16 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 if( status < 0 )
                     return status;
                 if( E_text_Z_sl_T_eq( &header->signature[0], "FACP", sizeof( xsdt->header.signature )))
-                {   if( header->revision == 6 )
+                {   struct H_acpi_Z_facs *facs;
+                    if( header->revision == 6 )
                     {   struct H_acpi_Z_fadt *fadt = (P)header;
                         if( header->length != sizeof( *fadt )
                         || fadt->table_minor_version != 5
                         || !fadt->ex_dsdt
                         )
                             return ~0;
-                        E_main_S_kernel_args.acpi.dsdt = fadt->ex_dsdt;
+                        header = (P)fadt->ex_dsdt;
+                        facs = (P)fadt->ex_facs;
                     }else if( header->revision == 3
                     || header->revision == 4
                     )
@@ -132,15 +135,24 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         || !fadt->ex_dsdt
                         )
                             return ~0;
-                        E_main_S_kernel_args.acpi.dsdt = fadt->ex_dsdt;
+                        header = (P)fadt->ex_dsdt;
+                        facs = (P)fadt->ex_facs;
                     }else
                         return ~0;
-                    header = (P)E_main_S_kernel_args.acpi.dsdt;
                     if( header->length <= sizeof( *header )
                     || !E_main_I_acpi_I_checksum( header, header->length )
                     || !E_text_Z_sl_T_eq( &header->signature[0], "DSDT", sizeof( xsdt->header.signature ))
                     )
                         return ~0;
+                    E_main_S_kernel_args.acpi.dsdt_content = (Pc)header + sizeof( *header );
+                    E_main_S_kernel_args.acpi.dsdt_content_l = header->length - sizeof( *header );
+                    if( facs
+                    && ( facs->length != sizeof( *facs )
+                      || facs->version > 3
+                    ))
+                        return ~0;
+                    E_main_S_kernel_args.acpi.facs = facs;
+                    
                 }
             }
             break;
@@ -182,7 +194,11 @@ E_main_I_virtual_address_change( P event
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_kernel_args.memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
-    , ( P * )&E_main_S_kernel_args.acpi.dsdt
+    , &E_main_S_kernel_args.acpi.dsdt_content
+    );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_kernel_args.memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , &E_main_S_kernel_args.acpi.facs
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_kernel_args.memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
