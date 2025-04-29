@@ -1,5 +1,6 @@
 .
 Makefile
+simple.h
 fileloader.h
 fileloader.c
 *.c

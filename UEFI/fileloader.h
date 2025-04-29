@@ -68,18 +68,18 @@ typedef __int128            S128;
 //==============================================================================
 #include "simple.h"
 //==============================================================================
-#define E_memory_S_page_size                0x1000
+#define H_oux_E_mem_S_page_size             0x1000
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define H_oux_J_align_up_p(p,t)             E_simple_Z_p_I_align_up_to_v2( p, sizeof(t) )
 //==============================================================================
-#define H_oux_J_align_up_p(p,t)             (( void * )(( N64 )(p) + sizeof(t) - 1 - (( N64 )(p) + sizeof(t) - 1 ) % sizeof(t) ))
-//------------------------------------------------------------------------------
 B E_text_Z_sl_T_eq( Pc, Pc, N );
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
 //------------------------------------------------------------------------------
-void E_mem_M( B, N, N, N, N, N, N, N );
+void E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N, N, N );
 B E_mem_Q_blk_T_eq( P, P, N );
-P E_mem_Q_blk_I_copy( P, P, N );
-P E_mem_Q_blk_P_fill_c( P, N, C );
+void E_mem_Q_blk_I_copy( P, P, N );
+void E_mem_Q_blk_P_fill_c( P, N, C );
 P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );
 P E_mem_Q_blk_M_align( N, N );
@@ -133,7 +133,6 @@ P E_mem_Q_blk_I_remove( P, N, N );
 #define H_uefi_Z_error_S_ip_address_confilct H_uefi_S_error(34)
 #define H_uefi_Z_error_S_http_error         H_uefi_S_error(35)
 //------------------------------------------------------------------------------
-#define H_uefi_S_page_size 0x1000
 struct H_uefi_Z_guid
 { N32 data_1;
   N16 data_2;
@@ -584,8 +583,115 @@ struct H_uefi_Z_protocol_Z_block_io
   S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
 };
 //==============================================================================
+struct H_oux_E_mem_Z_memory_map
+{ N64 physical_start;
+  N64 virtual_start;
+  N64 pages;
+};
+struct E_mem_Q_blk_Z_free
+{ Pc p;
+  N l;
+};
+struct E_mem_Q_blk_Z_allocated
+{ Pc p;
+  N n;
+  N u;
+};
+//==============================================================================
 S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
+//==============================================================================
+struct E_base_Z
+{ struct E_mem_Q_blk_Z_allocated *E_mem_Q_blk_S_allocated;
+  N E_mem_Q_blk_S_free_id, E_mem_Q_blk_S_allocated_id;
+  N *E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[2];
+  N E_mem_Q_blk_Q_table_M_from_free_S_table_id[2];
+  N E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n;
+  N E_mem_S_memory_size;
+  N E_mem_S_reserved_size;
+  P E_mem_S_kernel;
+  P E_mem_S_page_table;
+  P E_mem_S_memory_map;
+  P E_mem_S_kernel_stack;
+  B E_mem_S_reserved_from_end;
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+struct E_base_Z_image_dos_header
+{ N16 e_magic; // Magic number
+  N16 e_cblp; // Bytes on last page of file
+  N16 e_cp; // Pages in file
+  N16 e_crlc; // Relocations
+  N16 e_cparhdr; // Size of header in paragraphs
+  N16 e_minalloc; // Minimum extra paragraphs needed
+  N16 e_maxalloc; // Maximum extra paragraphs needed
+  N16 e_ss; // Initial (relative) SS value
+  N16 e_sp; // Initial SP value
+  N16 e_csum; // Checksum
+  N16 e_ip; // Initial IP value
+  N16 e_cs; // Initial (relative) CS value
+  N16 e_lfarlc; // File address of relocation table
+  N16 e_ovno; // Overlay number
+  N16 e_res[4]; // Reserved words
+  N16 e_oemid; // OEM identifier (for e_oeminfo)
+  N16 e_oeminfo; // OEM information; e_oemid specific
+  N16 e_res2[10]; // Reserved words
+  N32 e_lfanew; // File address of new exe header
+};
+struct E_base_Z_image_file_header
+{ N16 machine;
+  N16 number_of_sections;
+  N32 time_date_stamp;
+  N32 pointer_to_symbol_table;
+  N32 number_of_symbols;
+  N16 size_of_optional_header;
+  N16 characteristics;
+};
+struct E_base_Z_image_data_directory
+{ N32 virtual_address;
+  N32 size;
+};
+struct E_base_Z_image_optional_header64
+{ N16 magic;
+  N8 major_linker_version;
+  N8 minor_linker_version;
+  N32 size_of_code;
+  N32 size_of_initialized_data;
+  N32 size_of_uninitialized_data;
+  N32 address_of_entry_point;
+  N32 base_of_code;
+  N64 image_base;
+  N32 section_alignment;
+  N32 file_alignment;
+  N16 major_operating_system_version;
+  N16 minor_operating_system_version;
+  N16 major_image_version;
+  N16 minor_image_version;
+  N16 major_subsystem_version;
+  N16 minor_subsystem_version;
+  N32 win32_version_value;
+  N32 size_of_image;
+  N32 size_of_headers;
+  N32 checksum;
+  N16 subsystem;
+  N16 dll_characteristics;
+  N64 size_of_stack_reserve;
+  N64 size_of_stack_commit;
+  N64 size_of_heap_reserve;
+  N64 size_of_heap_commit;
+  N32 loader_flags;
+  N32 number_of_rva_and_sizes;
+  struct E_base_Z_image_data_directory data_directory[16];
+};
+struct E_base_Z_image_nt_headers64
+{ N32 signature;
+  struct E_base_Z_image_file_header file_header;
+  struct E_base_Z_image_optional_header64 optional_header;
+};
+struct E_base_Z_image_relocation
+{ N32 virtual_address;
+  N32 size_of_block;
+  N16 entries[];
+};
 /******************************************************************************/

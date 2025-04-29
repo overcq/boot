@@ -90,7 +90,7 @@ E_mem_Q_blk_T_eq( P p_1
     return yes;
 }
 _internal
-P
+void
 E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
@@ -120,13 +120,9 @@ E_mem_Q_blk_I_copy_fwd( P dst
             : "r" ( dst_x++ ), "r" ( src_x++ )
             : "xmm0", "memory"
             );
-        __asm__ volatile (
-        "\n"    "rep movsb"
-        : "+D" ( dst_x ), "+S" ( src_x ), "+c" ( l_2 )
-        :
-        : "memory"
-        );
-        return dst_x;
+        dst = dst_x;
+        src = src_x;
+        l = l_2;
     }
         #endif
     __asm__ volatile (
@@ -135,10 +131,9 @@ E_mem_Q_blk_I_copy_fwd( P dst
     :
     : "memory"
     );
-    return dst;
 }
 _internal
-P
+void
 E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
@@ -161,7 +156,7 @@ E_mem_Q_blk_I_copy_rev( P dst
         "\n"    "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
         :
-        : "cc", "memory"
+        : "memory"
         );
         for_n( i, l_1 )
             __asm__ volatile (
@@ -171,20 +166,14 @@ E_mem_Q_blk_I_copy_rev( P dst
             : "r" ( --dst_x ), "r" ( --src_x )
             : "xmm0", "memory"
             );
-        dst_x = (P)( (Pc)dst_x - 1 );
-        src_x = (P)( (Pc)src_x - 1 );
-        __asm__ volatile (
-        "\n"    "rep movsb"
-        "\n"    "cld"
-        : "+D" ( dst_x ), "+S" ( src_x ), "+c" ( l_2 )
-        :
-        : "cc", "memory"
-        );
-        return (Pc)dst_x + 1;
-    }
+        dst = (P)( (Pc)dst_x - 1 );
+        src = (P)( (Pc)src_x - 1 );
+        l = l_2;
+    }else
         #endif
-    dst = (Pc)dst + l - 1;
-    src = (Pc)src + l - 1;
+    {   dst = (Pc)dst + l - 1;
+        src = (Pc)src + l - 1;
+    }
     __asm__ volatile (
     "\n"    "std"
     "\n"    "rep movsb"
@@ -193,19 +182,19 @@ E_mem_Q_blk_I_copy_rev( P dst
     :
     : "cc", "memory"
     );
-    return (Pc)dst + 1;
 }
-P
+void
 E_mem_Q_blk_I_copy( P dst
 , P src
 , N l
 ){  if( !l )
-        return dst;
+        return;
     if( (Pc)dst < (Pc)src
     || (Pc)dst >= (Pc)src + l
     )
-        return E_mem_Q_blk_I_copy_fwd( dst, src, l );
-    return E_mem_Q_blk_I_copy_rev( dst, src, l );
+        E_mem_Q_blk_I_copy_fwd( dst, src, l );
+    else
+        E_mem_Q_blk_I_copy_rev( dst, src, l );
 }
 P
 memmove( P dst
@@ -216,7 +205,7 @@ memmove( P dst
 }
 __attribute__ ((__alias__( "memmove" )))
 P memcpy( P, P, N );
-P
+void
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
@@ -252,13 +241,8 @@ E_mem_Q_blk_P_fill_c( P p
             : "r" ( p_x++ )
             : "memory"
             );
-        __asm__ volatile (
-        "\n"    "rep stosb"
-        : "+D" ( p_x ), "+c" ( l_2 )
-        : "a" (c)
-        : "memory"
-        );
-        return p_x;
+        p = p_x;
+        l = l_2;
     }
         #endif
     __asm__ volatile (
@@ -267,7 +251,6 @@ E_mem_Q_blk_P_fill_c( P p
     : "a" (c)
     : "memory"
     );
-    return p;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal

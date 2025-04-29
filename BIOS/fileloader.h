@@ -60,7 +60,7 @@ typedef N                   *Pn;
 //==============================================================================
 #include "simple.h"
 //==============================================================================
-#define E_memory_S_page_size                0x1000
+#define H_oux_E_mem_S_page_size             0x1000
 #define E_memory_S_start                    0x100000
 //==============================================================================
 #define E_main_Z_memory_start               0x10000
@@ -92,8 +92,8 @@ Pc E_text_Z_s_Z_utf8_R_u( Pc, U * );
 void E_mem_M( struct E_main_Z_memory_table_entry * );
 void E_mem_M_free( struct E_main_Z_memory_table_entry * );
 B E_mem_Q_blk_T_eq( P, P, N );
-P E_mem_Q_blk_I_copy( P, P, N );
-P E_mem_Q_blk_P_fill_c( P, N, C );
+void E_mem_Q_blk_I_copy( P, P, N );
+void E_mem_Q_blk_P_fill_c( P, N, C );
 P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );
 P E_mem_Q_blk_M_align( N, N );

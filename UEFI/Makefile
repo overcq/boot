@@ -62,7 +62,7 @@ install-usb:
 	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 run-qemu:
-	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2,threads=2 -m 128 \
+	qemu-system-x86_64 -s -S -nic none -machine q35 -cpu IvyBridge -smp 4,cores=2,threads=2 -m 128 \
 	-drive if=pflash,format=raw,readonly=on,file=RELEASEX64_OVMF_CODE.fd \
 	-drive if=pflash,format=raw,file=RELEASEX64_OVMF_VARS.fd \
 	-drive media=disk,format=raw,file=disk.img

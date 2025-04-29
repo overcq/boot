@@ -167,19 +167,19 @@ E_main_Q_memory_table_I_after_hole( struct E_main_Z_memory_table_entry *memory_t
         )
             continue;
         if( !next_address )
-        {   if( E_simple_Z_p_I_align_down_to_v2( entry->address, E_memory_S_page_size ) == (P)address )
+        {   if( E_simple_Z_p_I_align_down_to_v2( entry->address, H_oux_E_mem_S_page_size ) == (P)address )
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     next_address = entry->address + entry->size;
             }else
                 break;
         }else
-            if( E_simple_Z_p_I_align_down_to_v2( entry->address, E_memory_S_page_size ) == E_simple_Z_p_I_align_down_to_v2( next_address, E_memory_S_page_size ))
+            if( E_simple_Z_p_I_align_down_to_v2( entry->address, H_oux_E_mem_S_page_size ) == E_simple_Z_p_I_align_down_to_v2( next_address, H_oux_E_mem_S_page_size ))
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     next_address = entry->address + entry->size;
             }else
                 break;
     }
-    return next_address ? E_simple_Z_p_I_align_up_to_v2( next_address, E_memory_S_page_size ) : address;
+    return next_address ? E_simple_Z_p_I_align_up_to_v2( next_address, H_oux_E_mem_S_page_size ) : address;
 }
 _internal
 Pc
@@ -192,19 +192,19 @@ E_main_Q_memory_table_I_before_hole( struct E_main_Z_memory_table_entry *memory_
         )
             continue;
         if( !prev_address )
-        {   if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) == (Pc)address )
+        {   if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, H_oux_E_mem_S_page_size ) == (Pc)address )
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     prev_address = entry->address;
-            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) < (Pc)address )
+            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, H_oux_E_mem_S_page_size ) < (Pc)address )
                 break;
         }else
-            if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) == E_simple_Z_p_I_align_up_to_v2( prev_address, E_memory_S_page_size ))
+            if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, H_oux_E_mem_S_page_size ) == E_simple_Z_p_I_align_up_to_v2( prev_address, H_oux_E_mem_S_page_size ))
             {   if( entry->type != E_main_Z_memory_table_Z_memory_type_S_available )
                     prev_address = entry->address;
-            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, E_memory_S_page_size ) < (Pc)prev_address )
+            }else if( E_simple_Z_p_I_align_up_to_v2( entry->address + entry->size, H_oux_E_mem_S_page_size ) < (Pc)prev_address )
                 break;
     }
-    return prev_address ? E_simple_Z_p_I_align_down_to_v2( prev_address, E_memory_S_page_size ) : address;
+    return prev_address ? E_simple_Z_p_I_align_down_to_v2( prev_address, H_oux_E_mem_S_page_size ) : address;
 }
 _internal
 void
@@ -240,36 +240,36 @@ E_main_I_allocate_page_table( struct E_main_Z_memory_table_entry *memory_table
 , N max_memory
 ){  if( max_memory < 0x400000 ) // NDFN
         return 0;
-    Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, E_memory_S_page_size ) - E_memory_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
-    Pn pdpt = (Pn)( (Pc)pml4 - E_memory_S_page_size );
+    Pn pml4 = (Pn)( E_simple_Z_p_I_align_down_to_v2( memory_table, H_oux_E_mem_S_page_size ) - H_oux_E_mem_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
+    Pn pdpt = (Pn)( (Pc)pml4 - H_oux_E_mem_S_page_size );
     pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
-    Pn pd = (Pn)( (Pc)pdpt - E_memory_S_page_size );
+    Pn pd = (Pn)( (Pc)pdpt - H_oux_E_mem_S_page_size );
     pdpt[0] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
-    Pn pt = (Pn)( (Pc)pd - E_memory_S_page_size );
+    Pn pt = (Pn)( (Pc)pd - H_oux_E_mem_S_page_size );
     for_n( pd_i, 32 ) // 64 MiB pamięci. Tablice stron pamięci zajmują ok. 140 KiB.
     {   for_n( pt_i, 512 )
-        {   N address = pd_i * ( 1 << 21 ) + pt_i * E_memory_S_page_size;
+        {   N address = pd_i * ( 1 << 21 ) + pt_i * H_oux_E_mem_S_page_size;
             pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
         }
         pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-        pt = (Pn)( (Pc)pt - E_memory_S_page_size );
+        pt = (Pn)( (Pc)pt - H_oux_E_mem_S_page_size );
     }
     E_main_Q_cr3_P(pml4);
     if( max_memory <= 64 * 1024 * 1024 )
         goto End;
     pml4 = E_main_Q_memory_table_I_after_hole( memory_table, (P)E_memory_S_start ); // Start od czwartego mibibajta, rosnąco.
-    pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + E_memory_S_page_size );
+    pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + H_oux_E_mem_S_page_size );
     pml4[0] = (N)pdpt | Z_page_entry_S_p | Z_page_entry_S_rw;
-    pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + E_memory_S_page_size );
+    pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + H_oux_E_mem_S_page_size );
     for_n( pdpt_i, 16 ) // 16 GiB pamięci. Tablice stron pamięci zajmują ok. 32 MiB.
-    {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + E_memory_S_page_size );
+    {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + H_oux_E_mem_S_page_size );
         for_n( pd_i, 512 )
         {   for_n( pt_i, 512 )
-            {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
+            {   N address = ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
                 pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
             }
             pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-            pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + E_memory_S_page_size );
+            pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + H_oux_E_mem_S_page_size );
         }
         pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
         pd = pt;
@@ -278,16 +278,16 @@ E_main_I_allocate_page_table( struct E_main_Z_memory_table_entry *memory_table
     if( max_memory <= 16UL * 1024 * 1024 * 1024 )
         goto End;
     for_n( pml4_i, 8 ) // 4 TiB pamięci. Tablice stron pamięci zajmują ok. 8 GiB.
-    {   pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + E_memory_S_page_size );
+    {   pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + H_oux_E_mem_S_page_size );
         for_n( pdpt_i, 512 )
-        {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + E_memory_S_page_size );
+        {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + H_oux_E_mem_S_page_size );
             for_n( pd_i, 512 )
             {   for_n( pt_i, 512 )
-                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
                     pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
                 }
                 pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-                pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + E_memory_S_page_size );
+                pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + H_oux_E_mem_S_page_size );
             }
             pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
             pd = pt;
@@ -298,18 +298,18 @@ E_main_I_allocate_page_table( struct E_main_Z_memory_table_entry *memory_table
     E_main_Q_cr3_P(pml4);
     if( max_memory <= 4UL * 1024 * 1024 * 1024 * 1024 )
         goto End;
-    pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + E_memory_S_page_size );
+    pdpt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pml4 + H_oux_E_mem_S_page_size );
     for_n_( pml4_i, 512 ) // 256 TiB pamięci. Tablice stron pamięci zajmują ok. 513 GiB.
-    {   pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + E_memory_S_page_size );
+    {   pd = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pdpt + H_oux_E_mem_S_page_size );
         for_n( pdpt_i, 512 )
-        {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + E_memory_S_page_size );
+        {   pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pd + H_oux_E_mem_S_page_size );
             for_n( pd_i, 512 )
             {   for_n( pt_i, 512 )
-                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
+                {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
                     pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
                 }
                 pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-                pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + E_memory_S_page_size );
+                pt = E_main_Q_memory_table_I_after_hole( memory_table, (Pc)pt + H_oux_E_mem_S_page_size );
             }
             pdpt[ pdpt_i ] = (N)pd | Z_page_entry_S_p | Z_page_entry_S_rw;
             pd = pt;
@@ -318,28 +318,28 @@ E_main_I_allocate_page_table( struct E_main_Z_memory_table_entry *memory_table
         pdpt = pt;
     }
     E_main_Q_cr3_P(pml4);
-End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory ) - E_memory_S_page_size ); // Start od końca pamięci rzeczywistej, malejąco.
-    pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
+End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory ) - H_oux_E_mem_S_page_size ); // Start od końca pamięci rzeczywistej, malejąco.
+    pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - H_oux_E_mem_S_page_size );
     B end = no;
     for_n_( pml4_i, 512 )
     {   if( !end )
-        {   pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - E_memory_S_page_size );
+        {   pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - H_oux_E_mem_S_page_size );
             for_n( pdpt_i, 512 )
             {   if( !end )
-                {   pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - E_memory_S_page_size );
+                {   pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - H_oux_E_mem_S_page_size );
                     for_n( pd_i, 512 )
                     {   if( !end )
                         {   for_n( pt_i, 512 )
-                            {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
+                            {   N address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
                                 if( !end )
-                                {   if( address == max_memory - E_memory_S_page_size )
+                                {   if( address == max_memory - H_oux_E_mem_S_page_size )
                                         end = yes;
                                     pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
                                 }else
                                     pt[ pt_i ] = 0;
                             }
                             pd[ pd_i ] = (N)pt | Z_page_entry_S_p | Z_page_entry_S_rw;
-                            pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pt ) - E_memory_S_page_size );
+                            pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pt ) - H_oux_E_mem_S_page_size );
                         }else
                             pd[ pd_i ] = 0;
                     }
@@ -353,10 +353,10 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
         }else
             pml4[ pml4_i ] = 0;
     }
-    N video_end = E_simple_Z_n_I_align_up_to_v2( (N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * E_vga_S_video->height, E_memory_S_page_size );
+    N video_end = E_simple_Z_n_I_align_up_to_v2( (N)E_vga_S_video->framebuffer + E_vga_S_video->line_width * E_vga_S_video->height, H_oux_E_mem_S_page_size );
     if( max_memory < video_end )
-    {   N video_start = E_simple_Z_n_I_align_down_to_v2( E_vga_S_video->framebuffer, E_memory_S_page_size );
-        pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - E_memory_S_page_size );
+    {   N video_start = E_simple_Z_n_I_align_down_to_v2( E_vga_S_video->framebuffer, H_oux_E_mem_S_page_size );
+        pdpt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pml4 ) - H_oux_E_mem_S_page_size );
         end = no;
         B started = no;
         B ending_max_memory = no;
@@ -371,7 +371,7 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
                 if( address < max_memory
                 || started
                 )
-                    pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - E_memory_S_page_size );
+                    pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - H_oux_E_mem_S_page_size );
                 for_n( pdpt_i, 512 )
                 {   if( !end )
                     {   if( address < max_memory )
@@ -381,11 +381,11 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
                         if( address < max_memory
                         || started
                         )
-                            pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - E_memory_S_page_size );
+                            pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - H_oux_E_mem_S_page_size );
                         for_n( pd_i, 512 )
                         {   if( !end )
                             {   for_n( pt_i, 512 )
-                                {   address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * E_memory_S_page_size );
+                                {   address = ( pml4_i * ( 1L << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
                                     if( !end )
                                     {   if( address == max_memory )
                                             ending_max_memory = yes;
@@ -399,17 +399,17 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
                                                 if( !pd_inited )
                                                 {   for_n( i, pdpt_i )
                                                         pdpt[i] = 0;
-                                                    pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - E_memory_S_page_size );
+                                                    pd = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pdpt ) - H_oux_E_mem_S_page_size );
                                                     for_n_( i, pd_i )
                                                         pd[i] = 0;
                                                 }
                                                 if( !pt_inited )
-                                                {   pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - E_memory_S_page_size );
+                                                {   pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pd ) - H_oux_E_mem_S_page_size );
                                                     for_n( i, pt_i )
                                                         pt[i] = 0;
                                                 }
                                             }
-                                            if( address == video_end - E_memory_S_page_size )
+                                            if( address == video_end - H_oux_E_mem_S_page_size )
                                                 end = yes;
                                             pt[ pt_i ] = address | Z_page_entry_S_p | Z_page_entry_S_rw;
                                         }
@@ -423,7 +423,7 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
                                 || started
                                 )
                                 {   ending_max_memory = no;
-                                    pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pt ) - E_memory_S_page_size );
+                                    pt = (P)( E_main_Q_memory_table_I_before_hole( memory_table, pt ) - H_oux_E_mem_S_page_size );
                                 }
                             }else
                                 pd[ pd_i ] = 0;
@@ -442,7 +442,7 @@ End:pml4 = (P)( E_main_Q_memory_table_I_before_hole( memory_table, (P)max_memory
         }
     }
     E_main_Q_cr3_P(pml4);
-    return (Pc)pt + E_memory_S_page_size;
+    return (Pc)pt + H_oux_E_mem_S_page_size;
 }
 __attribute__ ((__noreturn__))
 void

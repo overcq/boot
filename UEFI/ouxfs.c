@@ -72,7 +72,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
     S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_loader_data, 1, ( N64 * )&sector );
     if( status < 0 )
         return status;
-    status = disk_io->read( disk_io, media_id, 0, E_memory_S_page_size, sector );
+    status = disk_io->read( disk_io, media_id, 0, H_oux_E_mem_S_page_size, sector );
     if( status < 0 )
         return status;
     if( !E_text_Z_sl_T_eq( sector, H_oux_E_fs_Q_device_S_ident, sizeof( H_oux_E_fs_Q_device_S_ident )))
@@ -83,7 +83,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
     )
         goto Error_0;
     H_oux_E_fs_S_sector_size = 1 << sector_size_bit;
-    N64 *block_table_n_ = H_oux_J_align_up_p( sector + sizeof( H_oux_E_fs_Q_device_S_ident ) + 1, N64 );
+    N64 *block_table_n_ = (P)H_oux_J_align_up_p( sector + sizeof( H_oux_E_fs_Q_device_S_ident ) + 1, sizeof(N64) );
     N64 block_table_n = block_table_n_[0];
     N64 block_table_block_table_n = block_table_n_[1];
     N64 block_table_directory_table_start = block_table_n_[2];
