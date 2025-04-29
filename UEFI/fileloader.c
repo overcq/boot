@@ -705,7 +705,7 @@ E_main_I_relocate( N loader_start
 ){  struct E_base_Z_image_dos_header *image_dos_header = (P)loader_start;
     if( image_dos_header->e_magic != 0x5a4d )
         return ~0;
-    struct E_base_Z_image_nt_headers64 *image_nt_headers64 = (P)(N)image_dos_header->e_lfanew;
+    struct E_base_Z_image_nt_headers64 *image_nt_headers64 = (P)( (Pc)loader_start + image_dos_header->e_lfanew );
     if( image_nt_headers64->signature != 0x4550 )
         return ~0;
     struct E_base_Z_image_data_directory *reloc = &image_nt_headers64->optional_header.data_directory[5];
@@ -1103,27 +1103,33 @@ H_uefi_I_main(
     }
     if( loader_start_new )
     {   E_mem_Q_blk_I_copy( (P)loader_start_new, (P)loader_start, loader_end - loader_start );
-        //status = E_main_I_relocate( loader_start_new, loader_start_new - loader_start );
+        status = E_main_I_relocate( loader_start_new, loader_start_new - loader_start );
         if( status < 0 )
             goto End;
         loader_end = loader_start_new + ( loader_end - loader_start );
         loader_start = loader_start_new;
-        E_mem_Q_blk_I_copy( (P)stack_address, (P)E_simple_Z_n_I_align_down_to_v2( E_main_S_loader_stack, H_oux_E_mem_S_page_size ), H_oux_E_mem_S_page_size );
         __asm__ volatile (
-        "\n"    "mov    %%rsp,%%rax"
-        "\n"    "and    $0xfff,%%rax"
-        "\n"    "or     %2,%%rax"
-        "\n"    "mov    %%rax,%%rsp"
         "\n"    "lea    0f,%%rax"
         "\n"    "sub    %0,%%rax"
         "\n"    "add    %1,%%rax"
         "\n"    "jmp    *%%rax"
         "\n0:"
         :
-        : "g" ( loader_start ), "g" ( loader_start_new ), "g" ( stack_address + stack_size - H_oux_E_mem_S_page_size )
-        : "rax", "memory"
+        : "g" ( loader_start ), "g" ( loader_start_new )
+        : "rax"
         );
     }
+    // Przeniesienie stosu.
+    E_mem_Q_blk_I_copy( (P)stack_address, (P)E_simple_Z_n_I_align_down_to_v2( E_main_S_loader_stack, H_oux_E_mem_S_page_size ), H_oux_E_mem_S_page_size );
+    __asm__ volatile (
+    "\n"    "mov    %%rsp,%%rax"
+    "\n"    "and    $0xfff,%%rax"
+    "\n"    "or     %0,%%rax"
+    "\n"    "mov    %%rax,%%rsp"
+    :
+    : "g" ( stack_address + stack_size - H_oux_E_mem_S_page_size )
+    : "rax"
+    );
     struct H_oux_E_mem_Z_memory_map *my_memory_map = (P)memory_map_address;
     memory_map_ = memory_map;
     for_n( i, memory_map_n )
