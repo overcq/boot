@@ -718,11 +718,40 @@ E_main_I_relocate( N loader_start
     && image_relocation->size_of_block
     )
     {   for_n( i, ( image_relocation->size_of_block - sizeof( *image_relocation )) / sizeof( image_relocation->entries[0] ))
-            if( image_relocation->entries[i] >> 12 == 10 )
-            {   N offset = image_relocation->entries[i] & 0xfff;
-                N *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
-                *fixup += delta;
+        {   N offset = image_relocation->entries[i] & 0xfff;
+            switch( image_relocation->entries[i] >> 12 )
+            { case 0:
+                    break;
+              case 1:
+                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
+                    *fixup += ( delta & 0xffff0000 ) >> 16;
+                    break;
+                }
+              case 2:
+                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
+                    *fixup += delta & 0xffff;
+                    break;
+                }
+              case 3:
+                {   N32 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
+                    *fixup += delta & 0xffffffff;
+                    break;
+                }
+              case 4:
+                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
+                    fixup[0] += ( delta & 0xffff0000 ) >> 16;
+                    fixup[1] = delta & 0xffff;
+                    break;
+                }
+              case 10:
+                {   N64 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
+                    *fixup += delta;
+                    break;
+                }
+              default:
+                return ~0;
             }
+        }
         image_relocation = (P)( (Pc)image_relocation + image_relocation->size_of_block );
     }
     return 0;
