@@ -1053,7 +1053,7 @@ H_uefi_I_main(
     N memory_map_address = reserved_from_end ? page_table_address - memory_map_size : page_table_address + page_table_size;
     N stack_size = H_oux_E_mem_S_page_size;
     N stack_address = reserved_from_end
-    ? E_simple_Z_n_I_align_down_to_v2( memory_map_address - ( sizeof( *E_base_S ) + 2 * sizeof( struct E_mem_Q_blk_Z_free ) + 7 * sizeof( struct E_mem_Q_blk_Z_allocated )), H_oux_E_mem_S_page_size ) - stack_size
+    ? E_simple_Z_n_I_align_down_to_v2( memory_map_address - ( sizeof( *E_base_S ) + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated )), H_oux_E_mem_S_page_size ) - stack_size
     : memory_size - stack_size;
     // Ewentualne przeniesienie programu ‘bootloadera’.
     N loader_start_new = 0;
@@ -1107,7 +1107,7 @@ H_uefi_I_main(
             if( loader_inside_free_start )
                 break;
         }
-        N loader_start_min = E_simple_Z_n_I_align_up_to_v2( memory_map_address + memory_map_size + 2 * sizeof( struct E_mem_Q_blk_Z_free ) + 7 * sizeof( struct E_mem_Q_blk_Z_allocated ), H_oux_E_mem_S_page_size );
+        N loader_start_min = E_simple_Z_n_I_align_up_to_v2( memory_map_address + memory_map_size + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ), H_oux_E_mem_S_page_size );
         if(( loader_inside_free_start
           && loader_start < loader_start_min
           )

@@ -10,6 +10,7 @@
 //==============================================================================
 extern struct E_base_Z *E_base_S;
 //==============================================================================
+_internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
 _internal N E_mem_Q_blk_Q_sys_table_R_last( N, N );
 _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
@@ -17,31 +18,31 @@ _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożne następująco od największego adresu wirtualnego:
  * • przestrzeń ‘niezmapowana’
- * • pamięć zarezerwowana
+ * • pamięć zarezerwowana (wewnątrz program ‘bootloadera”)
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’
- * • tablica stron pamięci wirtualnej
+ * • tablica stron pamięci wirtualnej (wewnątrz program ‘bootloadera”)
  * • tablica “memory_map”
  * • struktura “E_base_S”
  * • początkowe dane “mem-blk”: “allocated”, “free”
  * • stos
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • program ‘bootloadera”
+ * • (program ‘bootloadera”)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • nieprzenaszalna pamięć zarezerwowana
+ * • nieprzenaszalna pamięć zarezerwowana (wewnątrz program ‘bootloadera”)
  * W przeciwnym przypadku (“!reserved_from_end”):
  * • przestrzeń ‘niezmapowana’
  * • stos
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • program ‘bootloadera”
+ * • (program ‘bootloadera”)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • początkowe dane “mem-blk”
  * • struktura “E_base_S”
  * • tablica “memory_map”
- * • tablica stron pamięci wirtualnej
+ * • tablica stron pamięci wirtualnej (wewnątrz program ‘bootloadera”)
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’
- * • pamięć zarezerwowana
+ * • pamięć zarezerwowana (wewnątrz program ‘bootloadera”)
  */
 void
 E_mem_M(
@@ -74,18 +75,18 @@ E_mem_M(
     E_base_S->E_mem_Q_blk_S_allocated_id = 1;
     E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n = 0;
     E_base_S->E_mem_Q_blk_S_allocated = (P)( reserved_from_end
-    ? (Pc)E_base_S - ( 2 * sizeof( struct E_mem_Q_blk_Z_free ) + 7 * sizeof( struct E_mem_Q_blk_Z_allocated ))
-    : (Pc)E_base_S + sizeof( *E_base_S ) + 2 * sizeof( struct E_mem_Q_blk_Z_free )
+    ? (Pc)E_base_S - ( E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ))
+    : (Pc)E_base_S + sizeof( *E_base_S ) + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free )
     );
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = 2;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = E_mem_Q_blk_S_free_n_init;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p = (P)( reserved_from_end
     ? (Pc)E_base_S - E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
     : (Pc)E_base_S + sizeof( *E_base_S )
     );
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p = (P)E_base_S->E_mem_Q_blk_S_allocated;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = 7;
+    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = E_mem_Q_blk_S_allocated_n_init;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].p = (P)E_base_S;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].u = 1;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].n = sizeof( *E_base_S );
@@ -102,14 +103,31 @@ E_mem_M(
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 5 ].u = H_oux_E_mem_S_page_size;
     E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 5 ].n = stack_size / H_oux_E_mem_S_page_size;
     struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    free_p[0].p = reserved_from_end
-    ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start )
-    : (P)( E_base_S->E_mem_Q_blk_S_allocated + E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n )
-    ;
-    free_p[0].l = stack_address - (N)free_p[0].p;
-    free_p[1].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
-    free_p[1].p = free_p[1].l ? (Pc)kernel_address + kernel_size : 0;
-    
+    _0( free_p, E_mem_Q_blk_S_free_n_init * sizeof( *free_p ));
+    if( reserved_from_end )
+    {   if( loader_start >= H_oux_E_mem_S_page_size + reserved_size_from_start
+        && loader_start + loader_size <= stack_address
+        )
+        {   if( free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start ))
+                free_p[0].p = (P)( H_oux_E_mem_S_page_size + reserved_size_from_start );
+            if( free_p[1].l = stack_address - ( loader_start + loader_size ))
+                free_p[1].p = (P)( loader_start + loader_size );
+        }
+    }else
+        if( loader_start >= (N)( E_base_S->E_mem_Q_blk_S_allocated + E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n )
+        && loader_start + loader_size <= stack_address
+        )
+        {   if( free_p[0].l = loader_start - (N)( E_base_S->E_mem_Q_blk_S_allocated + E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n ))
+                free_p[0].p = (P)( E_base_S->E_mem_Q_blk_S_allocated + E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n );
+            if( free_p[1].l = stack_address - ( loader_start + loader_size ))
+                free_p[1].p = (P)( loader_start + loader_size );
+        }
+    free_p[2].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+    free_p[2].p = free_p[1].l ? (Pc)kernel_address + kernel_size : 0;
+    if( !free_p[0].p )
+        E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
+    if( !free_p[1].p )
+        E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(1);
     struct E_mem_Q_blk_Z_allocated allocated_p;
     N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p, (Pc)&allocated_p.n - (Pc)&allocated_p, 0, 0 );
     E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = (P)loader_start;

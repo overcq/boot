@@ -583,6 +583,8 @@ struct H_uefi_Z_protocol_Z_block_io
   S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
 };
 //==============================================================================
+#define E_mem_Q_blk_S_free_n_init       3
+#define E_mem_Q_blk_S_allocated_n_init  7
 struct H_oux_E_mem_Z_memory_map
 { N64 physical_start;
   N64 virtual_start;
