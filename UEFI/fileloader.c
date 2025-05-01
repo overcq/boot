@@ -42,7 +42,7 @@ struct E_main_Z_kernel_args
 } E_main_S_kernel_args;
 struct H_uefi_Z_system_table *E_main_S_system_table;
 N E_main_S_loader_stack;
-N64 gdt[3], ldt[2], idt[2];
+N64 gdt[5], ldt[2], idt[2];
 //==============================================================================
 S
 H_uefi_I_print( struct H_uefi_Z_system_table *system_table
@@ -1012,13 +1012,15 @@ H_uefi_I_main(
     N page_table_address = reserved_from_end ? start_end_address : start_end_address - page_table_size;
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_data_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_data_S_write | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
-//#define E_main_J_local_descriptor_1( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
+#define E_main_J_local_descriptor_1( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
     gdt[1] = E_main_J_code_descriptor( 0, ~0ULL );
     gdt[2] = E_main_J_data_descriptor( 0, ~0ULL );
-    //gdt[3] = E_main_J_local_descriptor_1( (N)&ldt[0], sizeof(ldt) - 1 );
-    //gdt[4] = (N)&ldt[0] >> 32;
-    //ldt[0] = 0;
+    gdt[3] = E_main_J_local_descriptor_1( (N)&ldt[0], sizeof(ldt) - 1 );
+    gdt[4] = (N)&ldt[0] >> 32;
+    ldt[0] = 0;
+    ldt[1] = 0;
     idt[0] = 0;
+    idt[1] = 0;
     struct __attribute__ ((packed))
     { N32 pad_1;
       N16 pad_2;
@@ -1031,8 +1033,8 @@ H_uefi_I_main(
     id.limit = sizeof(idt) - 1;
     __asm__ volatile (
     "\n"    "lgdt   %0"
-    //"\n"    "mov    $3 << 3,%%ax"
-    //"\n"    "lldt   %%ax"
+    "\n"    "mov    $3 << 3,%%ax"
+    "\n"    "lldt   %%ax"
     "\n"    "lidt   %1"
     "\n"    "mov    $2 << 3,%%ax"
     "\n"    "mov    %%ax,%%ds"
@@ -1179,6 +1181,7 @@ H_uefi_I_main(
         my_memory_map++;
     }
     E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, stack_address, stack_size, memory_map_address, memory_map_size, page_table_address, page_table_size, (N64)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
+    // ‘Kernel’ potrzebuje przenieść GDT oraz ustawić LDT i IDT przed wyrzuceniem obszaru programu ‘bootloadera’.
     system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
 End:__asm__ volatile (
     "\n0:"  "hlt"

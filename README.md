@@ -36,6 +36,7 @@ Liczba sektorów w MBR lub VBR równa 0 oznacza, że FBL nie ma być uruchamiany
 
 * *mbr.S* nie zawiera skopiowanej z *vbr.S* obsługi większego pliku FBL.
 * *vbr.S* nie zawiera obsługi dwubajtowej liczby sektorów, a w specyfikacji znajduje się 1 bajt liczby sektorów rozmiaru FBL.
+
 ‘Bootloader’ BIOS nie jest obecnie rozwijany ze względu na niemożliwość ‘zamontowania’ dawnego, testowego systemu plików. Ale w przyszłości system plików zostanie zmieniony na OUXFS (używany w ‘bootloaderze’ UEFI), którego obsługa jest wbudowana w zmodyfikowany przeze mnie ‘kernel’ Linuksa.
 
 ## UEFI
