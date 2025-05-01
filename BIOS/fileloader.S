@@ -1,5 +1,5 @@
 #*******************************************************************************
-#   ___   publicplace
+#   ___   public
 #  ¦OUX¦  assembly
 #  ¦/C+¦  OUX/C+ OS
 #   ---   BIOS file boot loader

@@ -1,5 +1,5 @@
 /*******************************************************************************
-*   ___   publicplace
+*   ___   public
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
 *   ---   UEFI boot loader
@@ -599,25 +599,35 @@ struct E_mem_Q_blk_Z_allocated
   N n;
   N u;
 };
+struct E_mem_blk_Z
+{ struct E_mem_Q_blk_Z_allocated *allocated;
+  N free_id, allocated_id;
+  N *M_from_free_S_allocated_id[2];
+  N M_from_free_S_table_id[2];
+  N M_from_free_S_allocated_id_n;
+  N memory_size;
+  N reserved_size;
+  B reserved_from_end;
+};
 //==============================================================================
 S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 //==============================================================================
-struct E_base_Z
-{ struct E_mem_Q_blk_Z_allocated *E_mem_Q_blk_S_allocated;
-  N E_mem_Q_blk_S_free_id, E_mem_Q_blk_S_allocated_id;
-  N *E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[2];
-  N E_mem_Q_blk_Q_table_M_from_free_S_table_id[2];
-  N E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n;
-  N E_mem_S_memory_size;
-  N E_mem_S_reserved_size;
-  P E_mem_S_kernel;
-  P E_mem_S_page_table;
-  P E_mem_S_memory_map;
-  P E_mem_S_kernel_stack;
-  B E_mem_S_reserved_from_end;
+struct E_main_Z_kernel_args
+{ struct E_mem_blk_Z mem_blk;
+  struct H_oux_E_mem_Z_memory_map *memory_map;
+  N descriptor_l;
+  N memory_map_n;
+  P kernel;
+  P page_table;
+  P kernel_stack;
+  struct
+  { P dsdt_content;
+    N dsdt_content_l;
+    P facs;
+  }acpi;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header

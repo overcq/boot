@@ -1,5 +1,5 @@
 #*******************************************************************************
-#   ___   publicplace
+#   ___   public
 #  ¦OUX¦  16-bit assembly
 #  ¦/C+¦  OUX/C+ OS
 #   ---   BIOS VBR boot loader
