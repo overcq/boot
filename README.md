@@ -1,8 +1,10 @@
 # OUX/C+ OS boot loader
 
-![OUX/C+ OS boot loader in bochs emulator](OUX_C+-OS-boot-loader-bochs.png)
+## BIOS
 
-## Specyfikacja
+![OUX/C+ OS boot loader in bochs emulator](BIOS/OUX_C+-OS-boot-loader-bochs.png)
+
+### Specyfikacja
 
 Dostępne są następujace moduły:
 1. program Master Boot Record (MBR)
@@ -30,7 +32,12 @@ W VBR lub MBR od bajtu nr 224 znajduje się 5 B informacji, gdzie położony j
 
 Liczba sektorów w MBR lub VBR równa 0 oznacza, że FBL nie ma być uruchamiany z tego modułu. Jeżeli liczba sektorów jest równa 0 w VBR, to proces uruchamiania zostanie zatrzymany.
 
-## Uwagi
+### Uwagi
 
 * *mbr.S* nie zawiera skopiowanej z *vbr.S* obsługi większego pliku FBL.
 * *vbr.S* nie zawiera obsługi dwubajtowej liczby sektorów, a w specyfikacji znajduje się 1 bajt liczby sektorów rozmiaru FBL.
+‘Bootloader’ BIOS nie jest obecnie rozwijany ze względu na niemożliwość ‘zamontowania’ dawnego, testowego systemu plików. Ale w przyszłości system plików zostanie zmieniony na OUXFS (używany w ‘bootloaderze’ UEFI), którego obsługa jest wbudowana w zmodyfikowany przeze mnie ‘kernel’ Linuksa.
+
+## UEFI
+
+Po uruchomieniu przez UEFI ‘bootloader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”; obecnie tymczasowo, dopóki nie istnieje ‘kernel’, jest przydzielana pusta pamięć. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i w przyszłości przekaże sterowanie do ‘kernela’ z danymi.
