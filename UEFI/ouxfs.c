@@ -1080,9 +1080,9 @@ End_loop_2:
     status = system_table->boot_services->W_pages(( N64 )sector, 1 );;
     return status;
 Error_1:
-    system_table->boot_services->W_pool( H_oux_E_fs_S_block_table );
+    S status_1 = system_table->boot_services->W_pool( H_oux_E_fs_S_block_table );
 Error_0:
-    system_table->boot_services->W_pages(( N64 )sector, 1 );
+    S status_0 = system_table->boot_services->W_pages(( N64 )sector, 1 );
     if( !( status < 0 ))
         status = ~0;
     return status;

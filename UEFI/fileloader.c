@@ -44,6 +44,7 @@ struct H_uefi_Z_system_table *E_main_S_system_table;
 N E_main_S_loader_stack;
 N64 gdt[5], ldt[2], idt[2];
 //==============================================================================
+__attribute__ (( __warn_unused_result__ ))
 S
 H_uefi_I_print( struct H_uefi_Z_system_table *system_table
 , N v
@@ -82,6 +83,7 @@ E_main_I_acpi_I_checksum( P table
         checksum += table_[i];
     return !checksum;
 }
+__attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_acpi( struct H_uefi_Z_system_table *system_table
 ){  struct H_uefi_Z_guid guid_;
@@ -562,6 +564,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
     }
 }
 //------------------------------------------------------------------------------
+__attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **entry
 , N descriptor_l
@@ -602,6 +605,7 @@ E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_descriptor **en
         }
     return 0;
 }
+__attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_allocate_page_table_I_next_physical_address( struct H_uefi_Z_memory_descriptor **entry
 , N descriptor_l
@@ -615,6 +619,7 @@ E_main_I_allocate_page_table_I_next_physical_address( struct H_uefi_Z_memory_des
     }
     return 0;
 }
+__attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
 , N descriptor_l
@@ -699,6 +704,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
     return 0;
 }
 //------------------------------------------------------------------------------
+__attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_relocate( N loader_start
 , N delta
@@ -858,7 +864,9 @@ H_uefi_I_main(
             continue;
         status = H_oux_E_fs_Q_disk_M( system_table, disk_io, media_id );
         if( status < 0 )
-        {   system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+        {   S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            if( status_ < 0 )
+                break;
             if( !~status // Brak lub błąd systemu plików.
             || status == H_uefi_Z_error_S_no_media
             || status == H_uefi_Z_error_S_media_changed
@@ -870,30 +878,30 @@ H_uefi_I_main(
         status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel_args.kernel );
         if( status < 0 )
         {   H_oux_E_fs_Q_disk_W( system_table );
-            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             break;
         }
         status = H_oux_E_fs_Q_kernel_I_read( system_table, disk_io, media_id, (P)E_main_S_kernel_args.kernel );
         if( status < 0 )
-        {   system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
+        {   S status_ = system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
             H_oux_E_fs_Q_disk_W( system_table );
-            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             break;
         }
         status = H_oux_E_fs_Q_disk_W( system_table );
         if( status < 0 )
-        {   system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
-            system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+        {   S status_ = system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
+            status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             break;
         }
         status = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
         if( status < 0 )
-            system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
+            S status_ = system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ));
         break;
     }
-    system_table->boot_services->W_pool( disk_io_handles );
+    status = system_table->boot_services->W_pool( disk_io_handles );
     {   kernel_size = H_oux_E_mem_S_page_size;
-        system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel_args.kernel );
+        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel_args.kernel );
     }
     //if( status < 0 )
         //return status;
@@ -918,7 +926,7 @@ H_uefi_I_main(
         return status;
     status = system_table->boot_services->R_memory_map( &memory_map_l, memory_map, &map_key, &descriptor_l, &descriptor_version );
     if( status < 0 )
-    {   system_table->boot_services->W_pool( memory_map );
+    {   S status_ = system_table->boot_services->W_pool( memory_map );
         return status;
     }
     N memory_map_n = memory_map_l / descriptor_l;
@@ -979,7 +987,7 @@ H_uefi_I_main(
     }*/
     status = system_table->boot_services->exit_boot_services( image_handle, map_key );
     if( status < 0 )
-    {   system_table->boot_services->W_pool( memory_map );
+    {   S status_ = system_table->boot_services->W_pool( memory_map );
         return status;
     }
     N pml4, start_end_address;
@@ -1182,7 +1190,7 @@ H_uefi_I_main(
     }
     E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, stack_address, stack_size, memory_map_address, memory_map_size, page_table_address, page_table_size, (N64)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
     // ‘Kernel’ potrzebuje przenieść GDT oraz ustawić LDT i IDT przed wyrzuceniem obszaru programu ‘bootloadera’.
-    system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
+    status = system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
 End:__asm__ volatile (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"

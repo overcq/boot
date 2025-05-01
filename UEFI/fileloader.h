@@ -95,7 +95,7 @@ P E_mem_Q_blk_I_prepend( P, N );
 P E_mem_Q_blk_I_insert( P, N, N );
 P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
-#define H_uefi_Z_api __attribute__(( ms_abi ))
+#define H_uefi_Z_api __attribute__(( __ms_abi__ ))
 #define H_uefi_S_error(e) ( (S)( 1LL << 63 ) | e )
 //------------------------------------------------------------------------------
 #define H_uefi_Z_error_S_success            0
@@ -178,8 +178,8 @@ struct H_uefi_Z_input_key
   C16 unicode_char;
 };
 struct H_uefi_Z_simple_input_interface
-{ S ( H_uefi_Z_api *reset )( struct H_uefi_Z_simple_input_interface *this, B extended_verification );
-  S ( H_uefi_Z_api *read_key_stroke )( struct H_uefi_Z_simple_input_interface *this, struct H_uefi_Z_input_key *key );
+{ S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset )( struct H_uefi_Z_simple_input_interface *this, B extended_verification );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read_key_stroke )( struct H_uefi_Z_simple_input_interface *this, struct H_uefi_Z_input_key *key );
   P *wait_for_key;
 };
 struct H_uefi_Z_simple_text_output_mode
@@ -190,15 +190,15 @@ struct H_uefi_Z_simple_text_output_mode
   B cursor_visible;
 };
 struct H_uefi_Z_simple_text_output_interface
-{ S ( H_uefi_Z_api *reset )( struct H_uefi_Z_simple_text_output_interface *this, B extended_verification );
-  S ( H_uefi_Z_api *output )( struct H_uefi_Z_simple_text_output_interface *this, Pc16 s );
-  S ( H_uefi_Z_api *test )( struct H_uefi_Z_simple_text_output_interface *this, Pc16 s );
-  S ( H_uefi_Z_api *R_mode )( struct H_uefi_Z_simple_text_output_interface *this, N mode, N *columns, N *rows );
-  S ( H_uefi_Z_api *P_mode )( struct H_uefi_Z_simple_text_output_interface *this, N mode );
-  S ( H_uefi_Z_api *P_attribute )( struct H_uefi_Z_simple_text_output_interface *this, N attribute );
-  S ( H_uefi_Z_api *clear_screen )( struct H_uefi_Z_simple_text_output_interface *this );
-  S ( H_uefi_Z_api *P_cursor_position )( struct H_uefi_Z_simple_text_output_interface *this, N column, N row );
-  S ( H_uefi_Z_api *P_cursor )( struct H_uefi_Z_simple_text_output_interface *this, B enable );
+{ S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset )( struct H_uefi_Z_simple_text_output_interface *this, B extended_verification );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *output )( struct H_uefi_Z_simple_text_output_interface *this, Pc16 s );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *test )( struct H_uefi_Z_simple_text_output_interface *this, Pc16 s );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_mode )( struct H_uefi_Z_simple_text_output_interface *this, N mode, N *columns, N *rows );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_mode )( struct H_uefi_Z_simple_text_output_interface *this, N mode );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_attribute )( struct H_uefi_Z_simple_text_output_interface *this, N attribute );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *clear_screen )( struct H_uefi_Z_simple_text_output_interface *this );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_cursor_position )( struct H_uefi_Z_simple_text_output_interface *this, N column, N row );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_cursor )( struct H_uefi_Z_simple_text_output_interface *this, B enable );
   struct H_uefi_Z_simple_text_output_mode *mode;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -279,68 +279,68 @@ enum H_uefi_Z_locate_search
 //------------------------------------------------------------------------------
 struct H_uefi_Z_runtime_services
 { struct H_uefi_Z_table_header header;
-  S ( H_uefi_Z_api *R_time )( struct H_uefi_Z_time *time, struct H_uefi_Z_time_capabilities *capabilities );
-  S ( H_uefi_Z_api *P_time )( struct H_uefi_Z_time *time );
-  S ( H_uefi_Z_api *R_wakeup_time )( B *enabled, B *pending, struct H_uefi_Z_time *time );
-  S ( H_uefi_Z_api *P_wakeup_time )( B enable, struct H_uefi_Z_time *time );
-  S ( H_uefi_Z_api *P_virtual_address_map )( N memory_map_l, N descriptor_size, N32 descriptor_version, struct H_uefi_Z_memory_descriptor *memory_map );
-  S ( H_uefi_Z_api *convert_pointer )( N debug_disposition, P *address );
-  S ( H_uefi_Z_api *R_variable )( Pc16 name, struct H_uefi_Z_guid *vendor_guid, N32 attrbutes, N *data_l, P *data );
-  S ( H_uefi_Z_api *R_next_variable_name )( N *name_l, Pc16 name, struct H_uefi_Z_guid *vendor_guid );
-  S ( H_uefi_Z_api *P_variable )( Pc16 name, struct H_uefi_Z_guid *guid, N32 attributes, N data_l, P data );
-  S ( H_uefi_Z_api *R_next_high_monotonic_count )( N32 *count );
-  S ( H_uefi_Z_api *reset_system )( enum H_uefi_Z_reset type, N status, N data_l, Pc16 data );
-  S ( H_uefi_Z_api *update_capsule )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 scatter_gather_list );
-  S ( H_uefi_Z_api *R_capsule_capabilities )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 *maximum_capsule_size, enum H_uefi_Z_reset *reset_type );
-  S ( H_uefi_Z_api *R_variable_info )( N32 attributes, N64 *maximum_variable_storage_size, N64 *remaining_variable_storage_size, N64 *maximum_variable_size );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_time )( struct H_uefi_Z_time *time, struct H_uefi_Z_time_capabilities *capabilities );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_time )( struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_wakeup_time )( B *enabled, B *pending, struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_wakeup_time )( B enable, struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_virtual_address_map )( N memory_map_l, N descriptor_size, N32 descriptor_version, struct H_uefi_Z_memory_descriptor *memory_map );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *convert_pointer )( N debug_disposition, P *address );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable )( Pc16 name, struct H_uefi_Z_guid *vendor_guid, N32 attrbutes, N *data_l, P *data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_variable_name )( N *name_l, Pc16 name, struct H_uefi_Z_guid *vendor_guid );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_variable )( Pc16 name, struct H_uefi_Z_guid *guid, N32 attributes, N data_l, P data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_high_monotonic_count )( N32 *count );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset_system )( enum H_uefi_Z_reset type, N status, N data_l, Pc16 data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *update_capsule )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 scatter_gather_list );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_capsule_capabilities )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 *maximum_capsule_size, enum H_uefi_Z_reset *reset_type );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable_info )( N32 attributes, N64 *maximum_variable_storage_size, N64 *remaining_variable_storage_size, N64 *maximum_variable_size );
   
 };
 struct H_uefi_Z_boot_services
 { struct H_uefi_Z_table_header header;
-  S ( H_uefi_Z_api *Q_tpl_I_raise )( N tpl );
-  S ( H_uefi_Z_api *Q_tpl_I_restore )( N tpl );
-  S ( H_uefi_Z_api *M_pages )( enum H_uefi_Z_allocate type, enum H_uefi_Z_memory memory_type, N pages_n, N64 *physical_address );
-  S ( H_uefi_Z_api *W_pages )( N64 physical_address, N pages_n );
-  S ( H_uefi_Z_api *R_memory_map )( N *memory_map_l, struct H_uefi_Z_memory_descriptor *memory_map, N *map_key, N *descriptor_l, N32 *descriptor_version );
-  S ( H_uefi_Z_api *M_pool )( enum H_uefi_Z_memory memory_type, N l, P *buffer );
-  S ( H_uefi_Z_api *W_pool )( P buffer );
-  S ( H_uefi_Z_api *M_event )( N32 type, N tpl, H_uefi_Z_notify_I *notify_proc, P notify_context, P *event );
-  S ( H_uefi_Z_api *P_timer )( P event, enum H_uefi_Z_timer_delay type, N64 trigger_time );
-  S ( H_uefi_Z_api *wait_for_event )( N events_n, P *events, N *index );
-  S ( H_uefi_Z_api *signal_event )( P event );
-  S ( H_uefi_Z_api *W_event )( P event );
-  S ( H_uefi_Z_api *check_event )( P event );
-  S ( H_uefi_Z_api *install_protocol_interface )( P *handle, struct H_uefi_Z_guid *protocol, enum H_uefi_Z_inteface typ, P interface );
-  S ( H_uefi_Z_api *reinstall_protocol_interface )( P handle, struct H_uefi_Z_guid *protocol, P old, P new );
-  S ( H_uefi_Z_api *uninstall_protocol_interface )( P handle, struct H_uefi_Z_guid *protocol, P interface );
-  S ( H_uefi_Z_api *handle_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface );
-  S ( H_uefi_Z_api *pc_handle_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface );
-  S ( H_uefi_Z_api *register_protocol_notify )( struct H_uefi_Z_guid *protocol, P event, P *registration );
-  S ( H_uefi_Z_api *locate_handle )( struct H_uefi_Z_guid *protocol, P registration, P *interface );
-  S ( H_uefi_Z_api *locate_device_path )( struct H_uefi_Z_guid *protocol, struct H_uefi_Z_device_path **device_path, P *device );
-  S ( H_uefi_Z_api *install_configuration_table )( struct H_uefi_Z_guid *protocol, P table );
-  S ( H_uefi_Z_api *load_image )( B boot_policy, P parent_image_handle, struct H_uefi_Z_device_path *file_path, P source_buffer, N source_l, P *image_handle );
-  S ( H_uefi_Z_api *start_image )( P handle, N *exit_data_l, Pc16 *exit_data );
-  S ( H_uefi_Z_api *exit )( P image_handle, S exit_status, N exit_data_l, Pc16 exit_data );
-  S ( H_uefi_Z_api *unload_image )( P handle );
-  S ( H_uefi_Z_api *exit_boot_services )( P image_handle, N map_key );
-  S ( H_uefi_Z_api *R_next_monotonic_count )( N64 *count );
-  S ( H_uefi_Z_api *stall )( N microseconds );
-  S ( H_uefi_Z_api *P_watchdog_timer )( N timeout, N64 code, N data_l, Pc16 data );
-  S ( H_uefi_Z_api *connect_controller )( P handle, P *driver_image_handle, struct H_uefi_Z_device_path *remaining_device_path, B recursive );
-  S ( H_uefi_Z_api *disconnect_controller )( P handle, P driver_image_handle, P child_handle );
-  S ( H_uefi_Z_api *open_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface, P agent_handle, P controller_handle, N32 attributes );
-  S ( H_uefi_Z_api *close_protocol )( P handle, struct H_uefi_Z_guid *protocol, P agent_handle, P controller_handle );
-  S ( H_uefi_Z_api *open_protocol_information )( P handle, struct H_uefi_Z_guid *protocol, struct H_uefi_Z_open_protocol_information_entry **entry_buffer, N *entry_n );
-  S ( H_uefi_Z_api *protocols_per_handle )( P handle, struct H_uefi_Z_guid **protocol_buffer, N *protocol_n );
-  S ( H_uefi_Z_api *locate_handle_buffer )( enum H_uefi_Z_locate_search type, struct H_uefi_Z_guid *protocol, P search_key, N *handles_n, P **handles_buffer );
-  S ( H_uefi_Z_api *locate_protocol )( struct H_uefi_Z_guid *protocol, P registration, P *interface );
-  S ( H_uefi_Z_api *install_multiple_protocol_interfaces )( P *handle, ... );
-  S ( H_uefi_Z_api *uninstall_multiple_protocol_interfaces )( P handle, ... );
-  S ( H_uefi_Z_api *calculate_crc32 )( P data, N data_l, N32 *crc );
-  S ( H_uefi_Z_api *Q_mem_I_copy )( P destination, P source, N l );
-  S ( H_uefi_Z_api *Q_mem_I_fill )( P buffer, N l, N8 value );
-  S ( H_uefi_Z_api *M_event_ex )( N32 type, N notify_tpl, H_uefi_Z_notify_I *notify_proc, const P notify_context, const struct H_uefi_Z_guid *event_group, P *event );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *Q_tpl_I_raise )( N tpl );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *Q_tpl_I_restore )( N tpl );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_pages )( enum H_uefi_Z_allocate type, enum H_uefi_Z_memory memory_type, N pages_n, N64 *physical_address );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *W_pages )( N64 physical_address, N pages_n );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_memory_map )( N *memory_map_l, struct H_uefi_Z_memory_descriptor *memory_map, N *map_key, N *descriptor_l, N32 *descriptor_version );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_pool )( enum H_uefi_Z_memory memory_type, N l, P *buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *W_pool )( P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_event )( N32 type, N tpl, H_uefi_Z_notify_I *notify_proc, P notify_context, P *event );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_timer )( P event, enum H_uefi_Z_timer_delay type, N64 trigger_time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *wait_for_event )( N events_n, P *events, N *index );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *signal_event )( P event );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *W_event )( P event );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *check_event )( P event );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *install_protocol_interface )( P *handle, struct H_uefi_Z_guid *protocol, enum H_uefi_Z_inteface typ, P interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reinstall_protocol_interface )( P handle, struct H_uefi_Z_guid *protocol, P old, P new );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *uninstall_protocol_interface )( P handle, struct H_uefi_Z_guid *protocol, P interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *handle_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *pc_handle_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *register_protocol_notify )( struct H_uefi_Z_guid *protocol, P event, P *registration );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *locate_handle )( struct H_uefi_Z_guid *protocol, P registration, P *interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *locate_device_path )( struct H_uefi_Z_guid *protocol, struct H_uefi_Z_device_path **device_path, P *device );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *install_configuration_table )( struct H_uefi_Z_guid *protocol, P table );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *load_image )( B boot_policy, P parent_image_handle, struct H_uefi_Z_device_path *file_path, P source_buffer, N source_l, P *image_handle );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *start_image )( P handle, N *exit_data_l, Pc16 *exit_data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *exit )( P image_handle, S exit_status, N exit_data_l, Pc16 exit_data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *unload_image )( P handle );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *exit_boot_services )( P image_handle, N map_key );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_monotonic_count )( N64 *count );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *stall )( N microseconds );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_watchdog_timer )( N timeout, N64 code, N data_l, Pc16 data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *connect_controller )( P handle, P *driver_image_handle, struct H_uefi_Z_device_path *remaining_device_path, B recursive );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *disconnect_controller )( P handle, P driver_image_handle, P child_handle );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *open_protocol )( P handle, struct H_uefi_Z_guid *protocol, P *interface, P agent_handle, P controller_handle, N32 attributes );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *close_protocol )( P handle, struct H_uefi_Z_guid *protocol, P agent_handle, P controller_handle );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *open_protocol_information )( P handle, struct H_uefi_Z_guid *protocol, struct H_uefi_Z_open_protocol_information_entry **entry_buffer, N *entry_n );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *protocols_per_handle )( P handle, struct H_uefi_Z_guid **protocol_buffer, N *protocol_n );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *locate_handle_buffer )( enum H_uefi_Z_locate_search type, struct H_uefi_Z_guid *protocol, P search_key, N *handles_n, P **handles_buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *locate_protocol )( struct H_uefi_Z_guid *protocol, P registration, P *interface );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *install_multiple_protocol_interfaces )( P *handle, ... );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *uninstall_multiple_protocol_interfaces )( P handle, ... );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *calculate_crc32 )( P data, N data_l, N32 *crc );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *Q_mem_I_copy )( P destination, P source, N l );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *Q_mem_I_fill )( P buffer, N l, N8 value );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_event_ex )( N32 type, N notify_tpl, H_uefi_Z_notify_I *notify_proc, const P notify_context, const struct H_uefi_Z_guid *event_group, P *event );
 };
 #define H_uefi_Z_guid_S_acpi_table { 0x8868e871, 0xe4f1, 0x11d3, { 0xbc, 0x22, 0, 0x80, 0xc7, 0x3c, 0x88, 0x81 } }
 #define H_uefi_Z_guid_S_acpi1_table { 0xeb9d2d30, 0x2d88, 0x11d3, { 0x91, 0x16, 0, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }
@@ -560,8 +560,8 @@ struct __attribute__ ((packed)) H_acpi_Z_facs
 #define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
 struct H_uefi_Z_protocol_Z_disk_io
 { N64 revision;
-  S ( H_uefi_Z_api *read )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
-  S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
 };
 //------------------------------------------------------------------------------
 #define H_uefi_Z_guid_S_block_io { 0x964e5b21, 0x6459, 0x11d2, { 0x8e, 0x39, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
@@ -578,9 +578,9 @@ struct H_uefi_Z_protocol_Z_block_io_Z_media
 struct H_uefi_Z_protocol_Z_block_io
 { N64 revision;
   struct H_uefi_Z_protocol_Z_block_io_Z_media *media;
-  S ( H_uefi_Z_api *reset )( struct H_uefi_Z_protocol_Z_block_io *this );
-  S ( H_uefi_Z_api *read )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
-  S ( H_uefi_Z_api *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset )( struct H_uefi_Z_protocol_Z_block_io *this );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
 };
 //==============================================================================
 #define E_mem_Q_blk_S_free_n_init       3
