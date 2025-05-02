@@ -3,7 +3,7 @@
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
 *   ---   UEFI boot loader
-*         boot loader
+*         main
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒2‒1 d
 *******************************************************************************/
 #include "fileloader.h"
@@ -21,6 +21,7 @@
 struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct H_uefi_Z_system_table *E_main_S_system_table;
 struct H_uefi_Z_memory_descriptor *E_main_S_memory_map;
+N E_main_S_descriptor_l;
 N E_main_S_loader_stack;
 N64 gdt[5], ldt[2], idt[2];
 //==============================================================================
@@ -177,27 +178,27 @@ E_main_I_virtual_address_change( P event
 ){  struct H_uefi_Z_system_table *system_table = E_main_S_system_table;
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , &E_main_S_kernel_args.acpi.dsdt_content
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , &E_main_S_kernel_args.acpi.facs
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , ( P * )&E_main_S_kernel_args.kernel
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , ( P * )&E_main_S_system_table
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , ( P * )&E_main_S_loader_stack
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, E_main_S_kernel_args.memory_map_n
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , ( P * )&E_main_S_memory_map
     );
 }
@@ -894,35 +895,36 @@ H_uefi_I_main(
     N memory_map_l = 0;
     N map_key;
     N32 descriptor_version;
-    status = system_table->boot_services->R_memory_map( &memory_map_l, 0, &map_key, &E_main_S_kernel_args.descriptor_l, &descriptor_version );
+    status = system_table->boot_services->R_memory_map( &memory_map_l, 0, &map_key, &E_main_S_descriptor_l, &descriptor_version );
     if( status < 0
     && status != H_uefi_Z_error_S_buffer_too_small
     )
         return status;
-    memory_map_l += ( 2 + 1 ) * E_main_S_kernel_args.descriptor_l; // 2 na możliwość wstawienia w następującym “M_pool”, 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów.
+    memory_map_l += ( 2 + 1 ) * E_main_S_descriptor_l; // 2 na możliwość wstawienia w następującym “M_pool”, 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów.
     status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_loader_data, memory_map_l, ( P * )&E_main_S_memory_map );
     if( status < 0 )
         return status;
-    status = system_table->boot_services->R_memory_map( &memory_map_l, E_main_S_memory_map, &map_key, &E_main_S_kernel_args.descriptor_l, &descriptor_version );
+    N E_main_S_descriptor_l;
+    status = system_table->boot_services->R_memory_map( &memory_map_l, E_main_S_memory_map, &map_key, &E_main_S_descriptor_l, &descriptor_version );
     if( status < 0 )
     {   S status_ = system_table->boot_services->W_pool( E_main_S_memory_map );
         return status;
     }
-    N memory_map_n = memory_map_l / E_main_S_kernel_args.descriptor_l;
-    E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
+    N memory_map_n = memory_map_l / E_main_S_descriptor_l;
+    E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N loader_start, loader_end;
-    E_main_Q_memory_map_R_loader_location( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n, &loader_start, &loader_end );
-    N reserved_size = E_main_Q_memory_map_R_reserved_size( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
+    E_main_Q_memory_map_R_loader_location( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, &loader_start, &loader_end );
+    N reserved_size = E_main_Q_memory_map_R_reserved_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B reserved_from_end = loader_start < H_oux_E_mem_S_page_size + reserved_size;
-    N reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
-    N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
+    N reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
+    N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B has_memory_map_new_entry;
-    E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, memory_size, &has_memory_map_new_entry );
+    E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, memory_size, &has_memory_map_new_entry );
     if( has_memory_map_new_entry )
-    {   memory_map_l += E_main_S_kernel_args.descriptor_l;
+    {   memory_map_l += E_main_S_descriptor_l;
         memory_map_n++;
     }
-    E_main_Q_memory_map_I_sort_virtual( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
+    E_main_Q_memory_map_I_sort_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     /*{   struct H_uefi_Z_memory_descriptor *memory_map_ = E_main_S_memory_map;
         for_n( i, memory_map_n )
         {   H_uefi_I_print( system_table, i, sizeof(i), 10 );
@@ -935,7 +937,7 @@ H_uefi_I_main(
             system_table->output->output( system_table->output, L", " );
             H_uefi_I_print( system_table, memory_map_->pages, sizeof( memory_map_->pages ), 10 );
             system_table->output->output( system_table->output, L"\r\n" );
-            memory_map_ = (P)( (Pc)memory_map_ + E_main_S_kernel_args.descriptor_l );
+            memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
         }
         system_table->output->output( system_table->output, L"has_new_entry=" );
         H_uefi_I_print( system_table, has_memory_map_new_entry, sizeof( has_memory_map_new_entry ), 10 );
@@ -956,7 +958,7 @@ H_uefi_I_main(
             {   E_main_S_loader_stack = ( memory_map_->virtual_start + (( rsp & ~0xfff ) - memory_map_->physical_start )) | ( rsp & 0xfff );
                 break;
             }
-            memory_map_ = (P)( (Pc)memory_map_ + E_main_S_kernel_args.descriptor_l );
+            memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
         }
         system_table->output->output( system_table->output, L", E_main_S_loader_stack=" );
         H_uefi_I_print( system_table, E_main_S_loader_stack, sizeof( E_main_S_loader_stack ), 16 );
@@ -970,7 +972,7 @@ H_uefi_I_main(
         return status;
     }
     N pml4, start_end_address;
-    status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
+    status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
         goto End;
     E_main_S_kernel_args.memory_map_n = memory_map_n;
@@ -979,7 +981,7 @@ H_uefi_I_main(
     "\n"    "mov    %%rsp,%0"
     : "=m" ( E_main_S_loader_stack )
     );
-    status = system_table->runtime_services->P_virtual_address_map( memory_map_l, E_main_S_kernel_args.descriptor_l, descriptor_version, E_main_S_memory_map );
+    status = system_table->runtime_services->P_virtual_address_map( memory_map_l, E_main_S_descriptor_l, descriptor_version, E_main_S_memory_map );
     if( status < 0 )
         goto End;
     __asm__ volatile (
@@ -1035,7 +1037,7 @@ H_uefi_I_main(
     : "p" ( &gd.limit ), "p" ( &id.limit )
     : "ax"
     );
-    E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_kernel_args.descriptor_l, memory_map_n );
+    E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
     E_main_S_kernel_args.memory_map = (P)( reserved_from_end ? (Pc)E_main_S_kernel_args.page_table - memory_map_size : (Pc)E_main_S_kernel_args.page_table + page_table_size );
     N stack_size = H_oux_E_mem_S_page_size;
@@ -1076,7 +1078,7 @@ H_uefi_I_main(
                 && memory_map_->pages * H_oux_E_mem_S_page_size >= loader_end - loader_start
                 )
                     loader_start_new = memory_map_->virtual_start;
-                memory_map_ = (P)( (Pc)memory_map_ + E_main_S_kernel_args.descriptor_l );
+                memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
             }
             if( !loader_start_new
             || loader_start_new + 2 * ( loader_end - loader_start ) > loader_end_max
@@ -1110,7 +1112,7 @@ H_uefi_I_main(
                 && memory_map_->pages * H_oux_E_mem_S_page_size >= loader_end - loader_start + stack_size
                 )
                     loader_start_new = memory_map_->virtual_start + memory_map_->pages * H_oux_E_mem_S_page_size - ( loader_end - loader_start + stack_size );
-                memory_map_ = (P)( (Pc)memory_map_ + E_main_S_kernel_args.descriptor_l );
+                memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
             }
             if( !loader_start_new
             || loader_start_new < loader_start_min
@@ -1163,11 +1165,13 @@ H_uefi_I_main(
             my_memory_map->virtual_start = memory_map_->virtual_start;
             my_memory_map->pages = memory_map_->pages;
         }
-        memory_map_ = (P)( (Pc)memory_map_ + E_main_S_kernel_args.descriptor_l );
+        memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
         my_memory_map++;
     }
     E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
-    // ‘Kernel’ potrzebuje przenieść GDT oraz ustawić LDT i IDT przed wyrzuceniem obszaru programu ‘bootloadera’.
+    E_main_S_kernel_args.bootloader = (P)loader_start;
+    // Poprawić adresy w ‘kernelu’ i zwolnić sekcję “.reloc”.
+    // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     status = system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
 End:__asm__ volatile (
     "\n0:"  "hlt"
