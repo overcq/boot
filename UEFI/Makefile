@@ -1,12 +1,11 @@
 #*******************************************************************************
 #   ___   public
-#  ¦OUX¦  ‟GNU” “make”
+#  ¦OUX¦  GNU “make”
 #  ¦/C+¦  OUX/C+ OS
 #   ---   UEFI boot loader
 #         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
-AS := as
 CC := clang
 CFLAGS := -Os
 VMWARE_DIR := /opt/vmware2
@@ -14,7 +13,7 @@ VMWARE_DIR := /opt/vmware2
 all: build
 build: fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build clean distclean install-qemu install-vmware install-usb run-qemu
+.PHONY: all build clean distclean install-qemu init-vmware install-vmware install-usb run-qemu
 #===============================================================================
 disk.img:
 	dd if=/dev/zero of=$@ bs=1M count=64 \
@@ -25,7 +24,7 @@ disk.img:
 	&& parted $$loopdev \
 	&& mkfs.fat $${loopdev}p1 \
 	&& ~inc/moje/programy/linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
-fileloader: fileloader.h fileloader.c text.c ouxfs.c mem-blk.c Makefile
+fileloader: simple.h fileloader.h fileloader.c text.c ouxfs.c mem-blk.c Makefile
 	$(CC) $(CFLAGS) -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-pointer-sign -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
@@ -36,29 +35,37 @@ distclean: clean
 install-qemu:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \
-	|| exit 1; \
-	loopdev=$$( losetup -LPf --show disk.img ); \
-	trap 'losetup -d $$loopdev' EXIT \
+	&& loopdev=$$( losetup -LPf --show disk.img ) \
 	&& mount $${loopdev}p1 $$ocq_mnt \
+	&& trap 'losetup -d $$loopdev' EXIT \
 	&& trap 'losetup -d $$loopdev && umount $$ocq_mnt' EXIT \
 	&& mkdir -p $$ocq_mnt/EFI/BOOT \
 	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+#-------------------------------------------------------------------------------
+init-vmware:
+	ocq_mnt=/mnt/oth; \
+	mkdir -p $$ocq_mnt \
+	&& $(VMWARE_DIR)/bin/vmware-mount -f ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk $$ocq_mnt \
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& parted -fs $$ocq_mnt/flat mklabel gpt mkpart primary fat32 0 100MB set 1 esp on mkpart primary 100MB 8GB \
+	&& loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
+	&& trap 'losetup -d $$loopdev && $(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& mkfs.fat -F 32 $${loopdev}p1 \
+	&& ../../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
 install-vmware:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \
-	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
 	&& $(VMWARE_DIR)/bin/vmware-mount ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
-	|| exit 1; \
-	mkdir -p $$ocq_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI	
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& mkdir -p $$ocq_mnt/EFI/BOOT \
+	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 #-------------------------------------------------------------------------------
 install-usb:
 	ocq_usb_dev=/dev/sdc; \
 	ocq_usb_mnt=/mnt/usb; \
 	mount $${ocq_usb_dev}1 $$ocq_usb_mnt \
-	|| exit 1; \
-	trap 'umount $$ocq_usb_mnt' EXIT; \
-	mkdir -p $$ocq_usb_mnt/EFI/BOOT \
+	&& trap 'umount $$ocq_usb_mnt' EXIT \
+	&& mkdir -p $$ocq_usb_mnt/EFI/BOOT \
 	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 run-qemu:

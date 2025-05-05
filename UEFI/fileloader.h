@@ -63,7 +63,7 @@ typedef __int128            S128;
 #define W_(pointer_variable)                ( W( pointer_variable ), pointer_variable = 0 )
 #define W_tab_(pointer_variable)            ( E_mem_Q_tab_W( pointer_variable ), pointer_variable = 0 )
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define _inline                             static __attribute__ ((__always_inline__,__unused__))
+#define _inline                             static __attribute__ (( __always_inline__, __unused__ ))
 #define _internal                           static
 //==============================================================================
 #include "simple.h"
@@ -377,7 +377,7 @@ struct H_uefi_Z_system_table
   struct H_uefi_Z_configuration_table *configuration_table;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-struct __attribute__ ((packed)) H_acpi_Z_rsdp
+struct __attribute__ (( __packed__ )) H_acpi_Z_rsdp
 { C signature[8];
   C checksum;
   C OEM_id[6];
@@ -388,7 +388,7 @@ struct __attribute__ ((packed)) H_acpi_Z_rsdp
   C checksum_2;
   C reserved[3];
 };
-struct __attribute__ ((packed)) H_acpi_Z_table_header
+struct __attribute__ (( __packed__ )) H_acpi_Z_table_header
 { C signature[4];
   N32 length;
   C revision;
@@ -399,7 +399,7 @@ struct __attribute__ ((packed)) H_acpi_Z_table_header
   N32 creator_id;
   N32 creator_revision;
 };
-struct __attribute__ ((packed)) H_acpi_Z_xsdt
+struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
 { struct H_acpi_Z_table_header header;
   N64 table_address[];
 };
@@ -424,7 +424,7 @@ enum H_acpi_Z_generic_address_Z_access_size
 , H_acpi_Z_generic_address_Z_access_size_S_4
 , H_acpi_Z_generic_address_Z_access_size_S_8
 };
-struct __attribute__ ((packed)) H_acpi_Z_generic_address
+struct __attribute__ (( __packed__ )) H_acpi_Z_generic_address
 { C space;
   C width;
   C offset;
@@ -442,7 +442,7 @@ enum H_acpi_Z_fadt_Z_preferred_pm_profile
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_performance_server
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_tablet
 };
-struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
+struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v3
 { struct H_acpi_Z_table_header header;
   N32 facs;
   N32 dsdt;
@@ -480,7 +480,7 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt_v3
   struct H_acpi_Z_generic_address ex_PM_timer_block;
   struct H_acpi_Z_generic_address ex_GPE0_block, ex_GPE1_block;
 };
-struct __attribute__ ((packed)) H_acpi_Z_fadt
+struct __attribute__ (( __packed__ )) H_acpi_Z_fadt
 { struct H_acpi_Z_table_header header;
   N32 facs;
   N32 dsdt;
@@ -521,7 +521,7 @@ struct __attribute__ ((packed)) H_acpi_Z_fadt
   struct H_acpi_Z_generic_address sleep_control_register, sleep_status_register;
   N64 hypervisor_vendor_identity;
 };
-struct __attribute__ ((packed)) H_acpi_Z_facs_v0
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v0
 { C signature[4];
   N32 length;
   N32 hardware_signature;
@@ -532,7 +532,7 @@ struct __attribute__ ((packed)) H_acpi_Z_facs_v0
   C version;
   C reserved_2[31];
 };
-struct __attribute__ ((packed)) H_acpi_Z_facs_v1
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v1
 { C signature[4];
   N32 length;
   N32 hardware_signature;
@@ -543,7 +543,7 @@ struct __attribute__ ((packed)) H_acpi_Z_facs_v1
   C version;
   C reserved[31];
 };
-struct __attribute__ ((packed)) H_acpi_Z_facs
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs
 { C signature[4];
   N32 length;
   N32 hardware_signature;
@@ -615,6 +615,20 @@ S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 //==============================================================================
+struct H_main_Z_uefi_runtime_services
+{ S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_time )( struct H_uefi_Z_time *time, struct H_uefi_Z_time_capabilities *capabilities );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_time )( struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_wakeup_time )( B *enabled, B *pending, struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_wakeup_time )( B enable, struct H_uefi_Z_time *time );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable )( Pc16 name, struct H_uefi_Z_guid *vendor_guid, N32 attrbutes, N *data_l, P *data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_variable_name )( N *name_l, Pc16 name, struct H_uefi_Z_guid *vendor_guid );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_variable )( Pc16 name, struct H_uefi_Z_guid *guid, N32 attributes, N data_l, P data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_high_monotonic_count )( N32 *count );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset_system )( enum H_uefi_Z_reset type, N status, N data_l, Pc16 data );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *update_capsule )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 scatter_gather_list );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_capsule_capabilities )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 *maximum_capsule_size, enum H_uefi_Z_reset *reset_type );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable_info )( N32 attributes, N64 *maximum_variable_storage_size, N64 *remaining_variable_storage_size, N64 *maximum_variable_size );
+};
 struct E_main_Z_kernel_args
 { struct E_mem_blk_Z mem_blk;
   struct H_oux_E_mem_Z_memory_map *memory_map;
@@ -623,6 +637,7 @@ struct E_main_Z_kernel_args
   P kernel;
   P page_table;
   P kernel_stack;
+  struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct
   { P dsdt_content;
     N dsdt_content_l;

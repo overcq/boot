@@ -1,6 +1,6 @@
 #*******************************************************************************
 #   ___   public
-#  ¦OUX¦  ‟GNU” “make”
+#  ¦OUX¦  GNU “make”
 #  ¦/C+¦  OUX/C+ OS
 #   ---   BIOS boot loader
 #         makefile

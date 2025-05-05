@@ -18,6 +18,29 @@
 #define E_cpu_Z_gdt_S_granularity       ( 1ULL << ( 32 + 23 ))
 #define E_cpu_Z_gdt_Z_type_S_ldt        ( 1ULL << ( 32 + 9 ))
 //==============================================================================
+struct __attribute__ (( __packed__ )) Q_elf_Z_rela_entry
+{ N64 offset;
+  N32 type, sym;
+  N64 addend;
+};
+struct __attribute__ (( __packed__ )) Q_exe_Z_rela_plt_entry
+{ N64 offset;
+  N32 sym;
+};
+struct __attribute__ (( __packed__ )) Q_exe_Z_export_entry
+{ N32 sym;
+  N64 offset;
+};
+struct E_main_Z_kernel_data
+{ struct Q_elf_Z_rela_entry *rela;
+  struct Q_exe_Z_rela_plt_entry *rela_plt;
+  struct Q_exe_Z_export_entry *exports;
+  Pc dynstr;
+  Pc text;
+  Pc data;
+  P entry;
+};
+//==============================================================================
 struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct H_uefi_Z_system_table *E_main_S_system_table;
 struct H_uefi_Z_memory_descriptor *E_main_S_memory_map;
@@ -687,7 +710,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
 //------------------------------------------------------------------------------
 __attribute__ (( __warn_unused_result__ ))
 S
-E_main_I_relocate( N loader_start
+E_main_Q_loader_I_relocate( N loader_start
 , N delta
 ){  struct E_base_Z_image_dos_header *image_dos_header = (P)loader_start;
     if( image_dos_header->e_magic != 0x5a4d )
@@ -847,7 +870,9 @@ H_uefi_I_main(
         if( status < 0 )
         {   S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             if( status_ < 0 )
+            {   status = status_;
                 break;
+            }
             if( !~status // Brak lub błąd systemu plików.
             || status == H_uefi_Z_error_S_no_media
             || status == H_uefi_Z_error_S_media_changed
@@ -856,6 +881,12 @@ H_uefi_I_main(
             break;
         }
         kernel_size = H_oux_E_fs_Q_kernel_R_size( system_table, disk_io, media_id );
+        if( kernel_size < H_oux_E_mem_S_page_size )
+        {   H_oux_E_fs_Q_disk_W( system_table );
+            S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
+            status = ~0;
+            break;
+        }
         status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel_args.kernel );
         if( status < 0 )
         {   H_oux_E_fs_Q_disk_W( system_table );
@@ -881,13 +912,46 @@ H_uefi_I_main(
         break;
     }
     status = system_table->boot_services->W_pool( disk_io_handles );
-    {   kernel_size = H_oux_E_mem_S_page_size;
-        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, kernel_size / H_oux_E_mem_S_page_size + ( kernel_size % H_oux_E_mem_S_page_size ? 1 : 0 ), ( N64 * )&E_main_S_kernel_args.kernel );
-    }
-    //if( status < 0 )
-        //return status;
-    //if( disk_io_handles_i == disk_io_handles_n )
-        //return ~0;
+    if( disk_io_handles_i == disk_io_handles_n )
+        return ~0;
+    Pn kernel_p = E_main_S_kernel_args.kernel;
+    if( !E_text_Z_sl_T_eq( (P)kernel_p, "OUXEXE", 6 ))
+        return ~0;
+    kernel_p = (P)( (Pc)kernel_p + 6 );
+    struct E_main_Z_kernel_data kernel_data;
+    kernel_data.rela_plt = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.exports = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.dynstr = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.text = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.data = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.entry = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.rela = (P)kernel_p;
+    if( (N)kernel_data.rela != (N)kernel_data.rela_plt
+    || (N)kernel_data.rela_plt != (N)kernel_data.exports
+    || (N)kernel_data.exports > (N)kernel_data.dynstr
+    || (N)kernel_data.dynstr > (N)kernel_data.text
+    || (N)kernel_data.text > (N)kernel_data.data
+    || (N)kernel_data.data > (N)E_main_S_kernel_args.kernel + kernel_size
+    || (N)kernel_data.entry < (N)kernel_data.text
+    || (N)kernel_data.entry >= (N)kernel_data.data
+    )
+        return ~0;
+    for_n( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
+        if( kernel_data.rela[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
+        || kernel_data.rela[i].offset >= kernel_size
+        )
+            return ~0;
+    for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
+        if( kernel_data.exports[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
+        || kernel_data.exports[i].offset >= kernel_size
+        )
+            return ~0;
     P event;
     status = system_table->boot_services->M_event( 0x60000202, 8, E_main_I_virtual_address_change, 0, &event );
     if( status < 0 )
@@ -1122,7 +1186,7 @@ H_uefi_I_main(
     }
     if( loader_start_new )
     {   E_mem_Q_blk_I_copy( (P)loader_start_new, (P)loader_start, loader_end - loader_start );
-        status = E_main_I_relocate( loader_start_new, loader_start_new - loader_start );
+        status = E_main_Q_loader_I_relocate( loader_start_new, loader_start_new - loader_start );
         if( status < 0 )
             goto End;
         loader_end = loader_start_new + ( loader_end - loader_start );
@@ -1149,9 +1213,29 @@ H_uefi_I_main(
     : "g" ( E_main_S_kernel_args.kernel_stack + stack_size - H_oux_E_mem_S_page_size )
     : "rax"
     );
+    // ‘Relokacja’ kernela.
+    kernel_p = E_main_S_kernel_args.kernel;
+    kernel_p = (P)( (Pc)kernel_p + 6 );
+    kernel_data.rela_plt = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.exports = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.dynstr = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.text = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.data = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.entry = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
+    kernel_data.rela = (P)kernel_p;
+    for_n_( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
+        *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) += (N)E_main_S_kernel_args.kernel;
+    for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
+        *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.exports[i].offset ) += (N)E_main_S_kernel_args.kernel;
     struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
     memory_map_ = E_main_S_memory_map;
-    for_n( i, memory_map_n )
+    for_n_( i, memory_map_n )
     {   if( memory_map_->type == H_uefi_Z_memory_Z_reserved //TODO Czy potrzebne?
         || memory_map_->type == H_uefi_Z_memory_Z_runtime_services_code //TODO Czy potrzebne?
         || memory_map_->type == H_uefi_Z_memory_Z_runtime_services_data //TODO Czy potrzebne?
@@ -1170,9 +1254,27 @@ H_uefi_I_main(
     }
     E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
     E_main_S_kernel_args.bootloader = (P)loader_start;
-    // Poprawić adresy w ‘kernelu’ i zwolnić sekcję “.reloc”.
+    E_main_S_kernel_args.uefi_runtime_services.R_time = system_table->runtime_services->R_time;
+    E_main_S_kernel_args.uefi_runtime_services.P_time = system_table->runtime_services->P_time;
+    E_main_S_kernel_args.uefi_runtime_services.R_wakeup_time = system_table->runtime_services->R_wakeup_time;
+    E_main_S_kernel_args.uefi_runtime_services.P_wakeup_time = system_table->runtime_services->P_wakeup_time;
+    E_main_S_kernel_args.uefi_runtime_services.R_variable = system_table->runtime_services->R_variable;
+    E_main_S_kernel_args.uefi_runtime_services.R_next_variable_name = system_table->runtime_services->R_next_variable_name;
+    E_main_S_kernel_args.uefi_runtime_services.P_variable = system_table->runtime_services->P_variable;
+    E_main_S_kernel_args.uefi_runtime_services.R_next_high_monotonic_count = system_table->runtime_services->R_next_high_monotonic_count;
+    E_main_S_kernel_args.uefi_runtime_services.reset_system = system_table->runtime_services->reset_system;
+    E_main_S_kernel_args.uefi_runtime_services.update_capsule = system_table->runtime_services->update_capsule;
+    E_main_S_kernel_args.uefi_runtime_services.R_capsule_capabilities = system_table->runtime_services->R_capsule_capabilities;
+    E_main_S_kernel_args.uefi_runtime_services.R_variable_info = system_table->runtime_services->R_variable_info;
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
-    status = system_table->runtime_services->reset_system( H_uefi_Z_reset_Z_shutdown, status, 0, 0 );
+    __asm__ volatile (
+    "\n"    "mov    %0,%%rdi"
+    "\n"    "jmp    *%1"
+    :
+    : "g" ( &E_main_S_kernel_args ), "g" ( kernel_data.entry )
+    : "rdi"
+    );
+    __builtin_unreachable();
 End:__asm__ volatile (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"

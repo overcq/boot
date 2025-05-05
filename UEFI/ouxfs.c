@@ -59,12 +59,6 @@ N64 H_oux_E_fs_S_file_block_table_start, H_oux_E_fs_S_file_block_table_n;
     continue_from++
 //------------------------------------------------------------------------------
 S
-H_uefi_I_print( struct H_uefi_Z_system_table *system_table
-, N v
-, N v_l
-, N base
-);
-S
 H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
 , struct H_uefi_Z_protocol_Z_disk_io *disk_io
 , N32 media_id
@@ -74,7 +68,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
         return status;
     status = disk_io->read( disk_io, media_id, 0, H_oux_E_mem_S_page_size, sector );
     if( status < 0 )
-        return status;
+        goto Error_0;
     if( !E_text_Z_sl_T_eq( sector, H_oux_E_fs_Q_device_S_ident, sizeof( H_oux_E_fs_Q_device_S_ident )))
         goto Error_0;
     N sector_size_bit = sector[ sizeof( H_oux_E_fs_Q_device_S_ident ) ];
@@ -781,6 +775,7 @@ End_loop_0:
 End_loop_1:
     if( directory_table_i == block_table_directory_table_n )
         goto Error_1;
+    continue_from = ~0;
     // Odczyt tablicy plików i wyszukanie pliku “/system/kernel”.
     const Pc file_name = "kernel";
     N64 file_parent;

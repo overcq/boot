@@ -6,6 +6,7 @@
 *         memory blocks manager
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 e
 *******************************************************************************/
+#include <stddef.h>
 #include "fileloader.h"
 //==============================================================================
 struct E_base_Z
@@ -198,13 +199,13 @@ E_mem_Q_blk_I_copy( P dst
 }
 P
 memmove( P dst
-, P src
-, N l
+, const P src
+, size_t l
 ){  E_mem_Q_blk_I_copy( dst, src, l );
     return dst;
 }
 __attribute__ ((__alias__( "memmove" )))
-P memcpy( P, P, N );
+P memcpy( P, const P, size_t );
 void
 E_mem_Q_blk_P_fill_c( P p
 , N l
@@ -251,6 +252,13 @@ E_mem_Q_blk_P_fill_c( P p
     : "a" (c)
     : "memory"
     );
+}
+P
+memset( P p
+, int c
+, size_t l
+){  E_mem_Q_blk_P_fill_c( p, c, l );
+    return p;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal

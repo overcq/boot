@@ -6,6 +6,7 @@
 *         memory manager
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒4‒6 W
 *******************************************************************************/
+#include <stddef.h>
 #include "fileloader.h"
 //==============================================================================
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
@@ -241,6 +242,15 @@ E_mem_Q_blk_I_copy( P dst
     else
         E_mem_Q_blk_I_copy_rev( dst, src, l );
 }
+P
+memmove( P dst
+, const P src
+, size_t l
+){  E_mem_Q_blk_I_copy( dst, src, l );
+    return dst;
+}
+__attribute__ ((__alias__( "memmove" )))
+P memcpy( P, const P, size_t );
 void
 E_mem_Q_blk_P_fill_c( P p
 , N l
@@ -287,6 +297,13 @@ E_mem_Q_blk_P_fill_c( P p
     : "a" (c)
     : "memory"
     );
+}
+P
+memset( P p
+, int c
+, size_t l
+){  E_mem_Q_blk_P_fill_c( p, c, l );
+    return p;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _internal
