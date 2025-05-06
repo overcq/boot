@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include "fileloader.h"
 //==============================================================================
+#define E_mem_Q_blk_S_align_to_all  _Alignof(max_align_t)
+//==============================================================================
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
 _internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
@@ -860,6 +862,26 @@ void
 E_mem_Q_blk_Q_table_I_put_end( void
 ){  E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n--;
 }
+_internal
+N
+E_mem_Q_blk_I_default_align( N u
+){  N align;
+    // Spekulacje.
+    if( u > E_mem_Q_blk_S_align_to_all
+    && u % E_mem_Q_blk_S_align_to_all == 0
+    )
+        align = E_mem_Q_blk_S_align_to_all;
+    else if( u == E_mem_Q_blk_S_align_to_all )
+        align = u;
+    else if( u
+    && u < E_mem_Q_blk_S_align_to_all
+    && E_simple_Z_n_T_power_2(u)
+    )
+        align = u;
+    else
+        align = 1;
+    return align;
+}
 // Dla tablicy systemowej “free” ‘alokuje’ tyle “n”, ile żądane, lub więcej.
 _internal
 P
@@ -887,14 +909,8 @@ E_mem_Q_blk_Q_table_M_from_free( N *allocated_or_table_i
             l_align = sizeof(N);
         else if( ~align )
             l_align = align;
-        else if( u > sizeof(N) && u % sizeof(N) == 0 )
-            l_align = sizeof(N);
-        else if( u == sizeof(N) )
-            l_align = u;
-        else if( u < sizeof(N) && E_simple_Z_n_T_power_2(u) )
-            l_align = u;
         else
-            l_align = 1;
+            l_align = E_mem_Q_blk_I_default_align(u);
         if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id ) // Obszar przed wyrównanym adresem staje się wolnym blokiem.
         {   n++;
             l_1 += u;

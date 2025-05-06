@@ -13,7 +13,7 @@ VMWARE_DIR := /opt/vmware2
 all: build
 build: fileloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.PHONY: all build clean distclean install-qemu init-vmware install-vmware install-usb run-qemu
+.PHONY: all build clean distclean init-qemu install-qemu init-vmware install-vmware install-usb run-qemu
 #===============================================================================
 disk.img:
 	dd if=/dev/zero of=$@ bs=1M count=64 \
@@ -32,6 +32,13 @@ clean:
 distclean: clean
 	rm -f disk.img
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+init-qemu:
+	dd if=/dev/zero of=disk.img bs=1M count=1000 \
+	&& parted -fs disk.img mklabel gpt mkpart primary fat32 0 100MB set 1 esp on mkpart primary 100MB 1GB \
+	&& loopdev=$$( losetup -LPf --show disk.img ) \
+	&& trap 'losetup -d $$loopdev' EXIT \
+	&& mkfs.fat -F 32 $${loopdev}p1 \
+	&& ../../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
 install-qemu:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \

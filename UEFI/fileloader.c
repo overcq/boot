@@ -36,6 +36,7 @@ struct E_main_Z_kernel_data
   struct Q_exe_Z_rela_plt_entry *rela_plt;
   struct Q_exe_Z_export_entry *exports;
   Pc dynstr;
+  Pc got;
   Pc text;
   Pc data;
   P entry;
@@ -925,6 +926,8 @@ H_uefi_I_main(
     kernel_p++;
     kernel_data.dynstr = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
     kernel_p++;
+    kernel_data.got = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
     kernel_data.text = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
     kernel_p++;
     kernel_data.data = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
@@ -935,20 +938,21 @@ H_uefi_I_main(
     if( (N)kernel_data.rela != (N)kernel_data.rela_plt
     || (N)kernel_data.rela_plt != (N)kernel_data.exports
     || (N)kernel_data.exports > (N)kernel_data.dynstr
-    || (N)kernel_data.dynstr > (N)kernel_data.text
+    || (N)kernel_data.dynstr > (N)kernel_data.got
+    || (N)kernel_data.got > (N)kernel_data.text
     || (N)kernel_data.text > (N)kernel_data.data
-    || (N)kernel_data.data > (N)E_main_S_kernel_args.kernel + kernel_size
+    || (N)kernel_data.data > (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size )
     || (N)kernel_data.entry < (N)kernel_data.text
     || (N)kernel_data.entry >= (N)kernel_data.data
     )
         return ~0;
     for_n( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
-        if( kernel_data.rela[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
+        if( kernel_data.rela[i].offset < (N)kernel_data.got - (N)E_main_S_kernel_args.kernel
         || kernel_data.rela[i].offset >= kernel_size
         )
             return ~0;
     for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
-        if( kernel_data.exports[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
+        if( kernel_data.exports[i].offset < (N)kernel_data.got - (N)E_main_S_kernel_args.kernel
         || kernel_data.exports[i].offset >= kernel_size
         )
             return ~0;
@@ -1222,6 +1226,8 @@ H_uefi_I_main(
     kernel_p++;
     kernel_data.dynstr = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
     kernel_p++;
+    kernel_data.got = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
+    kernel_p++;
     kernel_data.text = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
     kernel_p++;
     kernel_data.data = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
@@ -1268,10 +1274,11 @@ H_uefi_I_main(
     E_main_S_kernel_args.uefi_runtime_services.R_variable_info = system_table->runtime_services->R_variable_info;
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
-    "\n"    "mov    %0,%%rdi"
-    "\n"    "jmp    *%1"
+    "\n"    "mov    %1,%%rdi"
+    "\n"    "mov    %0,%%rsp"
+    "\n"    "jmp    *%2"
     :
-    : "g" ( &E_main_S_kernel_args ), "g" ( kernel_data.entry )
+    : "g" ( E_main_S_kernel_args.kernel_stack + stack_size ), "g" ( &E_main_S_kernel_args ), "r" ( kernel_data.entry )
     : "rdi"
     );
     __builtin_unreachable();
