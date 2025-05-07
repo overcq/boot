@@ -88,7 +88,7 @@ E_mem_Q_blk_T_eq( P p_1
 , P p_2
 , N l
 ){  for_n( i, l )
-        if( *( (Pc)p_1 + l ) != *( (Pc)p_2 + l ))
+        if( *( (Pc)p_1 + i ) != *( (Pc)p_2 + i ))
             return no;
     return yes;
 }
@@ -98,7 +98,7 @@ E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
 ){
-        #ifdef __SSE2__
+        #ifdef __SSE__
     N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N128) );
     N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof(N128) );
     N l_0 = (Pc)src_x - (Pc)src;
@@ -117,10 +117,10 @@ E_mem_Q_blk_I_copy_fwd( P dst
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movdqa (%1),%%xmm0"
-            "\n"    "movdqa %%xmm0,(%0)"
+            "\n"    "movaps %1,%%xmm0"
+            "\n"    "movaps %%xmm0,%0"
             :
-            : "r" ( dst_x++ ), "r" ( src_x++ )
+            : "p" ( dst_x++ ), "p" ( src_x++ )
             : "xmm0", "memory"
             );
         dst = dst_x;
@@ -141,7 +141,7 @@ E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
 ){
-        #ifdef __SSE2__
+        #ifdef __SSE__
     N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof(N128) );
     N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof(N128) );
     N l_0 = (Pc)src + l - (Pc)src_x;
@@ -163,10 +163,10 @@ E_mem_Q_blk_I_copy_rev( P dst
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movdqa (%1),%%xmm0"
-            "\n"    "movdqa %%xmm0,(%0)"
+            "\n"    "movaps %1,%%xmm0"
+            "\n"    "movaps %%xmm0,%0"
             :
-            : "r" ( --dst_x ), "r" ( --src_x )
+            : "p" ( --dst_x ), "p" ( --src_x )
             : "xmm0", "memory"
             );
         dst = (P)( (Pc)dst_x - 1 );
@@ -206,14 +206,14 @@ memmove( P dst
 ){  E_mem_Q_blk_I_copy( dst, src, l );
     return dst;
 }
-__attribute__ ((__alias__( "memmove" )))
+__attribute__ (( __alias__( "memmove" ) ))
 P memcpy( P, const P, size_t );
 void
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
 ){
-        #ifdef __SSE2__
+        #ifdef __SSE__
     N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof(N128) );
     N l_0 = (Pc)p_x - (Pc)p;
     if( l > l_0
@@ -227,21 +227,21 @@ E_mem_Q_blk_P_fill_c( P p
         : "a" (c)
         : "memory"
         );
-        N128 x;
+        N128 __attribute__ (( __aligned__(16) )) x;
         p = &x;
         N cx = sizeof(N128);
         __asm__ volatile (
         "\n"    "rep stosb"
-        "\n"    "movdqa %2,%%xmm0"
+        "\n"    "movaps %2,%%xmm0"
         : "+D" (p), "+c" (cx)
         : "m" (x), "a" (c)
         : "xmm0", "memory"
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movdqa %%xmm0,(%0)"
+            "\n"    "movaps %%xmm0,%0"
             :
-            : "r" ( p_x++ )
+            : "p" ( p_x++ )
             : "memory"
             );
         p = p_x;
@@ -358,7 +358,7 @@ E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( N table_i
     N tmp_l = *( N * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + inserted_i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l );
     if( middle != inserted_i )
         if( middle < inserted_i )
-            E_mem_Q_blk_I_copy_rev( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + ( middle + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+            E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + ( middle + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
             , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
             , ( inserted_i - middle ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
             );
@@ -428,7 +428,7 @@ E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
     N tmp_u = E_base_S->E_mem_Q_blk_S_allocated[ inserted_i ].u;
     if( middle != inserted_i )
     {   if( middle < inserted_i )
-            E_mem_Q_blk_I_copy_rev( &E_base_S->E_mem_Q_blk_S_allocated[ middle + 1 ]
+            E_mem_Q_blk_I_copy( &E_base_S->E_mem_Q_blk_S_allocated[ middle + 1 ]
             , &E_base_S->E_mem_Q_blk_S_allocated[middle]
             , ( inserted_i - middle ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
             );
@@ -1664,7 +1664,7 @@ E_mem_Q_blk_I_prepend( P p
                                     if( !free_p[ free_i ].l )
                                         E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
                                 }
-                                E_mem_Q_blk_I_copy_rev( p_0 + l, p_0, l_0 );
+                                E_mem_Q_blk_I_copy( p_0 + l, p_0, l_0 );
                                 E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
                                 if( l_1 )
                                     *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
@@ -1794,7 +1794,7 @@ E_mem_Q_blk_I_insert( P p
                                     , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1
                                     , i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                                     );
-                                E_mem_Q_blk_I_copy_rev( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u + l
+                                E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u + l
                                 ,  E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                                 , l_0 - i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                                 );
@@ -1828,7 +1828,7 @@ E_mem_Q_blk_I_insert( P p
                 return 0;
             //TODO Zrobić w “E_mem_Q_blk_Q_table_M_from_free” parametr przesuniecia dla ‘split’ i kopiowania tam odrazu?
             if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
-                E_mem_Q_blk_I_copy_rev( (Pc)p_1 + ( i + n ) * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+                E_mem_Q_blk_I_copy( (Pc)p_1 + ( i + n ) * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                 , (Pc)p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                 , l_0 - i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
                 );

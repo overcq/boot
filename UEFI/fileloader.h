@@ -72,7 +72,6 @@ typedef __int128            S128;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define H_oux_J_align_up_p(p,t)             E_simple_Z_p_I_align_up_to_v2( p, sizeof(t) )
 //==============================================================================
-B E_text_Z_sl_T_eq( Pc, Pc, N );
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
 //------------------------------------------------------------------------------
@@ -583,8 +582,8 @@ struct H_uefi_Z_protocol_Z_block_io
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
 };
 //==============================================================================
-#define E_mem_Q_blk_S_free_n_init       3
-#define E_mem_Q_blk_S_allocated_n_init  7
+#define E_mem_Q_blk_S_free_n_init       4
+#define E_mem_Q_blk_S_allocated_n_init  6
 struct H_oux_E_mem_Z_memory_map
 { N64 physical_start;
   N64 virtual_start;

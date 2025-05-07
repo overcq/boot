@@ -92,11 +92,11 @@ __attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_acpi( struct H_uefi_Z_system_table *system_table
 ){  struct H_uefi_Z_guid guid_;
-#define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_text_Z_sl_T_eq( (Pc)&variable, (Pc)&guid_, sizeof(variable) ))
+#define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
     for_n( i, system_table->configuration_table_n )
     {   Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi_table )
         {   struct H_acpi_Z_rsdp *rsdp = system_table->configuration_table[i].vendor_table;
-            if( !E_text_Z_sl_T_eq( &rsdp->signature[0], "RSD PTR ", sizeof( rsdp->signature ))
+            if( !E_mem_Q_blk_T_eq( &rsdp->signature[0], "RSD PTR ", sizeof( rsdp->signature ))
             || rsdp->revision < 2
             || !E_main_I_acpi_I_checksum( rsdp, (Pc)&rsdp->length - (Pc)rsdp )
             || rsdp->length < sizeof( *rsdp )
@@ -106,7 +106,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
             struct H_acpi_Z_xsdt *xsdt = (P)rsdp->XSDT_address;
             if( xsdt->header.length < sizeof( xsdt->header ) + sizeof( xsdt->table_address[0] )
             || !E_main_I_acpi_I_checksum( xsdt, xsdt->header.length )
-            || !E_text_Z_sl_T_eq( &xsdt->header.signature[0], "XSDT", sizeof( xsdt->header.signature ))
+            || !E_mem_Q_blk_T_eq( &xsdt->header.signature[0], "XSDT", sizeof( xsdt->header.signature ))
             )
                 return ~0;
             N table_n = ( xsdt->header.length - sizeof( xsdt->header )) / sizeof( xsdt->table_address[0] );
@@ -125,7 +125,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 S status = system_table->output->output( system_table->output, &s[0] );
                 if( status < 0 )
                     return status;
-                if( E_text_Z_sl_T_eq( &header->signature[0], "FACP", sizeof( xsdt->header.signature )))
+                if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( xsdt->header.signature )))
                 {   struct H_acpi_Z_facs *facs;
                     if( header->revision == 6 )
                     {   struct H_acpi_Z_fadt *fadt = (P)header;
@@ -150,7 +150,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         return ~0;
                     if( header->length <= sizeof( *header )
                     || !E_main_I_acpi_I_checksum( header, header->length )
-                    || !E_text_Z_sl_T_eq( &header->signature[0], "DSDT", sizeof( xsdt->header.signature ))
+                    || !E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( xsdt->header.signature ))
                     )
                         return ~0;
                     E_main_S_kernel_args.acpi.dsdt_content = (Pc)header + sizeof( *header );
@@ -776,71 +776,86 @@ H_uefi_I_main(
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader\r\n" );
     if( status < 0 )
         return status;
-    /*struct H_uefi_Z_guid guid_;
-#define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_text_Z_sl_T_eq( (Pc)&variable, (Pc)&guid_, sizeof(variable) ))
-    for_n( i, system_table->configuration_table_n )
-    {   Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi_table )
-        {   system_table->output->output( system_table->output, L"ACPI, " );
-            continue;
+    // Włączenie obsługi SSE.
+    /*__asm__ volatile (
+    "\n"    "mov    %%cr0,%%rax"
+    "\n"    "and    $~( 1 << 2 ),%%rax"
+    "\n"    "or     $( 1 << 1 ),%%rax"
+    "\n"    "mov    %%rax,%%cr0"
+    "\n"    "mov    %%cr4,%%rax"
+    "\n"    "or     $(( 1 << 9 ) | ( 1 << 10 )),%%rax"
+    "\n"    "mov    %%rax,%%cr4"
+    :
+    :
+    : "rax"
+    );*/
+    /*{
+        struct H_uefi_Z_guid guid_;
+#define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
+        for_n( i, system_table->configuration_table_n )
+        {   Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi_table )
+            {   status = system_table->output->output( system_table->output, L"ACPI, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi1_table )
+            {   status = system_table->output->output( system_table->output, L"ACPI 1, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_sal_system_table )
+            {   status = system_table->output->output( system_table->output, L"SAL, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios_table )
+            {   status = system_table->output->output( system_table->output, L"SMBIOS, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios3_table )
+            {   status = system_table->output->output( system_table->output, L"SMBIOS 3, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_mps_table )
+            {   status = system_table->output->output( system_table->output, L"MPS, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_dtb_table )
+            {   status = system_table->output->output( system_table->output, L"DTB, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_rt_properties_table )
+            {   status = system_table->output->output( system_table->output, L"RT_PROPERTIES, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_attributes_table )
+            {   status = system_table->output->output( system_table->output, L"MEMORY_ATTRIBUTES, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_conformance_profiles_table )
+            {   status = system_table->output->output( system_table->output, L"CONFORMANCE_PROFILES, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_range_capsule )
+            {   status = system_table->output->output( system_table->output, L"MEMORY_RANGE_CAPSULE, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_debug_image_info_table )
+            {   status = system_table->output->output( system_table->output, L"DEBUG_IMAGE_INFO, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_system_resource_table )
+            {   status = system_table->output->output( system_table->output, L"SYSTEM_RESOURCE, " );
+                continue;
+            }
+            Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_image_security_database )
+            {   status = system_table->output->output( system_table->output, L"IMAGE_SECURITY_DATABASE, " );
+                continue;
+            }
+            status = system_table->output->output( system_table->output, L"unknown, " );
         }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi1_table )
-        {   system_table->output->output( system_table->output, L"ACPI 1, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_sal_system_table )
-        {   system_table->output->output( system_table->output, L"SAL, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios_table )
-        {   system_table->output->output( system_table->output, L"SMBIOS, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_smbios3_table )
-        {   system_table->output->output( system_table->output, L"SMBIOS 3, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_mps_table )
-        {   system_table->output->output( system_table->output, L"MPS, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_dtb_table )
-        {   system_table->output->output( system_table->output, L"DTB, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_rt_properties_table )
-        {   system_table->output->output( system_table->output, L"RT_PROPERTIES, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_attributes_table )
-        {   system_table->output->output( system_table->output, L"MEMORY_ATTRIBUTES, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_conformance_profiles_table )
-        {   system_table->output->output( system_table->output, L"CONFORMANCE_PROFILES, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_memory_range_capsule )
-        {   system_table->output->output( system_table->output, L"MEMORY_RANGE_CAPSULE, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_debug_image_info_table )
-        {   system_table->output->output( system_table->output, L"DEBUG_IMAGE_INFO, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_system_resource_table )
-        {   system_table->output->output( system_table->output, L"SYSTEM_RESOURCE, " );
-            continue;
-        }
-        Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_image_security_database )
-        {   system_table->output->output( system_table->output, L"IMAGE_SECURITY_DATABASE, " );
-            continue;
-        }
-        system_table->output->output( system_table->output, L"unknown, " );
-    }
 #undef Z_guid_T_eq
-    struct H_uefi_Z_input_key key;
-    while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
-    goto End;*/
+        struct H_uefi_Z_input_key key;
+        while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
+        goto End;
+    }*/
     status = E_main_I_acpi( system_table );
     struct H_uefi_Z_input_key key;
     while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
@@ -916,7 +931,7 @@ H_uefi_I_main(
     if( disk_io_handles_i == disk_io_handles_n )
         return ~0;
     Pn kernel_p = E_main_S_kernel_args.kernel;
-    if( !E_text_Z_sl_T_eq( (P)kernel_p, "OUXEXE", 6 ))
+    if( !E_mem_Q_blk_T_eq( kernel_p, "OUXEXE", 6 ))
         return ~0;
     kernel_p = (P)( (Pc)kernel_p + 6 );
     struct E_main_Z_kernel_data kernel_data;
@@ -948,12 +963,12 @@ H_uefi_I_main(
         return ~0;
     for_n( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
         if( kernel_data.rela[i].offset < (N)kernel_data.got - (N)E_main_S_kernel_args.kernel
-        || kernel_data.rela[i].offset >= kernel_size
+        || kernel_data.rela[i].offset >= kernel_size //NDFN Być może ‘relokacje’ mogą być tylko w GOT.
         )
             return ~0;
     for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
-        if( kernel_data.exports[i].offset < (N)kernel_data.got - (N)E_main_S_kernel_args.kernel
-        || kernel_data.exports[i].offset >= kernel_size
+        if( kernel_data.exports[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
+        || kernel_data.exports[i].offset >= (N)kernel_data.data - (N)E_main_S_kernel_args.kernel
         )
             return ~0;
     P event;
@@ -984,6 +999,7 @@ H_uefi_I_main(
     E_main_Q_memory_map_R_loader_location( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, &loader_start, &loader_end );
     N reserved_size = E_main_Q_memory_map_R_reserved_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B reserved_from_end = loader_start < H_oux_E_mem_S_page_size + reserved_size;
+reserved_from_end = yes; //TEST
     N reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B has_memory_map_new_entry;
@@ -1110,7 +1126,7 @@ H_uefi_I_main(
     E_main_S_kernel_args.memory_map = (P)( reserved_from_end ? (Pc)E_main_S_kernel_args.page_table - memory_map_size : (Pc)E_main_S_kernel_args.page_table + page_table_size );
     N stack_size = H_oux_E_mem_S_page_size;
     E_main_S_kernel_args.kernel_stack = (P)( reserved_from_end
-    ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map - ( E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated )), H_oux_E_mem_S_page_size ) - stack_size
+    ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
     : memory_size - stack_size
     );
     // Ewentualne przeniesienie programu ‘bootloadera’.
@@ -1131,7 +1147,7 @@ H_uefi_I_main(
                 break;
             }
         }
-        N loader_end_max = (N)E_main_S_kernel_args.kernel_stack;
+        N loader_end_max = E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.kernel_stack - ( E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated )), H_oux_E_mem_S_page_size );
         if(( loader_inside_free_end
           && loader_end > loader_end_max
           )
@@ -1145,7 +1161,9 @@ H_uefi_I_main(
                   )
                 && memory_map_->pages * H_oux_E_mem_S_page_size >= loader_end - loader_start
                 )
-                    loader_start_new = memory_map_->virtual_start;
+                {   loader_start_new = memory_map_->virtual_start;
+                    break;
+                }
                 memory_map_ = (P)( (Pc)memory_map_ + E_main_S_descriptor_l );
             }
             if( !loader_start_new
@@ -1237,8 +1255,6 @@ H_uefi_I_main(
     kernel_data.rela = (P)kernel_p;
     for_n_( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
         *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) += (N)E_main_S_kernel_args.kernel;
-    for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
-        *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.exports[i].offset ) += (N)E_main_S_kernel_args.kernel;
     struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
     memory_map_ = E_main_S_memory_map;
     for_n_( i, memory_map_n )
@@ -1274,11 +1290,11 @@ H_uefi_I_main(
     E_main_S_kernel_args.uefi_runtime_services.R_variable_info = system_table->runtime_services->R_variable_info;
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
-    "\n"    "mov    %1,%%rdi"
+    "\n"    "lea    %1,%%rdi"
     "\n"    "mov    %0,%%rsp"
     "\n"    "jmp    *%2"
     :
-    : "g" ( E_main_S_kernel_args.kernel_stack + stack_size ), "g" ( &E_main_S_kernel_args ), "r" ( kernel_data.entry )
+    : "g" ( E_main_S_kernel_args.kernel_stack + stack_size ), "p" ( &E_main_S_kernel_args ), "r" ( kernel_data.entry )
     : "rdi"
     );
     __builtin_unreachable();

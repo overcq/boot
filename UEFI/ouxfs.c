@@ -69,7 +69,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
     status = disk_io->read( disk_io, media_id, 0, H_oux_E_mem_S_page_size, sector );
     if( status < 0 )
         goto Error_0;
-    if( !E_text_Z_sl_T_eq( sector, H_oux_E_fs_Q_device_S_ident, sizeof( H_oux_E_fs_Q_device_S_ident )))
+    if( !E_mem_Q_blk_T_eq( sector, H_oux_E_fs_Q_device_S_ident, sizeof( H_oux_E_fs_Q_device_S_ident )))
         goto Error_0;
     N sector_size_bit = sector[ sizeof( H_oux_E_fs_Q_device_S_ident ) ];
     if( sector_size_bit != 9
