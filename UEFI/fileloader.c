@@ -91,7 +91,8 @@ E_main_I_acpi_I_checksum( P table
 __attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_acpi( struct H_uefi_Z_system_table *system_table
-){  struct H_uefi_Z_guid guid_;
+){  _0( &E_main_S_kernel_args.acpi, sizeof( E_main_S_kernel_args.acpi ));
+    struct H_uefi_Z_guid guid_;
 #define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
     for_n( i, system_table->configuration_table_n )
     {   Z_guid_T_eq( system_table->configuration_table[i].vendor_guid, H_uefi_Z_guid_S_acpi_table )
@@ -125,7 +126,15 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 S status = system_table->output->output( system_table->output, &s[0] );
                 if( status < 0 )
                     return status;
-                if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( xsdt->header.signature )))
+                if( E_mem_Q_blk_T_eq( &header->signature[0], "APIC", sizeof( xsdt->header.signature )))
+                {   struct H_acpi_Z_apic *apic = (P)header;
+                    E_main_S_kernel_args.acpi.apic_content = (Pc)apic + sizeof( *apic );
+                    E_main_S_kernel_args.acpi.apic_content_l = apic->header.length - sizeof( *apic );
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( xsdt->header.signature )))
+                {   struct H_acpi_Z_dmar *dmar = (P)header;
+                    E_main_S_kernel_args.acpi.dmar_content = (Pc)dmar + sizeof( *dmar );
+                    E_main_S_kernel_args.acpi.dmar_content_l = dmar->header.length - sizeof( *dmar );
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( xsdt->header.signature )))
                 {   struct H_acpi_Z_facs *facs;
                     if( header->revision == 6 )
                     {   struct H_acpi_Z_fadt *fadt = (P)header;
@@ -161,13 +170,47 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                     ))
                         return ~0;
                     E_main_S_kernel_args.acpi.facs = facs;
-                    
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "HPET", sizeof( xsdt->header.signature )))
+                {   struct H_acpi_Z_hpet *hpet = (P)header;
+                    if( header->length != sizeof( *hpet ))
+                        return ~0;
+                    E_main_S_kernel_args.acpi.hpet.comparator_count = hpet->comparator_count;
+                    E_main_S_kernel_args.acpi.hpet.counter_size = hpet->counter_size;
+                    E_main_S_kernel_args.acpi.hpet.legacy_replacement = hpet->legacy_replacement;
+                    E_main_S_kernel_args.acpi.hpet.address = hpet->address;
+                    E_main_S_kernel_args.acpi.hpet.hpet_number = hpet->hpet_number;
+                    E_main_S_kernel_args.acpi.hpet.minimum_tick = hpet->minimum_tick;
+                    E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( xsdt->header.signature )))
+                {   E_main_S_kernel_args.acpi.mcfg_content = (P)( (Pc)header + sizeof( *header ));
+                    E_main_S_kernel_args.acpi.mcfg_content_n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "SSDT", sizeof( xsdt->header.signature )))
+                {   if( E_main_S_kernel_args.acpi.ssdt_contents_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_contents ))
+                        return ~0;
+                    E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].address = (Pc)header + sizeof( *header );
+                    E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].l = header->length - sizeof( *header );
+                    E_main_S_kernel_args.acpi.ssdt_contents_n++;
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WAET", sizeof( xsdt->header.signature )))
+                {   struct H_acpi_Z_waet *waet = (P)header;
+                    if( header->length != sizeof( *waet ))
+                        return ~0;
+                    E_main_S_kernel_args.acpi.virt_guest_rtc_good = waet->flags & ( 1 << 0 );
+                    E_main_S_kernel_args.acpi.virt_guest_pm_good = waet->flags & ( 1 << 1 );
+                }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WSMT", sizeof( xsdt->header.signature )))
+                {    struct H_acpi_Z_wsmt *wsmt = (P)header;
+                    if( header->length != sizeof( *wsmt ))
+                        return ~0;
+                    E_main_S_kernel_args.acpi.smm_validate_fixed_comm_buffers = wsmt->flags & ( 1 << 0 );
+                    E_main_S_kernel_args.acpi.smm_validate_nested_ptr = wsmt->flags & ( 1 << 1 );
+                    E_main_S_kernel_args.acpi.smm_system_resource_protection = wsmt->flags & ( 1 << 2 );
                 }
             }
             break;
         }
     }
 #undef Z_guid_T_eq
+    if( !E_main_S_kernel_args.acpi.dsdt_content_l )
+        return ~0;
     return 0;
 }
 void
@@ -203,12 +246,29 @@ E_main_I_virtual_address_change( P event
     struct H_uefi_Z_runtime_services *runtime_services = system_table->runtime_services;
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
+    , &E_main_S_kernel_args.acpi.apic_content
+    );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
+    , &E_main_S_kernel_args.acpi.dmar_content
+    );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , &E_main_S_kernel_args.acpi.dsdt_content
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , &E_main_S_kernel_args.acpi.facs
     );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
+    , ( P * )&E_main_S_kernel_args.acpi.mcfg_content
+    );
+    for_n( i, E_main_S_kernel_args.acpi.ssdt_contents_n )
+        E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+        , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
+        , &E_main_S_kernel_args.acpi.ssdt_contents[i].address
+        );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_kernel_args.memory_map_n
     , ( P * )&E_main_S_kernel_args.kernel
@@ -714,9 +774,9 @@ S
 E_main_Q_loader_I_relocate( N loader_start
 , N delta
 ){  struct E_base_Z_image_dos_header *image_dos_header = (P)loader_start;
-    if( image_dos_header->e_magic != 0x5a4d )
+    if( image_dos_header->magic != 0x5a4d )
         return ~0;
-    struct E_base_Z_image_nt_headers64 *image_nt_headers64 = (P)( (Pc)loader_start + image_dos_header->e_lfanew );
+    struct E_base_Z_image_nt_headers64 *image_nt_headers64 = (P)( (Pc)loader_start + image_dos_header->lfanew );
     if( image_nt_headers64->signature != 0x4550 )
         return ~0;
     struct E_base_Z_image_data_directory *reloc = &image_nt_headers64->optional_header.data_directory[5];
@@ -999,7 +1059,6 @@ H_uefi_I_main(
     E_main_Q_memory_map_R_loader_location( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, &loader_start, &loader_end );
     N reserved_size = E_main_Q_memory_map_R_reserved_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B reserved_from_end = loader_start < H_oux_E_mem_S_page_size + reserved_size;
-reserved_from_end = yes; //TEST
     N reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B has_memory_map_new_entry;

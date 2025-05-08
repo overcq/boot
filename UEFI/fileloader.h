@@ -378,29 +378,25 @@ struct H_uefi_Z_system_table
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct __attribute__ (( __packed__ )) H_acpi_Z_rsdp
 { C signature[8];
-  C checksum;
+  N8 checksum;
   C OEM_id[6];
-  C revision;
+  N8 revision;
   N32 RSDT_address;
   N32 length;
   N64 XSDT_address;
-  C checksum_2;
-  C reserved[3];
+  N8 checksum_2;
+  N8 reserved[3];
 };
 struct __attribute__ (( __packed__ )) H_acpi_Z_table_header
 { C signature[4];
   N32 length;
-  C revision;
-  C checksum;
+  N8 revision;
+  N8 checksum;
   C OEM_id[6];
   C OEM_table_id[8];
   N32 OEM_revision;
   N32 creator_id;
   N32 creator_revision;
-};
-struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
-{ struct H_acpi_Z_table_header header;
-  N64 table_address[];
 };
 enum H_acpi_Z_generic_address_Z_space
 { H_acpi_Z_generic_address_Z_space_S_memory
@@ -424,12 +420,67 @@ enum H_acpi_Z_generic_address_Z_access_size
 , H_acpi_Z_generic_address_Z_access_size_S_8
 };
 struct __attribute__ (( __packed__ )) H_acpi_Z_generic_address
-{ C space;
-  C width;
-  C offset;
-  C access_size;
+{ N8 space;
+  N8 width;
+  N8 offset;
+  N8 access_size;
   N64 address;
 };
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
+{ struct H_acpi_Z_table_header header;
+  N64 table_address[];
+};
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_apic
+{ struct H_acpi_Z_table_header header;
+  N32 local_interrupt_controler;
+  N32 pcat_compat   :1;
+};
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_dmar
+{ struct H_acpi_Z_table_header header;
+  N8 host_addreass_width;
+  N8 flags;
+  N8 reserved[10];
+};
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v0
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  N8 reserved_1[8];
+  N8 version;
+  N8 reserved_2[31];
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v1
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  N64 ex_firmware_waking_vector;
+  N8 version;
+  N8 reserved[31];
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_facs
+{ C signature[4];
+  N32 length;
+  N32 hardware_signature;
+  N32 firmware_waking_vector;
+  N32 global_lock;
+  N32 flags;
+  N64 ex_firmware_waking_vector;
+  N8 version;
+  N8 reserved_1[3];
+  N32 OS_flags;
+  N8 reserved_2[24];
+};
+//------------------------------------------------------------------------------
 enum H_acpi_Z_fadt_Z_preferred_pm_profile
 { H_acpi_Z_fadt_Z_preferred_pm_profile_S_unspecified
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_desktop
@@ -445,32 +496,32 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v3
 { struct H_acpi_Z_table_header header;
   N32 facs;
   N32 dsdt;
-  C reserved_1;
-  C preferred_pm_profile;
+  N8 reserved_1;
+  N8 preferred_pm_profile;
   N16 SCI_interrupt;
   N32 SMI_command;
-  C SMI_ACPI_enable, SMI_ACPI_disable;
-  C SMI_S4BIOS_request;
-  C SMI_PSTATE_ACPI_control;
+  N8 SMI_ACPI_enable, SMI_ACPI_disable;
+  N8 SMI_S4BIOS_request;
+  N8 SMI_PSTATE_ACPI_control;
   N32 PM1a_event_block, PM1b_event_block;
   N32 PM1a_control_block, PM1b_control_block;
   N32 PM2_control_block;
   N32 PM_timer_block;
   N32 GPE0_block, GPE1_block;
-  C PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
-  C GPE1_base;
-  C SMI_CST_ACPI_control;
+  N8 PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  N8 GPE1_base;
+  N8 SMI_CST_ACPI_control;
   N16 PM_level2_latency, PM_level3_latency;
   N16 memory_cache_flush_size, memory_cache_flush_stride;
-  C CPU_duty_offset, CPU_duty_width;
-  C CMOS_alarm_day, CMOS_alarm_month;
-  C CMOS_century;
+  N8 CPU_duty_offset, CPU_duty_width;
+  N8 CMOS_alarm_day, CMOS_alarm_month;
+  N8 CMOS_century;
   N16 IA_PC_boot_architecture_flags;
-  C reserved_2;
+  N8 reserved_2;
   N32 flags;
   struct H_acpi_Z_generic_address reset_register;
-  C reset_value;
-  C reserved[3];
+  N8 reset_value;
+  N8 reserved[3];
   N64 ex_facs;
   N64 ex_dsdt;
   struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
@@ -483,33 +534,33 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_fadt
 { struct H_acpi_Z_table_header header;
   N32 facs;
   N32 dsdt;
-  C reserved_1;
-  C preferred_pm_profile;
+  N8 reserved_1;
+  N8 preferred_pm_profile;
   N16 SCI_interrupt;
   N32 SMI_command;
-  C SMI_ACPI_enable, SMI_ACPI_disable;
-  C SMI_S4BIOS_request;
-  C SMI_PSTATE_ACPI_control;
+  N8 SMI_ACPI_enable, SMI_ACPI_disable;
+  N8 SMI_S4BIOS_request;
+  N8 SMI_PSTATE_ACPI_control;
   N32 PM1a_event_block, PM1b_event_block;
   N32 PM1a_control_block, PM1b_control_block;
   N32 PM2_control_block;
   N32 PM_timer_block;
   N32 GPE0_block, GPE1_block;
-  C PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
-  C GPE1_base;
-  C SMI_CST_ACPI_control;
+  N8 PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  N8 GPE1_base;
+  N8 SMI_CST_ACPI_control;
   N16 PM_level2_latency, PM_level3_latency;
   N16 memory_cache_flush_size, memory_cache_flush_stride;
-  C CPU_duty_offset, CPU_duty_width;
-  C CMOS_alarm_day, CMOS_alarm_month;
-  C CMOS_century;
+  N8 CPU_duty_offset, CPU_duty_width;
+  N8 CMOS_alarm_day, CMOS_alarm_month;
+  N8 CMOS_century;
   N16 IA_PC_boot_architecture_flags;
-  C reserved_2;
+  N8 reserved_2;
   N32 flags;
   struct H_acpi_Z_generic_address reset_register;
-  C reset_value;
+  N8 reset_value;
   N16 ARM_boot_architecture_flags;
-  C table_minor_version;
+  N8 table_minor_version;
   N64 ex_facs;
   N64 ex_dsdt;
   struct H_acpi_Z_generic_address ex_PM1a_event_block, ex_PM1b_event_block;
@@ -520,40 +571,52 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_fadt
   struct H_acpi_Z_generic_address sleep_control_register, sleep_status_register;
   N64 hypervisor_vendor_identity;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v0
-{ C signature[4];
-  N32 length;
-  N32 hardware_signature;
-  N32 firmware_waking_vector;
-  N32 global_lock;
-  N32 flags;
-  C reserved_1[8];
-  C version;
-  C reserved_2[31];
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_hpet
+{ struct H_acpi_Z_table_header header;
+  N8 hardware_rev_id;
+  N8 comparator_count   :5;
+  N8 counter_size       :1;
+  N8 reserved           :1;
+  N8 legacy_replacement :1;
+  N16 pci_vendor_id;
+  struct H_acpi_Z_generic_address address;
+  N8 hpet_number;
+  N16 minimum_tick;
+  N8 page_protection;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v1
-{ C signature[4];
-  N32 length;
-  N32 hardware_signature;
-  N32 firmware_waking_vector;
-  N32 global_lock;
-  N32 flags;
-  N64 ex_firmware_waking_vector;
-  C version;
-  C reserved[31];
+struct H_oux_Z_hpet
+{ N8 comparator_count   :5;
+  N8 counter_size       :1;
+  N8 legacy_replacement :1;
+  struct H_acpi_Z_generic_address address;
+  N8 hpet_number;
+  N16 minimum_tick;
+  N8 page_protection;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_facs
-{ C signature[4];
-  N32 length;
-  N32 hardware_signature;
-  N32 firmware_waking_vector;
-  N32 global_lock;
+//------------------------------------------------------------------------------
+//NDFN Definicja odtworzona z filmu poradnikowego.
+struct __attribute__ (( __packed__ )) H_acpi_Z_mcfg_entry
+{ N64 base_address;
+  N16 pci_segment;
+  N8 start_bus;
+  N8 end_bus;
+  N32 reserved;
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_mcfg
+{ struct H_acpi_Z_table_header header;
+  N64 reserved;
+  struct H_acpi_Z_mcfg_entry table[];
+};
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_waet
+{ struct H_acpi_Z_table_header header;
   N32 flags;
-  N64 ex_firmware_waking_vector;
-  C version;
-  C reserved_1[3];
-  N32 OS_flags;
-  C reserved_2[24];
+};
+//------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_wsmt
+{ struct H_acpi_Z_table_header header;
+  N32 flags;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
@@ -628,6 +691,28 @@ struct H_main_Z_uefi_runtime_services
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_capsule_capabilities )( struct H_uefi_Z_capsule_header **capsule_headers, N capsule_headers_n, N64 *maximum_capsule_size, enum H_uefi_Z_reset *reset_type );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable_info )( N32 attributes, N64 *maximum_variable_storage_size, N64 *remaining_variable_storage_size, N64 *maximum_variable_size );
 };
+struct H_main_Z_kernel_Z_acpi
+{ P apic_content;
+  N apic_content_l;
+  P dmar_content;
+  N dmar_content_l;
+  P dsdt_content;
+  N dsdt_content_l;
+  P facs;
+  struct H_oux_Z_hpet hpet;
+  struct H_acpi_Z_mcfg_entry *mcfg_content;
+  N mcfg_content_n;
+  struct
+  { P address;
+    N l;
+  }ssdt_contents[2];
+  N ssdt_contents_n;
+  unsigned virt_guest_rtc_good                :1;
+  unsigned virt_guest_pm_good                 :1;
+  unsigned smm_validate_fixed_comm_buffers    :1;
+  unsigned smm_validate_nested_ptr            :1;
+  unsigned smm_system_resource_protection     :1;
+};
 struct E_main_Z_kernel_args
 { struct E_mem_blk_Z mem_blk;
   struct H_oux_E_mem_Z_memory_map *memory_map;
@@ -637,33 +722,29 @@ struct E_main_Z_kernel_args
   P page_table;
   P kernel_stack;
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
-  struct
-  { P dsdt_content;
-    N dsdt_content_l;
-    P facs;
-  }acpi;
+  struct H_main_Z_kernel_Z_acpi acpi;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header
-{ N16 e_magic; // Magic number
-  N16 e_cblp; // Bytes on last page of file
-  N16 e_cp; // Pages in file
-  N16 e_crlc; // Relocations
-  N16 e_cparhdr; // Size of header in paragraphs
-  N16 e_minalloc; // Minimum extra paragraphs needed
-  N16 e_maxalloc; // Maximum extra paragraphs needed
-  N16 e_ss; // Initial (relative) SS value
-  N16 e_sp; // Initial SP value
-  N16 e_csum; // Checksum
-  N16 e_ip; // Initial IP value
-  N16 e_cs; // Initial (relative) CS value
-  N16 e_lfarlc; // File address of relocation table
-  N16 e_ovno; // Overlay number
-  N16 e_res[4]; // Reserved words
-  N16 e_oemid; // OEM identifier (for e_oeminfo)
-  N16 e_oeminfo; // OEM information; e_oemid specific
-  N16 e_res2[10]; // Reserved words
-  N32 e_lfanew; // File address of new exe header
+{ N16 magic; // Magic number
+  N16 cblp; // Bytes on last page of file
+  N16 cp; // Pages in file
+  N16 crlc; // Relocations
+  N16 cparhdr; // Size of header in paragraphs
+  N16 minalloc; // Minimum extra paragraphs needed
+  N16 maxalloc; // Maximum extra paragraphs needed
+  N16 ss; // Initial (relative) SS value
+  N16 sp; // Initial SP value
+  N16 csum; // Checksum
+  N16 ip; // Initial IP value
+  N16 cs; // Initial (relative) CS value
+  N16 lfarlc; // File address of relocation table
+  N16 ovno; // Overlay number
+  N16 res[4]; // Reserved words
+  N16 oemid; // OEM identifier (for e_oeminfo)
+  N16 e_oeminfo; // OEM information; oemid specific
+  N16 res_2[10]; // Reserved words
+  N32 lfanew; // File address of new exe header
 };
 struct E_base_Z_image_file_header
 { N16 machine;
