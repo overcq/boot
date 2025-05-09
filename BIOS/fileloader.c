@@ -488,7 +488,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_vga_I_fill_rect( E_vga_S_video->width / 2 - 50, E_vga_S_video->height / 2 + 4 + 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
-    E_font_I_print( "OUX/C+ OS boot loader. File Boot Loader. ©overcq <overcq@int.pl>. http://github.com/overcq/boot\n" );
+    E_font_I_print( "OUX/C+ OS boot loader. File Boot Loader. ©overcq <overcq@int.pl>. http://github.com/overcq\n" );
 End:__asm__ (
     "\n0:"  "hlt"
     "\n"    "jmp    0b"

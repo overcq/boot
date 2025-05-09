@@ -622,8 +622,8 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_wsmt
 #define H_uefi_Z_guid_S_disk_io { 0xce345171, 0xba0b, 0x11d2, { 0x8e, 0x4f, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
 struct H_uefi_Z_protocol_Z_disk_io
 { N64 revision;
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N l, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_disk_io *this, N32 media_id, N64 offset, N l, P buffer );
 };
 //------------------------------------------------------------------------------
 #define H_uefi_Z_guid_S_block_io { 0x964e5b21, 0x6459, 0x11d2, { 0x8e, 0x39, 0, 0xa0, 0xc9, 0x69, 0x72, 0x3b } }
@@ -641,8 +641,56 @@ struct H_uefi_Z_protocol_Z_block_io
 { N64 revision;
   struct H_uefi_Z_protocol_Z_block_io_Z_media *media;
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *reset )( struct H_uefi_Z_protocol_Z_block_io *this );
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N size, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *read )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N l, P buffer );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *write )( struct H_uefi_Z_protocol_Z_block_io *this, N32 media_id, N64 lba, N l, P buffer );
+};
+//------------------------------------------------------------------------------
+#define H_uefi_Z_guid_S_graphics { 0x9042a9de, 0x23dc, 0x4a38, { 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a } }
+enum H_uefi_Z_pixel_format
+{ H_uefi_Z_pixel_format_S_rgb8
+, H_uefi_Z_pixel_format_S_bgr8
+, H_uefi_Z_pixel_format_S_bitmask
+, H_uefi_Z_pixel_format_S_blt
+};
+struct H_uefi_Z_protocol_Z_graphics_Z_mode_information_Z_pixel_bitmask
+{ N32 red;
+  N32 green;
+  N32 blue;
+  N32 reserved;
+};
+struct H_uefi_Z_protocol_Z_graphics_Z_mode_information
+{ N32 version;
+  N32 horizontal_resolution;
+  N32 vertical_resolution;
+  enum H_uefi_Z_pixel_format pixel_format;
+  struct H_uefi_Z_protocol_Z_graphics_Z_mode_information_Z_pixel_bitmask pixel_bitmask;
+  N32 pixels_per_scan_line;
+};
+struct H_uefi_Z_protocol_Z_graphics_I_blt_Z_pixel
+{ N32 blue;
+  N32 green;
+  N32 red;
+  N32 reserved;
+};
+enum H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation
+{ H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation_S_fill
+, H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation_S_video2buffer
+, H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation_S_buffer2video
+, H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation_S_video2video
+};
+struct H_uefi_Z_protocol_Z_graphics_Z_mode
+{ N32 max_mode;
+  N32 mode;
+  struct H_uefi_Z_protocol_Z_graphics_Z_mode_information *info;
+  N info_l;
+  P framebuffer;
+  N framebuffer_l;
+};
+struct H_uefi_Z_protocol_Z_graphics
+{ S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *query )( struct H_uefi_Z_protocol_Z_graphics *this, N32 mode, N *l, struct H_uefi_Z_protocol_Z_graphics_Z_mode_information **info );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_mode )( struct H_uefi_Z_protocol_Z_graphics *this, N32 mode );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *blt )( struct H_uefi_Z_protocol_Z_graphics *this, struct H_uefi_Z_protocol_Z_graphics_I_blt_Z_pixel *buffer, enum H_uefi_Z_protocol_Z_graphics_I_blt_Z_operation operation, N src_x, N src_y, N dest_x, N dest_y, N width, N height, N delta );
+  struct H_uefi_Z_protocol_Z_graphics_Z_mode *mode;
 };
 //==============================================================================
 #define E_mem_Q_blk_S_free_n_init       4
@@ -677,6 +725,18 @@ S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 //==============================================================================
+struct H_oux_Z_pixel_shifts
+{ N8 red;
+  N8 green;
+  N8 blue;
+};
+struct H_main_Z_framebuffer
+{ volatile N32 *p;
+  N32 width, height;
+  N32 pixels_per_scan_line;
+  enum H_uefi_Z_pixel_format pixel_format;
+  struct H_oux_Z_pixel_shifts pixel_shifts;
+};
 struct H_main_Z_uefi_runtime_services
 { S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_time )( struct H_uefi_Z_time *time, struct H_uefi_Z_time_capabilities *capabilities );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_time )( struct H_uefi_Z_time *time );
@@ -721,6 +781,7 @@ struct E_main_Z_kernel_args
   P kernel;
   P page_table;
   P kernel_stack;
+  struct H_main_Z_framebuffer framebuffer;
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct H_main_Z_kernel_Z_acpi acpi;
 };
