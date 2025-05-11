@@ -862,4 +862,39 @@ struct E_base_Z_image_relocation
   N32 size_of_block;
   N16 entries[];
 };
+//==============================================================================
+#define E_vga_S_background_color            0xcacaca
+#define E_vga_S_text_color                  0
+enum E_vga_Z_aa_pixel
+{ E_vga_Z_aa_pixel_S_e = 1 << 0,
+  E_vga_Z_aa_pixel_S_se = 1 << 1,
+  E_vga_Z_aa_pixel_S_s = 1 << 2,
+  E_vga_Z_aa_pixel_S_sw = 1 << 3,
+  E_vga_Z_aa_pixel_S_w = 1 << 4,
+  E_vga_Z_aa_pixel_S_nw = 1 << 5,
+  E_vga_Z_aa_pixel_S_n = 1 << 6,
+  E_vga_Z_aa_pixel_S_ne = 1 << 7
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N E_font_M(void);
+void E_font_W(void);
+N E_font_I_draw( N, N, N, U );
+void E_font_I_print_nl(void);
+void E_font_I_print_u(U);
+N E_font_I_print(Pc);
+void E_font_I_print_hex(N);
+//==============================================================================
+Pc E_text_Z_su_R_u( Pc, U *);
+//==============================================================================
+N E_vga_Z_color_M( N8, N8, N8 );
+N8 E_vga_Z_color_R_red(N32);
+N8 E_vga_Z_color_R_green(N32);
+N8 E_vga_Z_color_R_blue(N32);
+N E_vga_Z_color_M_gray(N8);
+N E_vga_R_video_color(N);
+N E_vga_R_pixel( N, N );
+void E_vga_P_pixel( N, N, N );
+void E_vga_I_set_pixel_aa( N, N, N, F, N );
+void E_vga_I_draw_rect( N, N, N, N, N );
+void E_vga_I_fill_rect( N, N, N, N, N );
 /******************************************************************************/

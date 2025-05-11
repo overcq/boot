@@ -33,4 +33,27 @@ E_text_Z_n_N_s_G( N n
     }while( n /= base );
     return i;
 }
+Pc
+E_text_Z_su_R_u( Pc s
+, U *u
+){  if( (S8)*s >= 0 )
+    {   *u = *s;
+        return s + 1;
+    }
+    U v = ~(S8)*s;
+    N n = E_asm_I_bsr(v);
+    if( n == ~0
+    || n == 6
+    )
+        return s;
+    v = *s & ( _v( v, 1 ) << n ) - 1;
+    for_n( i, 6 - n )
+    {   if(( *++s & 0xc0 ) != 0x80 )
+            return s;
+        v <<= 6;
+        v |= *s & 0x3f;
+    }
+    *u = v;
+    return s + 1;
+}
 /******************************************************************************/
