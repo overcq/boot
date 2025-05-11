@@ -75,7 +75,7 @@ typedef __int128            S128;
 Pc16 E_text_Z_n_N_s( Pc16, N, N, N );
 N E_text_Z_n_N_s_G( N, N, N );
 //------------------------------------------------------------------------------
-void E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N, N, N );
+N E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N, N, N );
 B E_mem_Q_blk_T_eq( P, P, N );
 void E_mem_Q_blk_I_copy( P, P, N );
 void E_mem_Q_blk_P_fill_c( P, N, C );

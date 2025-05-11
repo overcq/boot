@@ -87,7 +87,7 @@ struct __attribute__(( __packed__ )) E_main_Z_video
   N8 red_start, red_size, green_start, green_size, blue_start, blue_size;
 };
 //==============================================================================
-Pc E_text_Z_s_Z_utf8_R_u( Pc, U * );
+Pc E_text_Z_su_R_u( Pc, U * );
 //==============================================================================
 void E_mem_M( struct E_main_Z_memory_table_entry * );
 void E_mem_M_free( struct E_main_Z_memory_table_entry * );

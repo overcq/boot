@@ -2505,7 +2505,11 @@ E_font_M( void
         }
         Mt_( font.bitmap[i].bitmap, font.bitmap[i].width * font.height / 4 + ( font.bitmap[i].width * font.height % 4 ? 1 : 0 ));
         if( !font.bitmap[i].bitmap )
+        {   for_n( j, i )
+                W( font.bitmap[j].bitmap );
+            W( font.bitmap );
             return ~0;
+        }
         N8 c;
         for_n( j, font.bitmap[i].width * font.height )
         {   if( j % 4 == 0 )
@@ -2519,6 +2523,13 @@ E_font_M( void
     }
     return 0;
 }
+void
+E_font_W( void
+){  for_n( i, font.bitmap_n )
+        W( font.bitmap[i].bitmap );
+    W( font.bitmap );
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N
 E_font_I_draw(
   N x
@@ -2571,13 +2582,6 @@ E_font_I_draw(
     return ~0;
 }
 void
-E_font_W( void
-){  for_n( i, font.bitmap_n )
-        W( font.bitmap[i].bitmap );
-    W( font.bitmap );
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void
 E_font_I_scroll_fwd( N dy
 ){  E_mem_Q_blk_I_copy( (P)E_main_S_kernel_args.framebuffer.p
     , (P)( E_main_S_kernel_args.framebuffer.p + dy * E_main_S_kernel_args.framebuffer.pixels_per_scan_line )
@@ -2618,12 +2622,13 @@ E_font_I_print_u( U u
 N
 E_font_I_print( Pc s
 ){  while( *s )
-    {   U u = ~0;
+    {   U u;
         Pc s_ = E_text_Z_su_R_u( s, &u );
-        if( !~u )
+        if( s_ == s )
             return ~0;
         s = s_;
-        E_font_I_print_u(u);
+        if( ~u )
+            E_font_I_print_u(u);
     }
     return 0;
 }

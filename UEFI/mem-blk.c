@@ -47,7 +47,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • ‘kernel’; wyrównany adres
  * • pamięć zarezerwowana
  */
-void
+N
 E_mem_M(
   B reserved_from_end
 , N reserved_size_from_start
@@ -166,12 +166,13 @@ E_mem_M(
     }
     struct E_mem_Q_blk_Z_allocated allocated_p;
     N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_main_S_kernel_args.mem_blk.allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p, (Pc)&allocated_p.n - (Pc)&allocated_p, 0, 0 );
-    if( ~allocated_i )
-    {   E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = (P)loader_start;
-        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u = 1;
-        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n = loader_size;
-        E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, ~0 );
-    }
+    if( !~allocated_i )
+        return ~0;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = (P)loader_start;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u = 1;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n = loader_size;
+    E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, ~0 );
+    return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 B

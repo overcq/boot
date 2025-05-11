@@ -2600,12 +2600,13 @@ E_font_I_print_u( U u
 N
 E_font_I_print( Pc s
 ){  while( *s )
-    {   U u = ~0;
-        Pc s_ = E_text_Z_s_Z_utf8_R_u( s, &u );
-        if( !~u )
+    {   U u;
+        Pc s_ = E_text_Z_su_R_u( s, &u );
+        if( s_ == s )
             return ~0;
         s = s_;
-        E_font_I_print_u(u);
+        if( ~u )
+            E_font_I_print_u(u);
     }
     return 0;
 }

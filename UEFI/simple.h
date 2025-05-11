@@ -26,7 +26,7 @@ E_asm_I_bsf( N n
     );
         #else
     if(n)
-        i = __builtin_ctzl(n);
+        i = __builtin_ctzll(n);
     else
         i = ~0;
         #endif
@@ -52,7 +52,7 @@ E_asm_I_bsr( N n
     );
         #else
     if(n)
-        i = sizeof(N) * 8 - 1 - __builtin_clzl(n);
+        i = sizeof(N) * 8 - 1 - __builtin_clzll(n);
     else
         i = ~0;
         #endif
