@@ -10,14 +10,14 @@
 //==============================================================================
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
-N
+N32
 E_vga_Z_color_M(
   N8 red
 , N8 green
 , N8 blue
-){  return ( (N)blue << E_main_S_kernel_args.framebuffer.pixel_shifts.blue )
-    | ( (N)green << E_main_S_kernel_args.framebuffer.pixel_shifts.green )
-    | ( (N)red << E_main_S_kernel_args.framebuffer.pixel_shifts.red );
+){  return ( (N32)blue << E_main_S_kernel_args.framebuffer.pixel_shifts.blue )
+    | ( (N32)green << E_main_S_kernel_args.framebuffer.pixel_shifts.green )
+    | ( (N32)red << E_main_S_kernel_args.framebuffer.pixel_shifts.red );
 }
 N8
 E_vga_Z_color_R_red( N32 color
@@ -31,43 +31,43 @@ N8
 E_vga_Z_color_R_blue( N32 color
 ){  return ( color >> E_main_S_kernel_args.framebuffer.pixel_shifts.blue ) & 0xff;
 }
-N
+N32
 E_vga_Z_color_M_gray( N8 luminance
 ){  return E_vga_Z_color_M( luminance, luminance, luminance );
 }
-N
-E_vga_R_video_color( N color
+N32
+E_vga_R_video_color( N32 color
 ){  return ((( color >> 16 ) & 0xff ) << E_main_S_kernel_args.framebuffer.pixel_shifts.blue )
     | ((( color >> 8 ) & 0xff ) << E_main_S_kernel_args.framebuffer.pixel_shifts.green )
     | (( color & 0xff ) << E_main_S_kernel_args.framebuffer.pixel_shifts.red );
 }
-N
-E_vga_R_color( N video_color
+N32
+E_vga_R_color( N32 video_color
 ){  return ((( video_color >> E_main_S_kernel_args.framebuffer.pixel_shifts.blue ) & 0xff ) << 16 )
     | ((( video_color >> E_main_S_kernel_args.framebuffer.pixel_shifts.green ) & 0xff ) << 8 )
     | (( video_color >> E_main_S_kernel_args.framebuffer.pixel_shifts.red ) & 0xff );
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N
+N32
 E_vga_R_pixel(
-  N x
-, N y
+  N32 x
+, N32 y
 ){  volatile N32 *video_address = E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.pixels_per_scan_line * y + x;
     return *video_address;
 }
 void
 E_vga_P_pixel(
-  N x
-, N y
-, N video_color
+  N32 x
+, N32 y
+, N32 video_color
 ){  volatile N32 *video_address = E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.pixels_per_scan_line * y + x;
     *video_address = video_color;
 }
 void
 E_vga_I_set_pixel_aa(
-  N x
-, N y
-, N color
+  N32 x
+, N32 y
+, N32 color
 , F brightness
 , N get_pixel
 ){  N background_red, background_green, background_blue;
@@ -117,11 +117,11 @@ E_vga_I_set_pixel_aa(
 }
 void
 E_vga_I_draw_rect(
-  N x
-, N y
-, N width
-, N height
-, N video_color
+  N32 x
+, N32 y
+, N32 width
+, N32 height
+, N32 video_color
 ){  volatile N32 *video_address = E_main_S_kernel_args.framebuffer.p + y * E_main_S_kernel_args.framebuffer.pixels_per_scan_line + x;
     for_n( x_i, width )
         video_address[ x_i ] = video_color;
@@ -136,11 +136,11 @@ E_vga_I_draw_rect(
 }
 void
 E_vga_I_fill_rect(
-  N x
-, N y
-, N width
-, N height
-, N video_color
+  N32 x
+, N32 y
+, N32 width
+, N32 height
+, N32 video_color
 ){  volatile N32 *video_address = E_main_S_kernel_args.framebuffer.p + y * E_main_S_kernel_args.framebuffer.pixels_per_scan_line + x;
     for_n( y_i, height )
     {   for_n( x_i, width )

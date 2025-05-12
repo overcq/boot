@@ -12,17 +12,17 @@ extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
 struct E_font_Q_font_Z_bitmap
 { U u;
-  N width;
+  N8 width;
   N8 *bitmap;
 };
 struct
-{ N height;
-  N bitmap_n;
-  struct E_font_Q_font_Z_bitmap *bitmap;
+{ struct E_font_Q_font_Z_bitmap *bitmap;
+  N8 bitmap_n;
+  N8 height;
 }font;
-N E_font_S_x = 2;
-N E_font_S_y = 2;
-N E_font_S_color = E_vga_S_text_color;
+N32 E_font_S_x = 2;
+N32 E_font_S_y = 2;
+N32 E_font_S_color = E_vga_S_text_color;
 //==============================================================================
 N
 E_font_M( void
@@ -2591,7 +2591,7 @@ E_font_I_scroll_fwd( N dy
 }
 void
 E_font_I_print_nl( void
-){  E_font_S_x = 1;
+){  E_font_S_x = 2;
     if( E_font_S_y + 2 * ( font.height + 2 ) > E_main_S_kernel_args.framebuffer.height )
         E_font_I_scroll_fwd( 2 + font.height );
     else

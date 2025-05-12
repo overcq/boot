@@ -25,7 +25,7 @@ disk.img:
 	&& mkfs.fat $${loopdev}p1 \
 	&& ~inc/moje/programy/linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
 fileloader: simple.h fileloader.h fileloader.c font.c ouxfs.c mem-blk.c text.c vga.c Makefile
-	$(CC) $(CFLAGS) -std=gnu23 -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-pointer-sign -Wno-sign-compare -Wno-switch -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
+	$(CC) $(CFLAGS) -std=gnu23 -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-pointer-sign -Wno-sign-compare -Wno-switch -Wno-uninitialized -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable -Werror -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
 	rm -f fileloader
@@ -76,7 +76,7 @@ install-usb:
 	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 run-qemu:
-	qemu-system-x86_64 -s -S -nic none -machine q35 -cpu IvyBridge -smp 4,cores=2,threads=2 -m 128 \
+	qemu-system-x86_64 -s -S -machine q35 -cpu IvyBridge -smp 4,cores=2,threads=2 -m 128 \
 	-drive if=pflash,format=raw,readonly=on,file=RELEASEX64_OVMF_CODE.fd \
 	-drive if=pflash,format=raw,file=RELEASEX64_OVMF_VARS.fd \
 	-drive media=disk,format=raw,file=disk.img

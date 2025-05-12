@@ -886,15 +886,15 @@ void E_font_I_print_hex(N);
 //==============================================================================
 Pc E_text_Z_su_R_u( Pc, U *);
 //==============================================================================
-N E_vga_Z_color_M( N8, N8, N8 );
+N32 E_vga_Z_color_M( N8, N8, N8 );
 N8 E_vga_Z_color_R_red(N32);
 N8 E_vga_Z_color_R_green(N32);
 N8 E_vga_Z_color_R_blue(N32);
-N E_vga_Z_color_M_gray(N8);
-N E_vga_R_video_color(N);
-N E_vga_R_pixel( N, N );
-void E_vga_P_pixel( N, N, N );
-void E_vga_I_set_pixel_aa( N, N, N, F, N );
-void E_vga_I_draw_rect( N, N, N, N, N );
-void E_vga_I_fill_rect( N, N, N, N, N );
+N32 E_vga_Z_color_M_gray(N8);
+N32 E_vga_R_video_color(N32);
+N32 E_vga_R_pixel( N32, N32 );
+void E_vga_P_pixel( N32, N32, N32 );
+void E_vga_I_set_pixel_aa( N32, N32, N32, F, N );
+void E_vga_I_draw_rect( N32, N32, N32, N32, N32 );
+void E_vga_I_fill_rect( N32, N32, N32, N32, N32 );
 /******************************************************************************/
