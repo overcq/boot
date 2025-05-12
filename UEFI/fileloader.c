@@ -1239,7 +1239,7 @@ H_uefi_I_main(
                     ? memory_map->virtual_start - ( loader_end + loader_end - loader_start )
                     : 0;
                     if( memory_map->pages * H_oux_E_mem_S_page_size >= start + loader_end - loader_start )
-                    {   loader_start_new = memory_map->physical_start + start;
+                    {   loader_start_new = memory_map->virtual_start + start;
                         if( memory_map->pages * H_oux_E_mem_S_page_size != start + loader_end - loader_start )
                             if(start)
                             {   memory_map->pages = start / H_oux_E_mem_S_page_size;
@@ -1284,7 +1284,7 @@ H_uefi_I_main(
                   )
                 && memory_map->pages * H_oux_E_mem_S_page_size >= loader_end - loader_start + end
                 )
-                {   loader_start_new = memory_map->physical_start;
+                {   loader_start_new = memory_map->virtual_start;
                     if( memory_map->pages * H_oux_E_mem_S_page_size != loader_end - loader_start + end )
                     {   memory_map->physical_start += loader_end - loader_start;
                         memory_map->pages -= ( loader_end - loader_start ) / H_oux_E_mem_S_page_size;
@@ -1311,7 +1311,7 @@ H_uefi_I_main(
                 )
                 && memory_map->pages >= ( loader_end - loader_start ) / H_oux_E_mem_S_page_size
                 )
-                {   loader_start_new = memory_map->physical_start;
+                {   loader_start_new = memory_map->virtual_start;
                     if( memory_map->pages -= ( loader_end - loader_start ) / H_oux_E_mem_S_page_size )
                         memory_map->physical_start += loader_end - loader_start;
                     else
@@ -1347,7 +1347,7 @@ H_uefi_I_main(
                         ? loader_start_min + loader_end - loader_start - memory_map->virtual_start
                         : 0;
                         if( memory_map->pages * H_oux_E_mem_S_page_size >= start + loader_end - loader_start )
-                        {   loader_start_new = memory_map->physical_start + E_simple_Z_n_I_align_up_to_v2( start, H_oux_E_mem_S_page_size );
+                        {   loader_start_new = memory_map->virtual_start + start;
                             if( memory_map->pages * H_oux_E_mem_S_page_size != start + loader_end - loader_start )
                                 if(start)
                                 {   memory_map->pages = start / H_oux_E_mem_S_page_size;
@@ -1395,7 +1395,7 @@ H_uefi_I_main(
                       : 0
                       );
                     if( memory_map->pages * H_oux_E_mem_S_page_size >= start + loader_end - loader_start + end )
-                    {   loader_start_new = memory_map->physical_start + start;
+                    {   loader_start_new = memory_map->virtual_start + start;
                         if(start)
                         {   if( memory_map->pages * H_oux_E_mem_S_page_size != start + loader_end - loader_start )
                             {   struct H_uefi_Z_memory_descriptor *memory_map_ = (P)( (Pc)memory_map + memory_map_n * E_main_S_descriptor_l );
@@ -1423,7 +1423,7 @@ H_uefi_I_main(
             }
             if( !loader_move )
                 goto End;
-        }else if(no) //TEST
+        }else //TEST
 Test:   {   memory_map = E_main_S_memory_map;
             for_n_( i, memory_map_n )
             {   if(( memory_map->type == H_uefi_Z_memory_Z_boot_services_code
@@ -1435,7 +1435,7 @@ Test:   {   memory_map = E_main_S_memory_map;
                 )
                 && memory_map->pages >= ( loader_end - loader_start ) / H_oux_E_mem_S_page_size
                 )
-                {   loader_start_new = memory_map->physical_start;
+                {   loader_start_new = memory_map->virtual_start;
                     if( memory_map->pages -= ( loader_end - loader_start ) / H_oux_E_mem_S_page_size )
                         memory_map->physical_start += loader_end - loader_start;
                     else
@@ -1632,22 +1632,6 @@ Test:   {   memory_map = E_main_S_memory_map;
     if( !~E_font_M() )
         goto End;
     E_font_I_print( "OUX/C+ OS bootloader. ©overcq <overcq@int.pl>. http://github.com/overcq\n" );
-    E_font_I_print( "allocated=" );
-    E_font_I_print_hex( (N)E_main_S_kernel_args.mem_blk.allocated );
-    E_font_I_print( ", stack=" );
-    E_font_I_print_hex( (N)E_main_S_kernel_args.kernel_stack );
-    E_font_I_print( ", memory_map=" );
-    E_font_I_print_hex( (N)E_main_S_kernel_args.memory_map );
-    E_font_I_print( ", page_table=" );
-    E_font_I_print_hex( (N)E_main_S_kernel_args.page_table );
-    E_font_I_print( ", kernel=" );
-    E_font_I_print_hex( (N)E_main_S_kernel_args.kernel );
-    E_font_I_print( ", text=" );
-    E_font_I_print_hex( (N)kernel_data.text );
-    E_font_I_print( ", entry=" );
-    E_font_I_print_hex( (N)kernel_data.entry );
-    E_font_I_print( ", memory_size=" );
-    E_font_I_print_hex( memory_size );
     E_font_W();
     E_main_S_kernel_args.bootloader = (P)loader_start;
     E_main_S_kernel_args.uefi_runtime_services.R_time = system_table->runtime_services->R_time;
@@ -1685,7 +1669,6 @@ Test:   {   memory_map = E_main_S_memory_map;
     , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
     );
-    goto End;
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
     "\n"    "mov    %0,%%rsp"
@@ -1695,6 +1678,7 @@ Test:   {   memory_map = E_main_S_memory_map;
     );
     __builtin_unreachable();
 End:__asm__ volatile (
+    "\n"    "cli"
     "\n0:"  "hlt"
     "\n"    "jmp    0b"
     );
