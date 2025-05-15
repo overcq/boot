@@ -41,4 +41,4 @@ Liczba sektorów w MBR lub VBR równa 0 oznacza, że FBL nie ma być uruchamiany
 
 ## UEFI
 
-Po uruchomieniu przez UEFI ‘bootloader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”; obecnie tymczasowo, dopóki nie istnieje ‘kernel’, jest przydzielana pusta pamięć. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i w przyszłości przekaże sterowanie do ‘kernela’ z danymi.
+Po uruchomieniu przez UEFI ‘bootloader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i przekazuje sterowanie do ‘kernela’ z danymi.

@@ -1129,7 +1129,7 @@ H_uefi_I_main(
         return status;
     }
     struct H_uefi_Z_memory_descriptor *memory_map = (P)( (Pc)E_main_S_memory_map + memory_map_l );
-    memory_map->type = H_uefi_Z_memory_Z_reserved;
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
     memory_map->pages = graphics->mode->framebuffer_l / H_oux_E_mem_S_page_size + ( graphics->mode->framebuffer_l % H_oux_E_mem_S_page_size ? 1 : 0 );
     memory_map_l += E_main_S_descriptor_l;
@@ -1631,7 +1631,7 @@ Test:   {   memory_map = E_main_S_memory_map;
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     if( !~E_font_M() )
         goto End;
-    E_font_I_print( "OUX/C+ OS bootloader. ©overcq <overcq@int.pl>. http://github.com/overcq\n" );
+    E_font_I_print( "OUX/C+ OS bootloader. ©overcq <overcq@int.pl>. https://github.com/overcq\n" );
     E_font_W();
     E_main_S_kernel_args.bootloader = (P)loader_start;
     E_main_S_kernel_args.uefi_runtime_services.R_time = system_table->runtime_services->R_time;

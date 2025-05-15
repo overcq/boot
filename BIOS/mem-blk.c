@@ -140,7 +140,9 @@ void
 E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
-){
+){  __asm__ volatile (
+    "\n"    "std"
+    );
         #ifdef __SSE__
     N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof(N128) );
     N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof(N128) );
@@ -155,7 +157,6 @@ E_mem_Q_blk_I_copy_rev( P dst
         N l_1 = ( l - l_0 ) / sizeof(N128);
         N l_2 = ( l - l_0 ) % sizeof(N128);
         __asm__ volatile (
-        "\n"    "std"
         "\n"    "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
         :
@@ -178,12 +179,11 @@ E_mem_Q_blk_I_copy_rev( P dst
         src = (Pc)src + l - 1;
     }
     __asm__ volatile (
-    "\n"    "std"
     "\n"    "rep movsb"
     "\n"    "cld"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
-    : "cc", "memory"
+    : "memory"
     );
 }
 void
