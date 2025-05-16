@@ -274,10 +274,6 @@ E_main_I_virtual_address_change( P event
 ){  struct H_uefi_Z_runtime_services *runtime_services = E_main_S_system_table->runtime_services;
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
-    , &E_main_S_kernel_args.kernel
-    );
-    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
     , ( P * )&E_main_S_kernel_args.framebuffer.p
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
@@ -1155,27 +1151,38 @@ H_uefi_I_main(
         status = H_uefi_I_print( system_table, has_memory_map_new_entry, sizeof( has_memory_map_new_entry ), 10 );
         status = system_table->output->output( system_table->output, L", from_end=" );
         status = H_uefi_I_print( system_table, reserved_from_end, sizeof( reserved_from_end ), 10 );
-    N pml4, start_end_address;
-    status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
-    if( status < 0 )
-        goto End;
-    N page_table_size = reserved_from_end
-    ? (N64)E_main_S_kernel_args.kernel - start_end_address
-    : start_end_address - ( (N64)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ))
-    ;
-    E_main_S_kernel_args.page_table = (P)( reserved_from_end ? start_end_address : start_end_address - page_table_size );
-    E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
-    N memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
-    E_main_S_kernel_args.memory_map = (P)( reserved_from_end
-    ? (Pc)E_main_S_kernel_args.page_table - memory_map_size
-    : (Pc)E_main_S_kernel_args.page_table + page_table_size
-    );
-    N stack_size = H_oux_E_mem_S_page_size; //CONF
-    E_main_S_kernel_args.kernel_stack = (P)( reserved_from_end
-    ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
-    : memory_size - stack_size
-    );
+        N pml4, start_end_address;
+        status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
+        if( status < 0 )
+            goto End;
+        E_main_I_convert_pointer( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, &E_main_S_kernel_args.kernel );
+        N page_table_size = reserved_from_end
+        ? (N)E_main_S_kernel_args.kernel - start_end_address
+        : start_end_address - ( (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ))
+        ;
+        E_main_S_kernel_args.page_table = (P)( reserved_from_end ? start_end_address : start_end_address - page_table_size );
+        E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
+        N memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
+        E_main_S_kernel_args.memory_map = (P)( reserved_from_end
+        ? (Pc)E_main_S_kernel_args.page_table - memory_map_size
+        : (Pc)E_main_S_kernel_args.page_table + page_table_size
+        );
+        N stack_size = H_oux_E_mem_S_page_size; //CONF
+        E_main_S_kernel_args.kernel_stack = (P)( reserved_from_end
+        ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
+        : memory_size - stack_size
+        );
         N loader_start_min = E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.memory_map + memory_map_size + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ), H_oux_E_mem_S_page_size );
+        status = system_table->output->output( system_table->output, L", kernel=" );
+        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.kernel, sizeof( (N)E_main_S_kernel_args.kernel ), 16 );
+        status = system_table->output->output( system_table->output, L", page_table=" );
+        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.page_table, sizeof( (N)E_main_S_kernel_args.page_table ), 16 );
+        status = system_table->output->output( system_table->output, L", start_end_address=" );
+        status = H_uefi_I_print( system_table, start_end_address, sizeof( start_end_address ), 16 );
+        status = system_table->output->output( system_table->output, L", page_table_size=" );
+        status = H_uefi_I_print( system_table, page_table_size, sizeof( page_table_size ), 16 );
+        status = system_table->output->output( system_table->output, L", memory_map=" );
+        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
         status = system_table->output->output( system_table->output, L", framebuffer=" );
         status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
         struct H_uefi_Z_memory_descriptor *memory_map = E_main_S_memory_map;
@@ -1207,9 +1214,10 @@ H_uefi_I_main(
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
         goto End;
+    E_main_I_convert_pointer( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, &E_main_S_kernel_args.kernel );
     N page_table_size = reserved_from_end
-    ? (N64)E_main_S_kernel_args.kernel - start_end_address
-    : start_end_address - ( (N64)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ))
+    ? (N)E_main_S_kernel_args.kernel - start_end_address
+    : start_end_address - ( (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ))
     ;
     E_main_S_kernel_args.page_table = (P)( reserved_from_end ? start_end_address : start_end_address - page_table_size );
     E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
@@ -1497,7 +1505,10 @@ Test:   {   memory_map = E_main_S_memory_map;
         E_main_S_kernel_args.page_table = (P)( reserved_from_end ? start_end_address : start_end_address - page_table_size );
         E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
         memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
-        E_main_S_kernel_args.memory_map = (P)( reserved_from_end ? (Pc)E_main_S_kernel_args.page_table - memory_map_size : (Pc)E_main_S_kernel_args.page_table + page_table_size );
+        E_main_S_kernel_args.memory_map = (P)( reserved_from_end
+        ? (Pc)E_main_S_kernel_args.page_table - memory_map_size
+        : (Pc)E_main_S_kernel_args.page_table + page_table_size
+        );
         E_main_S_kernel_args.kernel_stack = (P)( reserved_from_end
         ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
         : memory_size - stack_size

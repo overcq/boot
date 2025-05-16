@@ -712,8 +712,8 @@ struct E_mem_Q_blk_Z_allocated
 struct E_mem_blk_Z
 { struct E_mem_Q_blk_Z_allocated *allocated;
   N free_id, allocated_id;
-  N *M_from_free_S_allocated_id[10];
-  N M_from_free_S_table_id[10];
+  N *M_from_free_S_allocated_id[2];
+  N M_from_free_S_table_id[2];
   N M_from_free_S_allocated_id_n;
   N memory_size;
   N reserved_size;
