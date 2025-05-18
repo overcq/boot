@@ -722,8 +722,8 @@ struct E_mem_blk_Z
 //==============================================================================
 S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
 S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
-N64 H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
-S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
+N64 H_oux_E_fs_Q_kernel_R_size(void);
+S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 //==============================================================================
 struct H_oux_Z_pixel_shifts
 { N8 red;

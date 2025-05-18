@@ -1088,9 +1088,7 @@ H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table *system_table
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N64
-H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *system_table
-, struct H_uefi_Z_protocol_Z_disk_io *disk_io
-, N32 media_id
+H_oux_E_fs_Q_kernel_R_size( void
 ){  N64 size = 0;
     for( N64 block_table_i = 0; block_table_i != H_oux_E_fs_S_file_block_table_n; block_table_i++ )
     {   struct H_oux_E_fs_Z_block *block = H_oux_E_fs_S_block_table + H_oux_E_fs_S_file_block_table_start + block_table_i;
@@ -1102,8 +1100,7 @@ H_oux_E_fs_Q_kernel_R_size( struct H_uefi_Z_system_table *system_table
     return size;
 }
 S
-H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_system_table *system_table
-, struct H_uefi_Z_protocol_Z_disk_io *disk_io
+H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_protocol_Z_disk_io *disk_io
 , N32 media_id
 , Pc data
 ){  for( N64 block_table_i = 0; block_table_i != H_oux_E_fs_S_file_block_table_n; block_table_i++ )

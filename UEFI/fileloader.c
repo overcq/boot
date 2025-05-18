@@ -80,7 +80,7 @@ N64 gdt[5], ldt[2], idt[2];
 //==============================================================================
 __attribute__ (( __warn_unused_result__ ))
 S
-H_uefi_I_print( struct H_uefi_Z_system_table *system_table
+H_uefi_I_print_n( struct H_uefi_Z_system_table *system_table
 , N v
 , N v_l
 , N base
@@ -146,13 +146,17 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 || !E_main_I_acpi_I_checksum( header, header->length )
                 )
                     return ~0;
-                C16 s[7];
+                C16 s[5];
                 for_n( i, 4 )
                     s[i] = header->signature[i];
-                s[4] = ',';
-                s[5] = ' ';
-                s[6] = '\0';
+                s[4] = '\0';
                 S status = system_table->output->output( system_table->output, &s[0] );
+                if( status < 0 )
+                    return status;
+                status = system_table->output->output( system_table->output, L"(" );
+                if( status < 0 )
+                    return status;
+                status = H_uefi_I_print_n( system_table, header->revision, sizeof( header->revision ), 10 );
                 if( status < 0 )
                     return status;
                 if( E_mem_Q_blk_T_eq( &header->signature[0], "APIC", sizeof( xsdt->header.signature )))
@@ -186,6 +190,30 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         facs = (P)fadt->ex_facs;
                     }else
                         return ~0;
+                    status = system_table->output->output( system_table->output, L"," );
+                    if( status < 0 )
+                        return status;
+                    for_n( i, 4 )
+                        s[i] = header->signature[i];
+                    s[4] = '\0';
+                    S status = system_table->output->output( system_table->output, &s[0] );
+                    if( status < 0 )
+                        return status;
+                    status = system_table->output->output( system_table->output, L"(" );
+                    if( status < 0 )
+                        return status;
+                    status = H_uefi_I_print_n( system_table, header->revision, sizeof( header->revision ), 10 );
+                    if( status < 0 )
+                        return status;
+                    status = system_table->output->output( system_table->output, L"),FACS(" );
+                    if( status < 0 )
+                        return status;
+                    status = H_uefi_I_print_n( system_table, facs->version, sizeof( facs->version ), 10 );
+                    if( status < 0 )
+                        return status;
+                    status = system_table->output->output( system_table->output, L")" );
+                    if( status < 0 )
+                        return status;
                     if( header->length <= sizeof( *header )
                     || !E_main_I_acpi_I_checksum( header, header->length )
                     || !E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( xsdt->header.signature ))
@@ -233,6 +261,9 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                     E_main_S_kernel_args.acpi.smm_validate_nested_ptr = wsmt->flags & ( 1 << 1 );
                     E_main_S_kernel_args.acpi.smm_system_resource_protection = wsmt->flags & ( 1 << 2 );
                 }
+                status = system_table->output->output( system_table->output, L"), " );
+                if( status < 0 )
+                    return status;
             }
             break;
         }
@@ -435,7 +466,6 @@ E_main_Q_memory_map_R_saved_n( struct H_uefi_Z_memory_descriptor *memory_map
 void
 E_main_Q_memory_map_I_set_virtual_I_entry( struct H_uefi_Z_memory_descriptor *memory_map_
 , struct H_uefi_Z_memory_descriptor *memory_map_end
-, N descriptor_l
 , N loader_start
 , N loader_end
 , B *has_memory_map_new_entry
@@ -486,7 +516,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -502,7 +531,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -517,7 +545,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -530,7 +557,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -552,7 +578,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -572,7 +597,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -585,7 +609,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
         {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -602,7 +625,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -618,7 +640,6 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map_
                 , (P)( (Pc)memory_map + memory_map_n * descriptor_l )
-                , descriptor_l
                 , loader_start, loader_end
                 , has_memory_map_new_entry
                 , &next_virtual_address
@@ -1023,7 +1044,7 @@ H_uefi_I_main(
                 continue;
             break;
         }
-        kernel_size = H_oux_E_fs_Q_kernel_R_size( system_table, disk_io, media_id );
+        kernel_size = H_oux_E_fs_Q_kernel_R_size();
         if( kernel_size < H_oux_E_mem_S_page_size )
         {   H_oux_E_fs_Q_disk_W( system_table );
             S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
@@ -1036,7 +1057,7 @@ H_uefi_I_main(
             S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             break;
         }
-        status = H_oux_E_fs_Q_kernel_I_read( system_table, disk_io, media_id, (P)E_main_S_kernel_args.kernel );
+        status = H_oux_E_fs_Q_kernel_I_read( disk_io, media_id, (P)E_main_S_kernel_args.kernel );
         if( status < 0 )
         {   S status_ = system_table->boot_services->W_pages( (N64)E_main_S_kernel_args.kernel, E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size );
             H_oux_E_fs_Q_disk_W( system_table );
@@ -1148,9 +1169,9 @@ H_uefi_I_main(
     }
     E_main_Q_memory_map_I_sort_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     /*{   status = system_table->output->output( system_table->output, L"has_new_entry=" );
-        status = H_uefi_I_print( system_table, has_memory_map_new_entry, sizeof( has_memory_map_new_entry ), 10 );
+        status = H_uefi_I_print_n( system_table, has_memory_map_new_entry, sizeof( has_memory_map_new_entry ), 10 );
         status = system_table->output->output( system_table->output, L", from_end=" );
-        status = H_uefi_I_print( system_table, reserved_from_end, sizeof( reserved_from_end ), 10 );
+        status = H_uefi_I_print_n( system_table, reserved_from_end, sizeof( reserved_from_end ), 10 );
         N pml4, start_end_address;
         status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
         if( status < 0 )
@@ -1174,17 +1195,17 @@ H_uefi_I_main(
         );
         N loader_start_min = E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.memory_map + memory_map_size + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ), H_oux_E_mem_S_page_size );
         status = system_table->output->output( system_table->output, L", kernel=" );
-        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.kernel, sizeof( (N)E_main_S_kernel_args.kernel ), 16 );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.kernel, sizeof( (N)E_main_S_kernel_args.kernel ), 16 );
         status = system_table->output->output( system_table->output, L", page_table=" );
-        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.page_table, sizeof( (N)E_main_S_kernel_args.page_table ), 16 );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.page_table, sizeof( (N)E_main_S_kernel_args.page_table ), 16 );
         status = system_table->output->output( system_table->output, L", start_end_address=" );
-        status = H_uefi_I_print( system_table, start_end_address, sizeof( start_end_address ), 16 );
+        status = H_uefi_I_print_n( system_table, start_end_address, sizeof( start_end_address ), 16 );
         status = system_table->output->output( system_table->output, L", page_table_size=" );
-        status = H_uefi_I_print( system_table, page_table_size, sizeof( page_table_size ), 16 );
+        status = H_uefi_I_print_n( system_table, page_table_size, sizeof( page_table_size ), 16 );
         status = system_table->output->output( system_table->output, L", memory_map=" );
-        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
         status = system_table->output->output( system_table->output, L", framebuffer=" );
-        status = H_uefi_I_print( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
         struct H_uefi_Z_memory_descriptor *memory_map = E_main_S_memory_map;
         for_n( i, memory_map_n )
         {   if( i % 40 == 0 )
@@ -1192,15 +1213,15 @@ H_uefi_I_main(
                 while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
             }
             status = system_table->output->output( system_table->output, ( i % 2 == 0 ? L"\r\n" : L";   " ));
-            status = H_uefi_I_print( system_table, i, sizeof(i), 10 );
+            status = H_uefi_I_print_n( system_table, i, sizeof(i), 10 );
             status = system_table->output->output( system_table->output, L". " );
-            status = H_uefi_I_print( system_table, memory_map->type, sizeof( memory_map->type ), 10 );
+            status = H_uefi_I_print_n( system_table, memory_map->type, sizeof( memory_map->type ), 10 );
             status = system_table->output->output( system_table->output, L", " );
-            status = H_uefi_I_print( system_table, memory_map->virtual_start, sizeof( memory_map->virtual_start ), 16 );
+            status = H_uefi_I_print_n( system_table, memory_map->virtual_start, sizeof( memory_map->virtual_start ), 16 );
             status = system_table->output->output( system_table->output, L", " );
-            status = H_uefi_I_print( system_table, memory_map->physical_start, sizeof( memory_map->physical_start ), 16 );
+            status = H_uefi_I_print_n( system_table, memory_map->physical_start, sizeof( memory_map->physical_start ), 16 );
             status = system_table->output->output( system_table->output, L", " );
-            status = H_uefi_I_print( system_table, memory_map->pages, sizeof( memory_map->pages ), 10 );
+            status = H_uefi_I_print_n( system_table, memory_map->pages, sizeof( memory_map->pages ), 10 );
             memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
         }
         goto End;
