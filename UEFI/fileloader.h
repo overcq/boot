@@ -435,7 +435,7 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
 struct __attribute__ (( __packed__ )) H_acpi_Z_apic
 { struct H_acpi_Z_table_header header;
   N32 local_interrupt_controler;
-  N32 pcat_compat   :1;
+  N32 flags;
 };
 //------------------------------------------------------------------------------
 struct __attribute__ (( __packed__ )) H_acpi_Z_dmar
@@ -696,9 +696,9 @@ struct H_uefi_Z_protocol_Z_graphics
 #define E_mem_Q_blk_S_free_n_init       4
 #define E_mem_Q_blk_S_allocated_n_init  6
 struct H_oux_E_mem_Z_memory_map
-{ N64 physical_start;
-  N64 virtual_start;
-  N64 pages;
+{ N physical_start;
+  N virtual_start;
+  N pages;
 };
 struct E_mem_Q_blk_Z_free
 { Pc p;
@@ -784,6 +784,7 @@ struct E_main_Z_kernel_args
   struct H_main_Z_framebuffer framebuffer;
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct H_main_Z_kernel_Z_acpi acpi;
+  P local_apic_address;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header

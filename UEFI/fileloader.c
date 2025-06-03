@@ -78,6 +78,16 @@ N E_main_S_descriptor_l;
 N E_main_S_loader_stack;
 N64 gdt[5], ldt[2], idt[2];
 //==============================================================================
+void
+E_main_I_outb( N16 port
+, N8 v
+){  __asm__ volatile(
+    "\n"    "out    %0,%1"
+    :
+    : "a" (v), "d" (port)
+    );
+}
+//==============================================================================
 __attribute__ (( __warn_unused_result__ ))
 S
 H_uefi_I_print_n( struct H_uefi_Z_system_table *system_table
@@ -163,6 +173,12 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 {   struct H_acpi_Z_apic *apic = (P)header;
                     E_main_S_kernel_args.acpi.apic_content = (Pc)apic + sizeof( *apic );
                     E_main_S_kernel_args.acpi.apic_content_l = apic->header.length - sizeof( *apic );
+                    E_main_S_kernel_args.local_apic_address = (P)(N)apic->local_interrupt_controler;
+                    // Inicjowanie trybu APIC.
+                    if( apic->flags & 1 ) // Czy jest także tryb zgodności PIC?
+                    {   E_main_I_outb( 0x22, 0x70 );
+                        E_main_I_outb( 0x23, 1 );
+                    }
                 }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( xsdt->header.signature )))
                 {   struct H_acpi_Z_dmar *dmar = (P)header;
                     E_main_S_kernel_args.acpi.dmar_content = (Pc)dmar + sizeof( *dmar );
@@ -332,6 +348,10 @@ E_main_I_virtual_address_change( P event
         , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
         , &E_main_S_kernel_args.acpi.ssdt_contents[i].address
         );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
+    , &E_main_S_kernel_args.local_apic_address
+    );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
     , ( P * )&E_main_S_system_table
@@ -1098,7 +1118,7 @@ H_uefi_I_main(
     kernel_data.entry = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
     kernel_p++;
     kernel_data.rela = (P)kernel_p;
-    if( (N)kernel_data.rela != (N)kernel_data.rela_plt
+    if( (N)kernel_data.rela > (N)kernel_data.rela_plt
     || (N)kernel_data.rela_plt != (N)kernel_data.exports
     || (N)kernel_data.exports > (N)kernel_data.dynstr
     || (N)kernel_data.dynstr > (N)kernel_data.got
@@ -1629,7 +1649,15 @@ Test:   {   memory_map = E_main_S_memory_map;
     kernel_p++;
     kernel_data.rela = (P)kernel_p;
     for_n_( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
-        *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) += (N)E_main_S_kernel_args.kernel;
+        switch( kernel_data.rela[i].type )
+        { case 6:
+                *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) += (N)E_main_S_kernel_args.kernel;
+                break;
+          case 8:
+                *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) = (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].addend;
+                break;
+        }
+    E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n )

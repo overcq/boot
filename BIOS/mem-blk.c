@@ -286,9 +286,9 @@ E_mem_Q_blk_Q_sys_table_a_I_move_empty_entry( N allocated_i
         , E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p + ( allocated_i + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
         , ( allocated_end - ( allocated_i + 1 )) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
         );
-        if( allocated_i <= E_base_S->E_mem_Q_blk_S_free_id )
+        if( allocated_i < E_base_S->E_mem_Q_blk_S_free_id )
             E_base_S->E_mem_Q_blk_S_free_id--;
-        if( allocated_i <= E_base_S->E_mem_Q_blk_S_allocated_id )
+        if( allocated_i < E_base_S->E_mem_Q_blk_S_allocated_id )
             E_base_S->E_mem_Q_blk_S_allocated_id--;
     }
     allocated_p[ allocated_end - 1 ].p = 0;
@@ -1172,7 +1172,14 @@ E_mem_Q_blk_I_add( P p
 , N n
 , N *n_prepended
 , N *n_appended
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n )
+    {   if( n_prepended )
+            *n_prepended = 0;
+        if( n_appended )
+            *n_appended = 0;
+        return *( P * )p;
+    }
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
     N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
     N allocated_i = max / 2;
@@ -1249,7 +1256,7 @@ E_mem_Q_blk_I_add( P p
                                 *n_prepended = l_1 / E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
                             if( n_appended )
                                 *n_appended = l / E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-                            return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + l_0;
+                            return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1;
                         }
                         if( free_p[ free_j ].p > p_0 + l_0 )
                         {   if( free_j == min )
@@ -1281,7 +1288,7 @@ E_mem_Q_blk_I_add( P p
                 *n_prepended = 0;
             if( n_appended )
                 *n_appended = n;
-            return (Pc)p_1 + l_0;
+            return p_1;
         }
         if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
