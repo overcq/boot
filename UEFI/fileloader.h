@@ -752,9 +752,7 @@ struct H_main_Z_uefi_runtime_services
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable_info )( N32 attributes, N64 *maximum_variable_storage_size, N64 *remaining_variable_storage_size, N64 *maximum_variable_size );
 };
 struct H_main_Z_kernel_Z_acpi
-{ P apic_content;
-  N apic_content_l;
-  P dmar_content;
+{ P dmar_content;
   N dmar_content_l;
   P dsdt_content;
   N dsdt_content_l;
@@ -773,6 +771,10 @@ struct H_main_Z_kernel_Z_acpi
   unsigned smm_validate_nested_ptr            :1;
   unsigned smm_system_resource_protection     :1;
 };
+struct E_interrupt_Z_gsi
+{ N8 source;
+  N8 flags;
+};
 struct E_main_Z_kernel_args
 { struct E_mem_blk_Z mem_blk;
   struct H_oux_E_mem_Z_memory_map *memory_map;
@@ -785,6 +787,9 @@ struct E_main_Z_kernel_args
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct H_main_Z_kernel_Z_acpi acpi;
   P local_apic_address;
+  P io_apic_address;
+  struct E_interrupt_Z_gsi *gsi;
+  N8 gsi_n;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header

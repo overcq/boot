@@ -45,6 +45,42 @@
 #define E_cpu_Z_gdt_S_granularity       ( 1ULL << ( 32 + 23 ))
 #define E_cpu_Z_gdt_Z_type_S_ldt        ( 1ULL << ( 32 + 9 ))
 //==============================================================================
+struct __attribute__ (( __packed__ )) H_acpi_Z_local_apic
+{ N8 type;
+  N8 l;
+  N8 processor;
+  N8 id;
+  N32 flags;
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_io_apic
+{ N8 type;
+  N8 l;
+  N8 id;
+  N8 reserved;
+  N32 address;
+  N32 gsi_base;
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_source_override
+{ N8 type;
+  N8 l;
+  N8 bus;
+  N8 source;
+  N32 gsi;
+  N16 flags;
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_local_apic_nmi
+{ N8 type;
+  N8 l;
+  N8 processor;
+  N16 flags;
+  N8 int_;
+};
+struct E_main_Z_apic_source_override
+{ N8 source;
+  N8 gsi;
+  N8 flags;
+};
+//------------------------------------------------------------------------------
 struct __attribute__ (( __packed__ )) Q_elf_Z_rela_entry
 { N64 offset;
   N32 type, sym;
@@ -77,6 +113,9 @@ N E_main_S_memory_map_n;
 N E_main_S_descriptor_l;
 N E_main_S_loader_stack;
 N64 gdt[5], ldt[2], idt[2];
+B E_main_S_pic_mode = no;
+P E_main_S_apic_content;
+N E_main_S_apic_content_l;
 //==============================================================================
 void
 E_main_I_outb( N16 port
@@ -131,6 +170,7 @@ __attribute__ (( __warn_unused_result__ ))
 S
 E_main_I_acpi( struct H_uefi_Z_system_table *system_table
 ){  _0( &E_main_S_kernel_args.acpi, sizeof( E_main_S_kernel_args.acpi ));
+    E_main_S_kernel_args.io_apic_address = 0;
     struct H_uefi_Z_guid guid_;
 #define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
     for_n( i, system_table->configuration_table_n )
@@ -171,13 +211,62 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                     return status;
                 if( E_mem_Q_blk_T_eq( &header->signature[0], "APIC", sizeof( xsdt->header.signature )))
                 {   struct H_acpi_Z_apic *apic = (P)header;
-                    E_main_S_kernel_args.acpi.apic_content = (Pc)apic + sizeof( *apic );
-                    E_main_S_kernel_args.acpi.apic_content_l = apic->header.length - sizeof( *apic );
+                    E_main_S_apic_content = (Pc)apic + sizeof( *apic );
+                    E_main_S_apic_content_l = apic->header.length - sizeof( *apic );
                     E_main_S_kernel_args.local_apic_address = (P)(N)apic->local_interrupt_controler;
-                    // Inicjowanie trybu APIC.
-                    if( apic->flags & 1 ) // Czy jest także tryb zgodności PIC?
-                    {   E_main_I_outb( 0x22, 0x70 );
-                        E_main_I_outb( 0x23, 1 );
+                    E_main_S_pic_mode = apic->flags & 1;
+                    Pc table = E_main_S_apic_content;
+                    N l = E_main_S_apic_content_l;
+                    while(l)
+                    {   if( l < (N8)table[1] )
+                            return ~0;
+                        switch( (N8)table[0] )
+                        { case 0: // local APIC
+                            {   struct H_acpi_Z_local_apic *local_apic = (P)&table[0];
+                                if( local_apic->l != sizeof( *local_apic ))
+                                    return ~0;
+                                if( !(( local_apic->flags & 3 ) == 1
+                                  || ( local_apic->flags & 3 ) == 2
+                                )
+                                || local_apic->flags & ~3
+                                )
+                                    return ~0;
+                                break;
+                            }
+                          case 1: // I/O APIC
+                            {   if( E_main_S_kernel_args.io_apic_address ) // Obsługiwany tylko jeden kontroler I/O APIC.
+                                    return ~0;
+                                struct H_acpi_Z_io_apic *io_apic = (P)&table[0];
+                                if( io_apic->l != sizeof( *io_apic ))
+                                    return ~0;
+                                if( io_apic->gsi_base )
+                                    return ~0;
+                                E_main_S_kernel_args.io_apic_address = (P)(N)io_apic->address;
+                                break;
+                            }
+                          case 2: // source override
+                            {   struct H_acpi_Z_source_override *source_override = (P)&table[0];
+                                if( source_override->l != sizeof( *source_override ))
+                                    return ~0;
+                                if( source_override->source > 254 - 32
+                                || source_override->gsi > 254 - 32
+                                || source_override->flags & 3 == 2
+                                || source_override->flags & ( 3 << 2 ) == 2 << 2
+                                )
+                                    return ~0;
+                                break;
+                            }
+                          case 4: // local APIC NMI
+                            {   struct H_acpi_Z_local_apic_nmi *local_apic_nmi = (P)&table[0];
+                                if( local_apic_nmi->l != sizeof( *local_apic_nmi ))
+                                    return ~0;
+                                break;
+                            }
+                          default:
+                                return ~0;
+                        }
+                        l -= (N8)table[1];
+                        table += (N8)table[1];
                     }
                 }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( xsdt->header.signature )))
                 {   struct H_acpi_Z_dmar *dmar = (P)header;
@@ -285,7 +374,9 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
         }
     }
 #undef Z_guid_T_eq
-    if( !E_main_S_kernel_args.acpi.dsdt_content_l )
+    if( !E_main_S_kernel_args.acpi.dsdt_content_l
+    || !E_main_S_kernel_args.io_apic_address
+    )
         return ~0;
     return 0;
 }
@@ -325,7 +416,7 @@ E_main_I_virtual_address_change( P event
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
-    , &E_main_S_kernel_args.acpi.apic_content
+    , &E_main_S_apic_content
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
@@ -348,6 +439,10 @@ E_main_I_virtual_address_change( P event
         , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
         , &E_main_S_kernel_args.acpi.ssdt_contents[i].address
         );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
+    , &E_main_S_kernel_args.io_apic_address
+    );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
     , &E_main_S_kernel_args.local_apic_address
@@ -813,6 +908,8 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
                                         if( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
                                         && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
+                                        && physical_address != (N)E_main_S_kernel_args.local_apic_address
+                                        && physical_address != (N)E_main_S_kernel_args.io_apic_address
                                         )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt;
                                     }
@@ -891,6 +988,116 @@ E_main_Q_loader_I_relocate( N loader_start
         }
         image_relocation = (P)( (Pc)image_relocation + image_relocation->size_of_block );
     }
+    return 0;
+}
+//------------------------------------------------------------------------------
+void
+E_main_M_madt_I_source_override_sort_gsi( struct E_main_Z_apic_source_override *apic_source_override
+, N apic_source_override_n
+){  N n = apic_source_override_n;
+    while( n > 1 )
+    {   struct E_main_Z_apic_source_override *entry_prev = &apic_source_override[0];
+        N new_n = 0;
+        for( N i = 1; i != n; i++ )
+        {   if( entry_prev->gsi > apic_source_override[i].gsi )
+            {   J_swap( struct E_main_Z_apic_source_override, *entry_prev, apic_source_override[i] );
+                new_n = i;
+            }
+            entry_prev = &apic_source_override[i];
+        }
+        n = new_n;
+    }
+}
+void
+E_main_M_madt_I_source_override_sort_source( struct E_main_Z_apic_source_override *apic_source_override
+, N apic_source_override_n
+){  N n = apic_source_override_n;
+    while( n > 1 )
+    {   struct E_main_Z_apic_source_override *entry_prev = &apic_source_override[0];
+        N new_n = 0;
+        for( N i = 1; i != n; i++ )
+        {   if( entry_prev->source > apic_source_override[i].source )
+            {   J_swap( struct E_main_Z_apic_source_override, *entry_prev, apic_source_override[i] );
+                new_n = i;
+            }
+            entry_prev = &apic_source_override[i];
+        }
+        n = new_n;
+    }
+}
+N32
+E_interrupt_Q_io_apic_R( N8 i
+){  *( volatile N32 * )E_main_S_kernel_args.io_apic_address = i;
+    return *( volatile N32 * )( (Pc)E_main_S_kernel_args.io_apic_address + 0x10 );
+}
+N
+E_main_M_madt( Pc table
+, N l
+){  N apic_source_override_n = 0;
+    struct E_main_Z_apic_source_override *apic_source_override;
+    Mt_( apic_source_override, apic_source_override_n );
+    if( !apic_source_override )
+        return ~0;
+    while(l)
+    {   switch( (N8)table[0] )
+        { case 2: // source override
+            {   struct H_acpi_Z_source_override *source_override = (P)&table[0];
+                N n_prepended;
+                if( !E_mem_Q_blk_I_add( &apic_source_override, 1, &n_prepended, 0 ))
+                {   W( apic_source_override );
+                    return ~0;
+                }
+                N i = n_prepended ? 0 : apic_source_override_n;
+                apic_source_override[i].source = source_override->source;
+                apic_source_override[i].gsi = source_override->gsi;
+                apic_source_override[i].flags = source_override->flags & 0xff;
+                apic_source_override_n++;
+                break;
+            }
+        }
+        l -= (N8)table[1];
+        table += (N8)table[1];
+    }
+    // Sprawdzenie, czy nie ma duplikatów ‘source override’.
+    if( apic_source_override_n > 1 )
+    {   E_main_M_madt_I_source_override_sort_source( apic_source_override, apic_source_override_n );
+        N source = apic_source_override[0].source;
+        for_n( i, apic_source_override_n - 1 )
+        {   if( apic_source_override[ 1 + i ].source == source )
+            {   W( apic_source_override );
+                return ~0;
+            }
+            source = apic_source_override[ 1 + i ].source;
+        }
+        E_main_M_madt_I_source_override_sort_gsi( apic_source_override, apic_source_override_n );
+        N gsi = apic_source_override[0].gsi;
+        for_n_( i, apic_source_override_n - 1 )
+        {   if( apic_source_override[ 1 + i ].gsi == gsi )
+            {   W( apic_source_override );
+                return ~0;
+            }
+            gsi = apic_source_override[ 1 + i ].gsi;
+        }
+    }
+    E_main_S_kernel_args.gsi_n = (( E_interrupt_Q_io_apic_R(1) >> 16 ) & 0xff ) + 1;
+    Mt_( E_main_S_kernel_args.gsi, E_main_S_kernel_args.gsi_n );
+    if( !E_main_S_kernel_args.gsi )
+    {   W( apic_source_override );
+        return ~0;
+    }
+    N apic_source_override_i = 0;
+    for_n( i, E_main_S_kernel_args.gsi_n )
+        if( apic_source_override_i == apic_source_override_n
+        || i != apic_source_override[ apic_source_override_i ].gsi
+        )
+        {   E_main_S_kernel_args.gsi[i].source = i;
+            E_main_S_kernel_args.gsi[i].flags = 0;
+        }else //NDFN A jaką funkcję pełni tutaj GSI, z którego przekierowano?
+        {   E_main_S_kernel_args.gsi[i].source = apic_source_override[ apic_source_override_i ].source;
+            E_main_S_kernel_args.gsi[i].flags = apic_source_override[ apic_source_override_i ].flags;
+            apic_source_override_i++;
+        }
+    W( apic_source_override );
     return 0;
 }
 //------------------------------------------------------------------------------
@@ -1151,9 +1358,11 @@ H_uefi_I_main(
     && status != H_uefi_Z_error_S_buffer_too_small
     )
         return status;
-    memory_map_l += ( 2 + 1 + 1 + 3 ) * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 1 + 1 + 1 + 1 + 3 ) * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w następującym “M_pool”
      * 1 na dopisanie bloku ‘framebuffer’
+     * 1 na dopisanie bloku “local_apic_address”
+     * 1 na dopisanie bloku “io_apic_address”
      * 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów
      * 3 na możliwość przenoszenia ‘bootloadera’
      */
@@ -1169,6 +1378,16 @@ H_uefi_I_main(
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
     memory_map->pages = graphics->mode->framebuffer_l / H_oux_E_mem_S_page_size + ( graphics->mode->framebuffer_l % H_oux_E_mem_S_page_size ? 1 : 0 );
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = (N)E_main_S_kernel_args.local_apic_address;
+    memory_map->pages = 1;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = (N)E_main_S_kernel_args.io_apic_address;
+    memory_map->pages = 1;
     memory_map_l += E_main_S_descriptor_l;
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
@@ -1226,6 +1445,10 @@ H_uefi_I_main(
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
         status = system_table->output->output( system_table->output, L", framebuffer=" );
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
+        status = system_table->output->output( system_table->output, L", local_apic=" );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.local_apic_address, sizeof( (N)E_main_S_kernel_args.local_apic_address ), 16 );
+        status = system_table->output->output( system_table->output, L", io_apic=" );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.io_apic_address, sizeof( (N)E_main_S_kernel_args.io_apic_address ), 16 );
         struct H_uefi_Z_memory_descriptor *memory_map = E_main_S_memory_map;
         for_n( i, memory_map_n )
         {   if( i % 40 == 0 )
@@ -1251,6 +1474,9 @@ H_uefi_I_main(
     {   S status_ = system_table->boot_services->W_pool( E_main_S_memory_map );
         return status;
     }
+    __asm__ volatile (
+    "\n"    "cli"
+    );
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
@@ -1692,6 +1918,8 @@ Test:   {   memory_map = E_main_S_memory_map;
     if( !~E_font_M() )
         goto End;
     E_font_I_print( "OUX/C+ OS bootloader. ©overcq <overcq@int.pl>. https://github.com/overcq\n" );
+    if( !~E_main_M_madt( E_main_S_apic_content, E_main_S_apic_content_l ))
+        goto End;
     E_font_W();
     E_main_S_kernel_args.bootloader = (P)loader_start;
     E_main_S_kernel_args.uefi_runtime_services.R_time = system_table->runtime_services->R_time;
@@ -1729,6 +1957,11 @@ Test:   {   memory_map = E_main_S_memory_map;
     , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
     );
+    // Inicjowanie trybu APIC.
+    if( E_main_S_pic_mode )
+    {   E_main_I_outb( 0x22, 0x70 );
+        E_main_I_outb( 0x23, 1 );
+    }
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
     "\n"    "mov    %0,%%rsp"
@@ -1738,7 +1971,6 @@ Test:   {   memory_map = E_main_S_memory_map;
     );
     __builtin_unreachable();
 End:__asm__ volatile (
-    "\n"    "cli"
     "\n0:"  "hlt"
     "\n"    "jmp    0b"
     );
