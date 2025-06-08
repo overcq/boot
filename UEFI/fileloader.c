@@ -37,6 +37,7 @@
 #define E_cpu_Z_page_entry_S_present    ( 1ULL << 0 )
 #define E_cpu_Z_page_entry_S_write      ( 1ULL << 1 )
 #define E_cpu_Z_page_entry_S_pwt        ( 1ULL << 3 )
+#define E_cpu_Z_page_entry_S_pcd        ( 1ULL << 4 )
 #define E_cpu_Z_gdt_Z_data_S_write      ( 1ULL << ( 32 + 9 ))
 #define E_cpu_Z_gdt_Z_type_S_code       ( 1ULL << ( 32 + 11 ))
 #define E_cpu_Z_gdt_S_code_data         ( 1ULL << ( 32 + 12 ))
@@ -906,12 +907,13 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                             return status;
                                         N physical_address = memory_map->physical_start + physical_pages * H_oux_E_mem_S_page_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
-                                        if( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
-                                        && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
-                                        && physical_address != (N)E_main_S_kernel_args.local_apic_address
-                                        && physical_address != (N)E_main_S_kernel_args.io_apic_address
+                                        if(( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
+                                          && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
                                         )
-                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt;
+                                        || physical_address == (N)E_main_S_kernel_args.local_apic_address
+                                        || physical_address == (N)E_main_S_kernel_args.io_apic_address
+                                        )
+                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pcd;
                                     }
                                 }else
                                     pt[ pt_i ] = 0;
