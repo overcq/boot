@@ -1961,8 +1961,8 @@ Test:   {   memory_map = E_main_S_memory_map;
     );
     // Inicjowanie trybu APIC.
     if( E_main_S_pic_mode )
-    {   E_main_I_outb( 0x22, 0x70 );
-        E_main_I_outb( 0x23, 1 );
+    {   E_main_I_outb( 0x21, 0xff );
+        E_main_I_outb( 0xa1, 0xff );
     }
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
