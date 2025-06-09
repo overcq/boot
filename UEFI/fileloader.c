@@ -1479,6 +1479,11 @@ H_uefi_I_main(
     __asm__ volatile (
     "\n"    "cli"
     );
+    // Wyłączenie PIC.
+    if( E_main_S_pic_mode )
+    {   E_main_I_outb( 0x21, 0xff );
+        E_main_I_outb( 0xa1, 0xff );
+    }
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address );
     if( status < 0 )
@@ -1959,11 +1964,6 @@ Test:   {   memory_map = E_main_S_memory_map;
     , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
     );
-    // Inicjowanie trybu APIC.
-    if( E_main_S_pic_mode )
-    {   E_main_I_outb( 0x21, 0xff );
-        E_main_I_outb( 0xa1, 0xff );
-    }
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane i GDT, ustawić LDT i IDT.
     __asm__ volatile (
     "\n"    "mov    %0,%%rsp"
