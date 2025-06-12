@@ -46,14 +46,14 @@
 #define E_cpu_Z_gdt_S_granularity       ( 1ULL << ( 32 + 23 ))
 #define E_cpu_Z_gdt_Z_type_S_ldt        ( 1ULL << ( 32 + 9 ))
 //==============================================================================
-struct __attribute__ (( __packed__ )) H_acpi_Z_local_apic
+struct __attribute__ (( __packed__ )) H_acpi_Z_madt_Z_local_apic
 { N8 type;
   N8 l;
   N8 processor;
   N8 id;
   N32 flags;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_io_apic
+struct __attribute__ (( __packed__ )) H_acpi_Z_madt_Z_io_apic
 { N8 type;
   N8 l;
   N8 id;
@@ -61,7 +61,7 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_io_apic
   N32 address;
   N32 gsi_base;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_source_override
+struct __attribute__ (( __packed__ )) H_acpi_Z_madt_Z_source_override
 { N8 type;
   N8 l;
   N8 bus;
@@ -69,7 +69,7 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_source_override
   N32 gsi;
   N16 flags;
 };
-struct __attribute__ (( __packed__ )) H_acpi_Z_local_apic_nmi
+struct __attribute__ (( __packed__ )) H_acpi_Z_madt_Z_local_apic_nmi
 { N8 type;
   N8 l;
   N8 processor;
@@ -223,13 +223,13 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                             return ~0;
                         switch( (N8)table[0] )
                         { case 0: // local APIC
-                            {   struct H_acpi_Z_local_apic *local_apic = (P)&table[0];
+                            {   struct H_acpi_Z_madt_Z_local_apic *local_apic = (P)&table[0];
                                 if( local_apic->l != sizeof( *local_apic ))
                                     return ~0;
                                 if( !(( local_apic->flags & 3 ) == 1
                                   || ( local_apic->flags & 3 ) == 2
                                 )
-                                || local_apic->flags & ~3
+                                || ( local_apic->flags & ~3 )
                                 )
                                     return ~0;
                                 break;
@@ -237,7 +237,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                           case 1: // I/O APIC
                             {   if( E_main_S_kernel_args.io_apic_address ) // Obsługiwany tylko jeden kontroler I/O APIC.
                                     return ~0;
-                                struct H_acpi_Z_io_apic *io_apic = (P)&table[0];
+                                struct H_acpi_Z_madt_Z_io_apic *io_apic = (P)&table[0];
                                 if( io_apic->l != sizeof( *io_apic ))
                                     return ~0;
                                 if( io_apic->gsi_base )
@@ -246,19 +246,19 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                                 break;
                             }
                           case 2: // source override
-                            {   struct H_acpi_Z_source_override *source_override = (P)&table[0];
+                            {   struct H_acpi_Z_madt_Z_source_override *source_override = (P)&table[0];
                                 if( source_override->l != sizeof( *source_override ))
                                     return ~0;
                                 if( source_override->source > 254 - 32
                                 || source_override->gsi > 254 - 32
-                                || source_override->flags & 3 == 2
-                                || source_override->flags & ( 3 << 2 ) == 2 << 2
+                                || ( source_override->flags & 3 ) == 2
+                                || ( source_override->flags & ( 3 << 2 )) == ( 2 << 2 )
                                 )
                                     return ~0;
                                 break;
                             }
                           case 4: // local APIC NMI
-                            {   struct H_acpi_Z_local_apic_nmi *local_apic_nmi = (P)&table[0];
+                            {   struct H_acpi_Z_madt_Z_local_apic_nmi *local_apic_nmi = (P)&table[0];
                                 if( local_apic_nmi->l != sizeof( *local_apic_nmi ))
                                     return ~0;
                                 break;
@@ -1043,7 +1043,7 @@ E_main_M_madt( Pc table
     while(l)
     {   switch( (N8)table[0] )
         { case 2: // source override
-            {   struct H_acpi_Z_source_override *source_override = (P)&table[0];
+            {   struct H_acpi_Z_madt_Z_source_override *source_override = (P)&table[0];
                 N n_prepended;
                 if( !E_mem_Q_blk_I_add( &apic_source_override, 1, &n_prepended, 0 ))
                 {   W( apic_source_override );
@@ -1082,6 +1082,8 @@ E_main_M_madt( Pc table
         }
     }
     E_main_S_kernel_args.gsi_n = (( E_interrupt_Q_io_apic_R(1) >> 16 ) & 0xff ) + 1;
+    if( E_main_S_kernel_args.gsi_n < 17 )
+        return ~0;
     Mt_( E_main_S_kernel_args.gsi, E_main_S_kernel_args.gsi_n );
     if( !E_main_S_kernel_args.gsi )
     {   W( apic_source_override );
@@ -1094,9 +1096,10 @@ E_main_M_madt( Pc table
         )
         {   E_main_S_kernel_args.gsi[i].source = i;
             E_main_S_kernel_args.gsi[i].flags = 0;
-        }else //NDFN A jaką funkcję pełni tutaj GSI, z którego przekierowano?
+        }else
         {   E_main_S_kernel_args.gsi[i].source = apic_source_override[ apic_source_override_i ].source;
             E_main_S_kernel_args.gsi[i].flags = apic_source_override[ apic_source_override_i ].flags;
+            E_main_S_kernel_args.gsi[ E_main_S_kernel_args.gsi[i].source ].source = ~0;
             apic_source_override_i++;
         }
     W( apic_source_override );
@@ -1280,7 +1283,10 @@ H_uefi_I_main(
             status = ~0;
             break;
         }
-        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel, E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size, ( N64 * )&E_main_S_kernel_args.kernel );
+        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_kernel
+        , E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size
+        , ( N64 * )&E_main_S_kernel_args.kernel
+        );
         if( status < 0 )
         {   H_oux_E_fs_Q_disk_W( system_table );
             S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
@@ -1473,9 +1479,7 @@ H_uefi_I_main(
     }*/
     status = system_table->boot_services->exit_boot_services( image_handle, map_key ); //TODO To może być wykonane wcześniej.
     if( status < 0 )
-    {   S status_ = system_table->boot_services->W_pool( E_main_S_memory_map );
-        return status;
-    }
+        goto End;
     __asm__ volatile (
     "\n"    "cli"
     );

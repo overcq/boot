@@ -68,7 +68,7 @@ install-vmware:
 	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 #-------------------------------------------------------------------------------
 install-usb:
-	ocq_usb_dev=/dev/sdc; \
+	ocq_usb_dev=/dev/sdb; \
 	ocq_usb_mnt=/mnt/usb; \
 	mount $${ocq_usb_dev}1 $$ocq_usb_mnt \
 	&& trap 'umount $$ocq_usb_mnt' EXIT \

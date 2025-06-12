@@ -763,7 +763,7 @@ struct H_main_Z_kernel_Z_acpi
   struct
   { P address;
     N l;
-  }ssdt_contents[2];
+  }ssdt_contents[4];
   N ssdt_contents_n;
   unsigned virt_guest_rtc_good                :1;
   unsigned virt_guest_pm_good                 :1;
