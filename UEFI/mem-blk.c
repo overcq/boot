@@ -20,12 +20,12 @@ _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
-/* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożne następująco od największego adresu wirtualnego:
+/* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
  * • przestrzeń ‘niezmapowana’
  * • pamięć zarezerwowana
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
- * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar (wewnątrz program ‘bootloadera”)
+ * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
  * • tablica “memory_map”
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • stos; wyrównany adres i rozmiar
@@ -42,7 +42,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • początkowe dane “mem-blk”: “free”, “allocated”
  * • tablica “memory_map”
- * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar (wewnątrz program ‘bootloadera”)
+ * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
  * • pamięć zarezerwowana
@@ -114,15 +114,10 @@ E_mem_M(
     }
     struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
     if( reserved_from_end )
-    {   if( loader_start + loader_size <= (N)E_main_S_kernel_args.mem_blk.allocated )
-        {   free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start );
-            free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start ) : 0;
-            free_p[1].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( loader_start + loader_size );
-            free_p[1].p = free_p[1].l ? (P)( loader_start + loader_size ) : 0;
-        }else
-        {   free_p[0].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( H_oux_E_mem_S_page_size + reserved_size_from_start );
-            free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start ) : 0;
-        }
+    {   free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start );
+        free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start ) : 0;
+        free_p[1].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( loader_start + loader_size );
+        free_p[1].p = free_p[1].l ? (P)( loader_start + loader_size ) : 0;
         free_p[2].l = memory_map_address - ( stack_address + stack_size );
         free_p[2].p = free_p[2].l ? (Pc)stack_address + stack_size : 0;
         free_p[3].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
@@ -140,25 +135,18 @@ E_mem_M(
         )
             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
     }else
-    {   free_p[3].p = 0;
-        free_p[3].l = 0;
-        free_p[0].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+    {   free_p[0].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
         free_p[0].p = free_p[0].l ? (Pc)kernel_address + kernel_size : 0;
-        if( loader_start >= (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ))
-        {   free_p[1].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
-            free_p[1].p = free_p[1].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
-            free_p[2].l = stack_address - ( loader_start + loader_size );
-            free_p[2].p = free_p[2].l ? (P)( loader_start + loader_size ) : 0;
-            if( free_p[2].l
-            && !free_p[1].l
-            )
-                E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(1);
-        }else
-        {   free_p[1].l = stack_address - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
-            free_p[1].p = free_p[1].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
-            free_p[2].p = 0;
-            free_p[2].l = 0;
-        }
+        free_p[1].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
+        free_p[1].p = free_p[1].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
+        free_p[2].l = stack_address - ( loader_start + loader_size );
+        free_p[2].p = free_p[2].l ? (P)( loader_start + loader_size ) : 0;
+        free_p[3].p = 0;
+        free_p[3].l = 0;
+        if( free_p[2].l
+        && !free_p[1].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(1);
         if( free_p[1].l
         && !free_p[0].l
         )

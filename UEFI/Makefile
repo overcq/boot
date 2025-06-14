@@ -66,6 +66,23 @@ install-vmware:
 	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
 	&& mkdir -p $$ocq_mnt/EFI/BOOT \
 	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+init-virtualbox:
+	ocq_mnt=/mnt/oth; \
+	mkdir -p $$ocq_mnt \
+	&& $(VMWARE_DIR)/bin/vmware-mount -f ~inc/.VirtualBox/Machines/boot\ UEFI/boot\ UEFI.vmdk $$ocq_mnt \
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& parted -fs $$ocq_mnt/flat mklabel gpt mkpart primary fat32 0 100MB set 1 esp on mkpart primary 100MB 2GB \
+	&& loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
+	&& trap 'losetup -d $$loopdev && $(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& mkfs.fat -F 32 $${loopdev}p1 \
+	&& ../../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
+install-virtualbox:
+	ocq_mnt=/mnt/oth; \
+	mkdir -p $$ocq_mnt \
+	&& $(VMWARE_DIR)/bin/vmware-mount ~inc/.VirtualBox/Machines/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
+	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	&& mkdir -p $$ocq_mnt/EFI/BOOT \
+	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 #-------------------------------------------------------------------------------
 install-usb:
 	ocq_usb_dev=/dev/sdb; \
