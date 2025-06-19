@@ -55,6 +55,7 @@ typedef __int128            S128;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define _0(pointer_variable,l)              E_mem_Q_blk_P_fill_c( (pointer_variable), l, 0 )
 #define _0_(pointer_variable)               _0( (pointer_variable), sizeof( *(pointer_variable) ))
+#define _0t_(pointer_variable,n)            _0( (pointer_variable), (n) * sizeof( *(pointer_variable) ))
 #define M(l)                                E_mem_Q_blk_M(l)
 #define Mt(u,n)                             E_mem_Q_blk_M_tab((u),(n))
 #define W(pointer_variable)                 E_mem_Q_blk_W( pointer_variable )
@@ -129,7 +130,7 @@ P E_mem_Q_blk_I_remove( P, N, N );
 #define H_uefi_Z_error_S_end_of_file        H_uefi_S_error(31)
 #define H_uefi_Z_error_S_invalid_language   H_uefi_S_error(32)
 #define H_uefi_Z_error_S_compromised_data   H_uefi_S_error(33)
-#define H_uefi_Z_error_S_ip_address_confilct H_uefi_S_error(34)
+#define H_uefi_Z_error_S_ip_address_conflict H_uefi_S_error(34)
 #define H_uefi_Z_error_S_http_error         H_uefi_S_error(35)
 //------------------------------------------------------------------------------
 struct H_uefi_Z_guid
@@ -238,6 +239,7 @@ enum H_uefi_Z_memory
 , H_uefi_Z_memory_Z_unaccepted
 , H_uefi_Z_memory_Z_n
 , H_uefi_Z_memory_Z_kernel = 0x80000000U
+, H_uefi_Z_memory_Z_processor_startup_page
 };
 #define H_uefi_Z_memory_protection_S_write      0x1000
 #define H_uefi_Z_memory_protection_S_read       0x2000
@@ -790,7 +792,10 @@ struct E_main_Z_kernel_args
   P local_apic_address;
   P io_apic_address;
   struct E_interrupt_Z_gsi *gsi;
+  P *processor_proc;
+  N32 processor_start_page;
   N8 gsi_n;
+  N8 processor_n;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header

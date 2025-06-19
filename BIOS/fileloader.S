@@ -224,7 +224,7 @@
     mov     %eax, S_pdt_32
     mov     $S_pdt_32, %eax
     mov     %eax, %cr3
-    cli                                     #TODO Blokować zewnętrzne przerwania (APIC).
+    cli                                     #TODO Blokować zewnętrzne przerwania (PIC).
     mov     $S_gd, %eax
     lgdtl   S_gd
 # Przełączenie do trybu chronionego.

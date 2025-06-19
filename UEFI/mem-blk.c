@@ -20,6 +20,7 @@ _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
+//TODO Dla kodu inicjującego procesory trzeba zagwarantować, że tablica strona pamięci wirtualnej będzie zawsze poniżej 4 GiB.
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
  * • przestrzeń ‘niezmapowana’
  * • pamięć zarezerwowana
@@ -33,6 +34,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • (program ‘bootloadera”)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • (niezarejestrowana strona pamięci na program startowy procesorów)
  * • nieprzenaszalna pamięć zarezerwowana
  * W przeciwnym przypadku (“!reserved_from_end”):
  * • przestrzeń ‘niezmapowana’
@@ -45,6 +47,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
+ * • (niezarejestrowana strona pamięci na program startowy procesorów)
  * • pamięć zarezerwowana
  */
 N
