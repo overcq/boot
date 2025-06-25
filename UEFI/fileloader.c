@@ -130,7 +130,7 @@ N E_main_S_apic_content_l;
 extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
 //==============================================================================
 void
-E_main_I_outb( N16 port
+E_main_I_out_8( N16 port
 , N8 v
 ){  __asm__ volatile (
     "\n"    "out    %0,%1"
@@ -198,6 +198,7 @@ S
 E_main_I_acpi( struct H_uefi_Z_system_table *system_table
 ){  _0( &E_main_S_kernel_args.acpi, sizeof( E_main_S_kernel_args.acpi ));
     E_main_S_kernel_args.io_apic_address = 0;
+    E_main_S_kernel_args.pcie_base_address = 0;
     struct H_uefi_Z_guid guid_;
 #define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
     for_n( i, system_table->configuration_table_n )
@@ -373,8 +374,11 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                     E_main_S_kernel_args.acpi.hpet.minimum_tick = hpet->minimum_tick;
                     E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
                 }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( xsdt->header.signature )))
-                {   E_main_S_kernel_args.acpi.mcfg_content = (P)( (Pc)header + sizeof( *header ));
-                    E_main_S_kernel_args.acpi.mcfg_content_n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                {   struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)( (Pc)header + sizeof( *header ));
+                    N n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                    if( n != 1 )
+                        return ~0;
+                    E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
                 }else if( E_mem_Q_blk_T_eq( &header->signature[0], "SSDT", sizeof( xsdt->header.signature )))
                 {   if( E_main_S_kernel_args.acpi.ssdt_contents_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_contents ))
                         return ~0;
@@ -461,7 +465,7 @@ E_main_I_virtual_address_change( P event
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
-    , ( P * )&E_main_S_kernel_args.acpi.mcfg_content
+    , &E_main_S_kernel_args.pcie_base_address
     );
     for_n( i, E_main_S_kernel_args.acpi.ssdt_contents_n )
         E_main_I_virtual_address_change_I_convert_pointer( runtime_services
@@ -1049,7 +1053,10 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         )
                                         || physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
-                                        )
+                                        || ( E_main_S_kernel_args.pcie_base_address
+                                          && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
+                                          && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
+                                        ))
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pcd;
                                     }
                                 }else
@@ -1652,8 +1659,8 @@ reserved_from_end = no; //TEST
     );
     // Wyłączenie PIC.
     if( E_main_S_pic_mode )
-    {   E_main_I_outb( 0x21, 0xff );
-        E_main_I_outb( 0xa1, 0xff );
+    {   E_main_I_out_8( 0x21, 0xff );
+        E_main_I_out_8( 0xa1, 0xff );
     }
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages );

@@ -597,7 +597,6 @@ struct H_oux_Z_hpet
   N8 page_protection;
 };
 //------------------------------------------------------------------------------
-//NDFN Definicja odtworzona z filmu poradnikowego.
 struct __attribute__ (( __packed__ )) H_acpi_Z_mcfg_entry
 { N64 base_address;
   N16 pci_segment;
@@ -760,8 +759,6 @@ struct H_main_Z_kernel_Z_acpi
   N dsdt_content_l;
   P facs;
   struct H_oux_Z_hpet hpet;
-  struct H_acpi_Z_mcfg_entry *mcfg_content;
-  N mcfg_content_n;
   struct
   { P address;
     N l;
@@ -786,6 +783,7 @@ struct E_main_Z_kernel_args
   P page_table;
   N additional_pages;
   P kernel_stack;
+  P pcie_base_address;
   struct H_main_Z_framebuffer framebuffer;
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct H_main_Z_kernel_Z_acpi acpi;
