@@ -6,7 +6,7 @@
 *         main
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒2‒1 d
 *******************************************************************************/
-#include "fileloader.h"
+#include "kernelloader.h"
 //==============================================================================
 #define E_cpu_Z_cr0_S_mp                ( 1ULL << 1 )
 #define E_cpu_Z_cr0_S_em                ( 1ULL << 2 )
@@ -1578,11 +1578,14 @@ H_uefi_I_main(
     }
     N reserved_size = E_main_Q_memory_map_R_reserved_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     B reserved_from_end = loader_start < H_oux_E_mem_S_page_size + reserved_size;
-reserved_from_end = no; //TEST
+//reserved_from_end = no; //TEST
+    N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N reserved_size_from_start;
     if( reserved_from_end )
-        reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
-    N memory_size = E_main_Q_memory_map_R_size( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
+    {   reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
+        if( memory_size - ( reserved_size - reserved_size_from_start ) - E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) - H_oux_E_mem_S_page_size >= 0x100000000 )
+            reserved_from_end = no;
+    }
     N memory_map_new_entries;
     E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, &memory_map_new_entries );
     memory_map_n += memory_map_new_entries;
@@ -1757,7 +1760,7 @@ reserved_from_end = no; //TEST
             }
             if( !loader_move )
                 goto End;
-        }else //TEST
+        }else if(no) //TEST
         {   memory_map = E_main_S_memory_map;
             for_n_( i, memory_map_n )
             {   if(( memory_map->type == H_uefi_Z_memory_Z_boot_services_code
@@ -1875,7 +1878,7 @@ reserved_from_end = no; //TEST
             }
             if( !loader_move )
                 goto End;
-        }else //TEST
+        }else if(no) //TEST
         {   memory_map = E_main_S_memory_map;
             for_n_( i, memory_map_n )
             {   if(( memory_map->type == H_uefi_Z_memory_Z_boot_services_code

@@ -6,7 +6,7 @@
 *         after protected mode initialization
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 *******************************************************************************/
-#include "fileloader.h"
+#include "kernelloader.h"
 //==============================================================================
 #define Z_page_entry_S_p                    ( 1 << 0 )
 #define Z_page_entry_S_rw                   ( 1 << 1 )
@@ -490,6 +490,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     if( !page_tables )
         goto End;
     E_main_Q_memory_table_I_reduce_by_page_tables( memory_table, page_tables );
+    //TODO Przemapować pamięć dla ciągłego obszaru wolnego, utworzyć tablicę obszarów pamięci dla ‘kernela’, wyszukać tablice ACPI, wczytać z OUXFS i ‘realokować’ ‘kernel’, ustawić flagi rejestrów CR.
     E_mem_M_free( memory_table );
     if( !~E_font_M() )
         goto End;
@@ -505,6 +506,7 @@ main( struct E_main_Z_memory_table_entry *memory_table
     E_vga_I_fill_rect( E_vga_S_video->width / 2, E_vga_S_video->height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_font_I_print( "OUX/C+ OS boot loader. File Boot Loader. ©overcq <overcq@int.pl>. https://github.com/overcq\n" );
 End:__asm__ (
+    "\n"    "cli"
     "\n0:"  "hlt"
     "\n"    "jmp    0b"
     );

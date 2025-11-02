@@ -224,7 +224,12 @@
     mov     %eax, S_pdt_32
     mov     $S_pdt_32, %eax
     mov     %eax, %cr3
-    cli                                     #TODO Blokować zewnętrzne przerwania (PIC).
+    cli
+    mov     $0xff, %al
+    mov     $0x21, %dx
+    out     %al, %dx
+    mov     $0xa1, %dx
+    out     %al, %dx
     mov     $S_gd, %eax
     lgdtl   S_gd
 # Przełączenie do trybu chronionego.
@@ -420,29 +425,29 @@ S_idt:
 .macro page_entry_32
     .4byte  0
 .endm
-.p2align 12
+.p2align 12, 0
 S_pt_32:
     page_entry_32
-.p2align 12
+.p2align 12, 0
 S_pdt_32:
     page_entry_32
-.p2align 12
+.p2align 12, 0
 S_pdpt_32:
     page_entry_32
 #-------------------------------------------------------------------------------
 .macro page_entry
     .8byte  0
 .endm
-.p2align 12
+.p2align 12, 0
 S_pt:
     page_entry
-.p2align 12
+.p2align 12, 0
 S_pd:
     page_entry
-.p2align 12
+.p2align 12, 0
 S_pdpt:
     page_entry
-.p2align 12
+.p2align 12, 0
 S_pml4:
     page_entry
 #*******************************************************************************

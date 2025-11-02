@@ -7,7 +7,7 @@
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 e
 *******************************************************************************/
 #include <stddef.h>
-#include "fileloader.h"
+#include "kernelloader.h"
 //==============================================================================
 #define E_mem_Q_blk_S_align_to_all  _Alignof(max_align_t)
 //==============================================================================
@@ -1921,6 +1921,7 @@ E_mem_Q_blk_I_remove( P p
                 , p_0
                 , *( Pc * )p + l_0 - p_0
                 );
+                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
                 E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
                 if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
@@ -1932,7 +1933,6 @@ E_mem_Q_blk_I_remove( P p
                     return 0;
                 }
                 E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
-                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
             }
             E_mem_Q_blk_Q_table_I_put_end();
             return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;

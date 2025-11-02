@@ -7,7 +7,7 @@
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒4‒6 W
 *******************************************************************************/
 #include <stddef.h>
-#include "fileloader.h"
+#include "kernelloader.h"
 //==============================================================================
 #define E_mem_Q_blk_S_align_to_all  alignof(max_align_t)
 //==============================================================================
@@ -20,9 +20,8 @@ _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
-//TODO Dla kodu inicjującego procesory trzeba zagwarantować, że tablica strona pamięci wirtualnej będzie zawsze poniżej 4 GiB.
+//DFN Dla kodu inicjującego procesory trzeba zagwarantować, że tablica strona pamięci wirtualnej będzie zawsze poniżej 4 GiB. Obecnie jest to gwarantowane przez ustawienie “!reserved_from_end”, gdyby nie miała być poniżej przy “reserved_from_end”.
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
- * • przestrzeń ‘niezmapowana’
  * • pamięć zarezerwowana
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
@@ -117,8 +116,8 @@ E_mem_M(
     }
     struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
     if( reserved_from_end )
-    {   free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start );
-        free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start ) : 0;
+    {   free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start + H_oux_E_mem_S_page_size );
+        free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start + H_oux_E_mem_S_page_size ) : 0;
         free_p[1].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( loader_start + loader_size );
         free_p[1].p = free_p[1].l ? (P)( loader_start + loader_size ) : 0;
         free_p[2].l = memory_map_address - ( stack_address + stack_size );
@@ -2016,6 +2015,7 @@ E_mem_Q_blk_I_remove( P p
                 , p_0
                 , *( Pc * )p + l_0 - p_0
                 );
+                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n -= n;
                 E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
                 if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
@@ -2027,7 +2027,6 @@ E_mem_Q_blk_I_remove( P p
                     return 0;
                 }
                 E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
-                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n -= n;
             }
             E_mem_Q_blk_Q_table_I_put_end();
             return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;

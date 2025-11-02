@@ -11,7 +11,7 @@ CFLAGS := -Os
 VMWARE_DIR := /opt/vmware2
 #===============================================================================
 all: build
-build: fileloader
+build: kernelloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .PHONY: all build clean distclean init-qemu install-qemu init-vmware install-vmware install-usb run-qemu
 #===============================================================================
@@ -24,11 +24,11 @@ disk.img:
 	&& parted $$loopdev \
 	&& mkfs.fat $${loopdev}p1 \
 	&& ~inc/moje/programy/linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
-fileloader: simple.h fileloader.h $(wildcard *.c) mp-init.S Makefile
+kernelloader: simple.h kernelloader.h $(wildcard *.c) mp-init.S Makefile
 	$(CC) $(CFLAGS) -std=gnu23 -march=x86-64 -mno-avx -mno-red-zone -fcf-protection=none -ffreestanding -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^) $(filter %.S,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
-	rm -f fileloader
+	rm -f kernelloader
 distclean: clean
 	rm -f disk.img
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +47,7 @@ install-qemu:
 	&& trap 'losetup -d $$loopdev' EXIT \
 	&& trap 'losetup -d $$loopdev && umount $$ocq_mnt' EXIT \
 	&& mkdir -p $$ocq_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+	&& install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 #-------------------------------------------------------------------------------
 init-vmware:
 	ocq_mnt=/mnt/oth; \
@@ -65,7 +65,7 @@ install-vmware:
 	&& $(VMWARE_DIR)/bin/vmware-mount ~inc/vmware/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
 	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
 	&& mkdir -p $$ocq_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+	&& install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 init-virtualbox:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \
@@ -82,7 +82,7 @@ install-virtualbox:
 	&& $(VMWARE_DIR)/bin/vmware-mount ~inc/.VirtualBox/Machines/boot\ UEFI/boot\ UEFI.vmdk 1 $$ocq_mnt \
 	&& trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
 	&& mkdir -p $$ocq_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+	&& install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
 #-------------------------------------------------------------------------------
 install-usb:
 	ocq_usb_dev=/dev/sdb; \
@@ -90,7 +90,7 @@ install-usb:
 	mount $${ocq_usb_dev}1 $$ocq_usb_mnt \
 	&& trap 'umount $$ocq_usb_mnt' EXIT \
 	&& mkdir -p $$ocq_usb_mnt/EFI/BOOT \
-	&& install fileloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
+	&& install kernelloader $$ocq_usb_mnt/EFI/BOOT/BOOTX64.EFI
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 run-qemu:
 	qemu-system-x86_64 -s -S -machine q35 -cpu IvyBridge -smp 4,cores=2,threads=2 -m 128 \

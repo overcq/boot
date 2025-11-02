@@ -9,10 +9,10 @@
 Dostępne są następujace moduły:
 1. program Master Boot Record (MBR)
 2. program Volume Boot Record (VBR)
-3. File Boot Loader (FBL)
+3. Kernel Boot Loader (KBL) lub File Boot Loader (FBL)
 
 Proces uruchamiania może przebiegać w jeden z następujących sposobów:
-1. MBR ➪ VBR na pierwszej uruchamialnej partycji ➪ FBL
+1. MBR ➪ VBR na pierwszej uruchamialnej partycji ➪ KBL
 2. MBR ➪ FBL
 
 Pierwszy ma zastosowanie, gdy na dysku jest tablica partycji w MBR, a na partycji jest VBR. Drugi wtedy, gdy na dysku nie ma tablicy partycji, lecz bezpośrednio po MBR jest system plików.

@@ -237,7 +237,6 @@ enum H_uefi_Z_memory
 , H_uefi_Z_memory_Z_pal_code
 , H_uefi_Z_memory_Z_persistent
 , H_uefi_Z_memory_Z_unaccepted
-, H_uefi_Z_memory_Z_n
 , H_uefi_Z_memory_Z_kernel = 0x80000000U
 , H_uefi_Z_memory_Z_processor_startup_page
 };
