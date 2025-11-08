@@ -1056,7 +1056,10 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
-                                        ))
+                                        )
+                                        || physical_address == 0xfc010000 //NDFN
+                                        || physical_address == 0xfc011000 //NDFN
+                                        )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pcd;
                                     }
                                 }else
@@ -1078,7 +1081,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
         }else
             pml4[ pml4_i ] = 0;
     }
-    *additional_pages += additional_pages_;
+    *additional_pages = additional_pages_;
     *pml4_ = (N)pml4;
     *start_end_address = memory_map_entry_conventional->virtual_start + ( pages + ( reserved_from_end ? 0 : 1 )) * H_oux_E_mem_S_page_size;
     return 0;
@@ -1516,6 +1519,7 @@ H_uefi_I_main(
      * 1 na dopisanie bloku ‘framebuffer’
      * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
+     * 1 na dopisanie bloku pamięci SATA AHCI
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
      * 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów
      * 2 na możliwość przenoszenia ‘bootloadera’
@@ -1543,6 +1547,11 @@ H_uefi_I_main(
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.io_apic_address;
     memory_map->pages = 1;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = 0xfc010000; //NDFN
+    memory_map->pages = 2;
     memory_map_l += E_main_S_descriptor_l;
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
@@ -2083,9 +2092,9 @@ H_uefi_I_main(
         {   my_memory_map->physical_start = memory_map->physical_start;
             my_memory_map->virtual_start = memory_map->virtual_start;
             my_memory_map->pages = memory_map->pages;
+            my_memory_map++;
         }
         memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
-        my_memory_map++;
     }
     if( !~E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size ))
         goto End;

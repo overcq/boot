@@ -22,6 +22,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
 //DFN Dla kodu inicjującego procesory trzeba zagwarantować, że tablica strona pamięci wirtualnej będzie zawsze poniżej 4 GiB. Obecnie jest to gwarantowane przez ustawienie “!reserved_from_end”, gdyby nie miała być poniżej przy “reserved_from_end”.
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
+ * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • pamięć zarezerwowana
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
@@ -36,7 +37,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • (niezarejestrowana strona pamięci na program startowy procesorów)
  * • nieprzenaszalna pamięć zarezerwowana
  * W przeciwnym przypadku (“!reserved_from_end”):
- * • przestrzeń ‘niezmapowana’
+ * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • stos; wyrównany adres i rozmiar
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • (program ‘bootloadera”)
