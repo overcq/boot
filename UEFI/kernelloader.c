@@ -244,6 +244,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 {   struct H_acpi_Z_apic *apic = (P)header;
                     E_main_S_apic_content = (Pc)apic + sizeof( *apic );
                     E_main_S_apic_content_l = apic->header.length - sizeof( *apic );
+                    E_main_S_kernel_args.local_apic_address = (P)(N)apic->local_interrupt_controler;
                     E_main_S_pic_mode = apic->flags & 1;
                     E_main_S_kernel_args.processor_n = 0;
                     Pc table = E_main_S_apic_content;
@@ -477,6 +478,10 @@ E_main_I_virtual_address_change( P event
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
     , &E_main_S_kernel_args.io_apic_address
+    );
+    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
+    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
+    , &E_main_S_kernel_args.local_apic_address
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
@@ -1049,6 +1054,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         if(( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
                                           && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
                                         )
+                                        || physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
@@ -1522,6 +1528,7 @@ H_uefi_I_main(
     memory_map_l += ( 2 + 1 + 1 + 1 + 1 + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w następującym “M_pool”
      * 1 na dopisanie bloku ‘framebuffer’
+     * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
      * 1 na dopisanie bloku pamięci SATA AHCI
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
@@ -1541,6 +1548,11 @@ H_uefi_I_main(
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
     memory_map->pages = graphics->mode->framebuffer_l / H_oux_E_mem_S_page_size + ( graphics->mode->framebuffer_l % H_oux_E_mem_S_page_size ? 1 : 0 );
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = (N)E_main_S_kernel_args.local_apic_address;
+    memory_map->pages = 1;
     memory_map_l += E_main_S_descriptor_l;
     memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
@@ -1638,6 +1650,8 @@ H_uefi_I_main(
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
         status = system_table->output->output( system_table->output, L", framebuffer=" );
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
+        status = system_table->output->output( system_table->output, L", local_apic=" );
+        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.local_apic_address, sizeof( (N)E_main_S_kernel_args.local_apic_address ), 16 );
         status = system_table->output->output( system_table->output, L", io_apic=" );
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.io_apic_address, sizeof( (N)E_main_S_kernel_args.io_apic_address ), 16 );
         struct H_uefi_Z_memory_descriptor *memory_map = E_main_S_memory_map;
