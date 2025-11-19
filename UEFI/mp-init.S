@@ -76,10 +76,14 @@ E_mp_init_I_reloc_5:
     ljmp    $1 << 3,$0                  # $0 do zastąpienia adresem 0f.
 .code64
 0:  fninit
-    mov     $1,%eax
-    cpuid                               #TODO Zmienić na odczyt z APIC.
-    shr     $24,%ebx
-    dec     %ebx
+    mov     $0x1b,%ecx
+    rdmsr
+    or      $( 1 << 11 ) | ( 1 << 10 ),%eax
+    wrmsr
+    mov     $0x802,%ecx
+    rdmsr
+    dec     %eax
+    mov     %eax,%ebx
 E_mp_init_I_reloc_6:
     mov     $0x1234567812345678,%rbp    # Do zastąpienia wartością “E_main_S_kernel_args.processor_proc”.
     incq    (%rbp,%rbx,8)

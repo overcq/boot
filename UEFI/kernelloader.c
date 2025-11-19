@@ -144,14 +144,17 @@ E_interrupt_Q_io_apic_R( N8 i
     return *( volatile N32 * )( (Pc)E_main_S_kernel_args.io_apic_address + 0x10 );
 }
 void
-E_interrupt_Q_local_apic_P( N i
-, N32 v
-){  *( volatile N32 * )( (Pc)E_main_S_kernel_args.local_apic_address + i * 0x10 ) = v;
+E_interrupt_Q_local_apic_P( N32 i
+, N64 v
+){  __asm__ volatile (
+    "\n"    "wrmsr"
+    :
+    : "c" (i), "d" ( v >> 32 ), "a" ( v & 0xffffffff )
+    );
 }
 void
-E_interrupt_I_ipi_init( N processor
-){  E_interrupt_Q_local_apic_P( 0x31, ( processor & 0xff ) << 24 );
-    E_interrupt_Q_local_apic_P( 0x30, 5 << 8 );
+E_interrupt_I_ipi_init( N32 processor
+){  E_interrupt_Q_local_apic_P( 0x830, ( (N64)processor << 32 ) | ( 5 << 8 ));
 }
 //==============================================================================
 __attribute__ (( __warn_unused_result__ ))
@@ -241,7 +244,6 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 {   struct H_acpi_Z_apic *apic = (P)header;
                     E_main_S_apic_content = (Pc)apic + sizeof( *apic );
                     E_main_S_apic_content_l = apic->header.length - sizeof( *apic );
-                    E_main_S_kernel_args.local_apic_address = (P)(N)apic->local_interrupt_controler;
                     E_main_S_pic_mode = apic->flags & 1;
                     E_main_S_kernel_args.processor_n = 0;
                     Pc table = E_main_S_apic_content;
@@ -475,10 +477,6 @@ E_main_I_virtual_address_change( P event
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
     , &E_main_S_kernel_args.io_apic_address
-    );
-    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
-    , &E_main_S_kernel_args.local_apic_address
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , E_main_S_memory_map, E_main_S_descriptor_l, E_main_S_memory_map_n
@@ -1051,7 +1049,6 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         if(( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
                                           && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
                                         )
-                                        || physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
@@ -1262,6 +1259,14 @@ H_uefi_I_main(
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader. ©overcq <overcq@int.pl>. http://github.com/overcq\r\n" );
     if( status < 0 )
         return status;
+    N32 ret;
+    __asm__ volatile (
+    "\n"    "cpuid"
+    : "=c" (ret)
+    : "a" (1)
+    );
+    if( !( ret & ( 1 << 21 ))) // x2APIC
+        return ~0;
     struct H_uefi_Z_guid H_uefi_Z_guid_S_graphics_S = H_uefi_Z_guid_S_graphics;
     struct H_uefi_Z_protocol_Z_graphics *graphics;
     status = system_table->boot_services->locate_protocol( &H_uefi_Z_guid_S_graphics_S, 0, ( P * )&graphics );
@@ -1517,7 +1522,6 @@ H_uefi_I_main(
     memory_map_l += ( 2 + 1 + 1 + 1 + 1 + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w następującym “M_pool”
      * 1 na dopisanie bloku ‘framebuffer’
-     * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
      * 1 na dopisanie bloku pamięci SATA AHCI
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
@@ -1537,11 +1541,6 @@ H_uefi_I_main(
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
     memory_map->pages = graphics->mode->framebuffer_l / H_oux_E_mem_S_page_size + ( graphics->mode->framebuffer_l % H_oux_E_mem_S_page_size ? 1 : 0 );
-    memory_map_l += E_main_S_descriptor_l;
-    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
-    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
-    memory_map->physical_start = (N)E_main_S_kernel_args.local_apic_address;
-    memory_map->pages = 1;
     memory_map_l += E_main_S_descriptor_l;
     memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
@@ -1639,8 +1638,6 @@ H_uefi_I_main(
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.memory_map, sizeof( (N)E_main_S_kernel_args.memory_map ), 16 );
         status = system_table->output->output( system_table->output, L", framebuffer=" );
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.framebuffer.p, sizeof( (N)E_main_S_kernel_args.framebuffer.p ), 16 );
-        status = system_table->output->output( system_table->output, L", local_apic=" );
-        status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.local_apic_address, sizeof( (N)E_main_S_kernel_args.local_apic_address ), 16 );
         status = system_table->output->output( system_table->output, L", io_apic=" );
         status = H_uefi_I_print_n( system_table, (N)E_main_S_kernel_args.io_apic_address, sizeof( (N)E_main_S_kernel_args.io_apic_address ), 16 );
         struct H_uefi_Z_memory_descriptor *memory_map = E_main_S_memory_map;
@@ -1674,6 +1671,19 @@ H_uefi_I_main(
     {   E_main_I_out_8( 0x21, 0xff );
         E_main_I_out_8( 0xa1, 0xff );
     }
+    // Włączenie x2APIC.
+    N64 v_high, v_low;
+    __asm__ volatile (
+    "\n"    "rdmsr"
+    : "=d" ( v_high ), "=a" ( v_low )
+    : "c" ( 0x1b )
+    );
+    v_low |= ( 1 << 11 ) | ( 1 << 10 );
+    __asm__ volatile (
+    "\n"    "wrmsr"
+    :
+    : "c" ( 0x1b ), "d" ( v_high ), "a" ( v_low )
+    );
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages );
     if( status < 0 )

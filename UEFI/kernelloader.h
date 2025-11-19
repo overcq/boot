@@ -786,13 +786,12 @@ struct E_main_Z_kernel_args
   struct H_main_Z_framebuffer framebuffer;
   struct H_main_Z_uefi_runtime_services uefi_runtime_services;
   struct H_main_Z_kernel_Z_acpi acpi;
-  P local_apic_address;
   P io_apic_address;
   struct E_interrupt_Z_gsi *gsi;
   P *processor_proc;
   N32 processor_start_page;
+  N32 processor_n;
   N8 gsi_n;
-  N8 processor_n;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header
