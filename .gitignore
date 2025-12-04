@@ -3,9 +3,9 @@
 *.o
 a.out
 E_cplus_S_cx_sources
-/BIOS/fileloader
+/BIOS/kernelloader
 /BIOS/mbr
 /BIOS/vbr
 /BIOS/install/*.c
 /BIOS/install/*.h
-/UEFI/fileloader
+/UEFI/kernelloader

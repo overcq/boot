@@ -1051,10 +1051,10 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                             return status;
                                         N physical_address = memory_map->physical_start + physical_pages * H_oux_E_mem_S_page_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
-                                        if(( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
+                                        if(/*( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
                                           && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
                                         )
-                                        || physical_address == (N)E_main_S_kernel_args.local_apic_address
+                                        ||*/ physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
