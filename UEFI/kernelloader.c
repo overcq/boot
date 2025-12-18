@@ -10,6 +10,7 @@
 //==============================================================================
 #define E_cpu_Z_cr0_S_mp                ( 1ULL << 1 )
 #define E_cpu_Z_cr0_S_em                ( 1ULL << 2 )
+#define E_cpu_Z_cr0_S_ts                ( 1ULL << 3 )
 #define E_cpu_Z_cr0_S_ne                ( 1ULL << 5 )
 #define E_cpu_Z_cr0_S_wp                ( 1ULL << 16 )
 #define E_cpu_Z_cr0_S_nw                ( 1ULL << 29 )
@@ -25,6 +26,7 @@
 #define E_cpu_Z_cr4_S_pce               ( 1ULL << 8 )
 #define E_cpu_Z_cr4_S_osfxsr            ( 1ULL << 9 )
 #define E_cpu_Z_cr4_S_osxmmexcpt        ( 1ULL << 10 )
+#define E_cpu_Z_cr4_S_umip              ( 1ULL << 11 )
 #define E_cpu_Z_cr4_S_fsgsbase          ( 1ULL << 16 )
 #define E_cpu_Z_cr4_S_pcide             ( 1ULL << 17 )
 #define E_cpu_Z_cr4_S_osxsave           ( 1ULL << 18 )
@@ -702,7 +704,7 @@ E_main_Q_memory_map_I_set_virtual_I_entry( struct H_uefi_Z_memory_descriptor *me
         *loader_computed = yes;
     }
 }
-void
+N
 E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
 , N descriptor_l
 , N memory_map_n
@@ -711,12 +713,13 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
 , N loader_end
 , N *memory_map_new_entries
 ){  *memory_map_new_entries = 0;
+    N startup_page_virtual_address;
     struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
     for_n( i, memory_map_n )
-    {   if( memory_map_->type == H_uefi_Z_memory_Z_loader_code
-        || memory_map_->type == (N32)H_uefi_Z_memory_Z_processor_startup_page
-        )
+    {   if( memory_map_->type == H_uefi_Z_memory_Z_loader_code )
             memory_map_->virtual_start = memory_map_->physical_start;
+        else if(  memory_map_->type == (N32)H_uefi_Z_memory_Z_processor_startup_page )
+            startup_page_virtual_address = memory_map_->virtual_start = memory_map_->physical_start;
         memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
     }
     struct H_uefi_Z_memory_descriptor *memory_map_end = (P)( (Pc)memory_map + memory_map_n * descriptor_l );
@@ -830,6 +833,8 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
                 );
             memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
         }
+        if( next_virtual_address < startup_page_virtual_address + H_oux_E_mem_S_page_size )
+            return ~0;
         memory_map_ = memory_map;
         for_n_( i, memory_map_n )
         {   if( memory_map_->type == (N32)H_uefi_Z_memory_Z_kernel )
@@ -880,6 +885,7 @@ E_main_Q_memory_map_I_set_virtual( struct H_uefi_Z_memory_descriptor *memory_map
             memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
         }
     }
+    return 0;
 }
 N
 E_main_Q_memory_map_I_remove_empty( struct H_uefi_Z_memory_descriptor *memory_map
@@ -1008,36 +1014,36 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
         memory_map_start_end = memory_map_end;
         pages = 0;
     }
-    Pn pml4 = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
+    volatile Pn pml4 = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
     N physical_pages = -1;
     B end = no;
-    *additional_pages = 1ULL << 15; //CONF Co najmniej maksymalna liczba (‘guard pages’ stosów) ‹zadań› w systemie.
-    N additional_pages_ = 0;
+    *additional_pages = 0;
+    N additional_pages_ = 1ULL << 15; //CONF Maksymalna liczba (‘guard pages’ stosów) ‹zadań› w systemie.
     const N table_n = H_oux_E_mem_S_page_size / sizeof(N);
     for_n( pml4_i, table_n )
     {   if( !end
-        || *additional_pages
+        || additional_pages_
         )
         {   S status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
             if( status < 0 )
                 return status;
-            Pn pdpt = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
+            volatile Pn pdpt = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
             for_n( pdpt_i, table_n )
             {   if( !end
-                || *additional_pages
+                || additional_pages_
                 )
                 {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
                     if( status < 0 )
                         return status;
-                    Pn pd = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
+                    volatile Pn pd = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
                     for_n( pd_i, table_n )
                     {   if( !end
-                        || *additional_pages
+                        || additional_pages_
                         )
                         {   status = E_main_I_allocate_page_table_I_next_page( &memory_map_entry_conventional, descriptor_l, memory_map_start_end, reserved_from_end, &pages );
                             if( status < 0 )
                                 return status;
-                            Pn pt = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
+                            volatile Pn pt = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i * ( 1ULL << 39 )) | ( pdpt_i * ( 1 << 30 )) | ( pd_i * ( 1 << 21 )) | ( pt_i * H_oux_E_mem_S_page_size );
@@ -1067,10 +1073,9 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                     }
                                 }else
                                 {   pt[ pt_i ] = 0;
-                                    if( *additional_pages )
-                                        ( *additional_pages )--;
-                                    else
-                                        additional_pages_++;
+                                    if( additional_pages_ )
+                                        additional_pages_--;
+                                    ( *additional_pages )++;
                                 }
                             pd[ pd_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pt;
                         }else
@@ -1084,7 +1089,6 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
         }else
             pml4[ pml4_i ] = 0;
     }
-    *additional_pages = additional_pages_;
     *pml4_ = (N)pml4;
     *start_end_address = memory_map_entry_conventional->virtual_start + ( pages + ( reserved_from_end ? 0 : 1 )) * H_oux_E_mem_S_page_size;
     return 0;
@@ -1607,7 +1611,8 @@ H_uefi_I_main(
             reserved_from_end = no;
     }
     N memory_map_new_entries;
-    E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, &memory_map_new_entries );
+    if( E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, &memory_map_new_entries ))
+        return ~0;
     memory_map_n += memory_map_new_entries;
     memory_map_n -= E_main_Q_memory_map_I_remove_empty( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     memory_map_l = memory_map_n * E_main_S_descriptor_l;
@@ -1714,7 +1719,8 @@ H_uefi_I_main(
     ? (Pc)E_main_S_kernel_args.page_table - memory_map_size
     : (Pc)E_main_S_kernel_args.page_table + page_table_size
     );
-    N stack_size = 2 * H_oux_E_mem_S_page_size; //CONF Co najmniej 2 strony pamięci, ponieważ jedna będzie zmieniona na ‘guard page’.
+    E_main_S_kernel_args.stack_pages = 1 + 1; //CONF Co najmniej 2 strony pamięci, ponieważ jedna będzie zmieniona na ‘guard page’.
+    N stack_size = E_main_S_kernel_args.stack_pages * H_oux_E_mem_S_page_size;
     E_main_S_kernel_args.kernel_stack = (P)( reserved_from_end
     ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
     : memory_size - stack_size
@@ -1960,7 +1966,8 @@ H_uefi_I_main(
         memory_map_l += E_main_S_descriptor_l;
         memory_map_n++;
         E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
-        E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, &memory_map_new_entries );
+        if( E_main_Q_memory_map_I_set_virtual( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n, reserved_from_end, loader_start, loader_end, &memory_map_new_entries ))
+            goto End;
         memory_map_n += memory_map_new_entries;
         memory_map_n -= E_main_Q_memory_map_I_remove_empty( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
         memory_map_l = memory_map_n * E_main_S_descriptor_l;
@@ -2192,13 +2199,13 @@ H_uefi_I_main(
     "\n"    "and    $~0xf,%%rax"
     "\n"    "mov    %%rax,%%cr8"
     :
-    : "i" ( ~( E_cpu_Z_cr0_S_em | E_cpu_Z_cr0_S_nw | E_cpu_Z_cr0_S_cd ))
+    : "i" ( ~( E_cpu_Z_cr0_S_em | E_cpu_Z_cr0_S_ts | E_cpu_Z_cr0_S_nw | E_cpu_Z_cr0_S_cd ))
     , "i" ( E_cpu_Z_cr0_S_mp | E_cpu_Z_cr0_S_ne | E_cpu_Z_cr0_S_wp )
     , "i" ( ~( E_cpu_Z_cr3_S_pwt | E_cpu_Z_cr3_S_pcd ))
     , "i" ( ~( E_cpu_Z_cr4_S_tsd | E_cpu_Z_cr4_S_pcide | E_cpu_Z_cr4_S_smep | E_cpu_Z_cr4_S_smap | E_cpu_Z_cr4_S_pke | E_cpu_Z_cr4_S_pks | E_cpu_Z_cr4_S_uintr | E_cpu_Z_cr4_S_lam_sup ))
-    , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
+    , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_umip | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
-    );
+        );
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.
     __asm__ volatile (
     "\n"    "mov    %0,%%rsp"
