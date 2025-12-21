@@ -540,7 +540,7 @@ End_loop_0:
     if( ~continue_from )
         goto Error_1;
     // Odczyt tablicy katalogów i wyszukanie katalogu “/system”.
-    const Pc directory_name = "system";
+    Pc directory_name = "system";
     N64 directory_uid;
     N64 directory_parent;
     N64 uid_last = ~0ULL;
@@ -777,7 +777,7 @@ End_loop_1:
         goto Error_1;
     continue_from = ~0;
     // Odczyt tablicy plików i wyszukanie pliku “/system/kernel”.
-    const Pc file_name = "kernel";
+    Pc file_name = "kernel";
     N64 file_parent;
     uid_last = ~0ULL;
     data_i = 0;

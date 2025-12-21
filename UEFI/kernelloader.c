@@ -1057,10 +1057,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                             return status;
                                         N physical_address = memory_map->physical_start + physical_pages * H_oux_E_mem_S_page_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
-                                        if(/*( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
-                                          && physical_address < (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p )
-                                        )
-                                        ||*/ physical_address == (N)E_main_S_kernel_args.local_apic_address
+                                        if( physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
@@ -2205,7 +2202,7 @@ H_uefi_I_main(
     , "i" ( ~( E_cpu_Z_cr4_S_tsd | E_cpu_Z_cr4_S_pcide | E_cpu_Z_cr4_S_smep | E_cpu_Z_cr4_S_smap | E_cpu_Z_cr4_S_pke | E_cpu_Z_cr4_S_pks | E_cpu_Z_cr4_S_uintr | E_cpu_Z_cr4_S_lam_sup ))
     , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_umip | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
-        );
+    );
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.
     __asm__ volatile (
     "\n"    "mov    %0,%%rsp"

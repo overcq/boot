@@ -873,7 +873,7 @@ struct E_base_Z_image_relocation
   N16 entries[];
 };
 //==============================================================================
-#define E_vga_S_background_color            0xcacaca
+#define E_vga_S_background_color            0xdbdbdb
 #define E_vga_S_text_color                  0
 enum E_vga_Z_aa_pixel
 { E_vga_Z_aa_pixel_S_e = 1 << 0,

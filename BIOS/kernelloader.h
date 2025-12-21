@@ -109,7 +109,7 @@ P E_mem_Q_blk_I_prepend( P, N );
 P E_mem_Q_blk_I_insert( P, N, N );
 P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
-#define E_vga_S_background_color            0xcacaca
+#define E_vga_S_background_color            0xdbdbdb
 #define E_vga_S_text_color                  0
 enum E_vga_Z_aa_pixel
 { E_vga_Z_aa_pixel_S_e = 1 << 0,

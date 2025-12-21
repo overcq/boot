@@ -1,5 +1,4 @@
 .
-Makefile
 simple.h
 kernelloader.h
 kernelloader.c
