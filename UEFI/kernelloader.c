@@ -40,6 +40,7 @@
 #define E_cpu_Z_page_entry_S_write      ( 1ULL << 1 )
 #define E_cpu_Z_page_entry_S_pwt        ( 1ULL << 3 )
 #define E_cpu_Z_page_entry_S_pcd        ( 1ULL << 4 )
+#define E_cpu_Z_page_entry_S_pat        ( 1ULL << 7 )
 #define E_cpu_Z_gdt_Z_data_S_write      ( 1ULL << ( 32 + 9 ))
 #define E_cpu_Z_gdt_Z_type_S_code       ( 1ULL << ( 32 + 11 ))
 #define E_cpu_Z_gdt_S_code_data         ( 1ULL << ( 32 + 12 ))
@@ -145,8 +146,18 @@ E_interrupt_Q_io_apic_R( N8 i
 ){  *( volatile N32 * )E_main_S_kernel_args.io_apic_address = i;
     return *( volatile N32 * )( (Pc)E_main_S_kernel_args.io_apic_address + 0x10 );
 }
+N64
+E_main_Q_msr_R( N32 i
+){  N32 l, h;
+    __asm__ volatile (
+    "\n"    "rdmsr"
+    : "=a" (l), "=d" (h)
+    : "c" (i)
+    );
+    return (( N64 )h << 32 ) | l;
+}
 void
-E_interrupt_Q_local_apic_P( N32 i
+E_main_Q_msr_P( N32 i
 , N64 v
 ){  __asm__ volatile (
     "\n"    "wrmsr"
@@ -156,7 +167,7 @@ E_interrupt_Q_local_apic_P( N32 i
 }
 void
 E_interrupt_I_ipi_init( N32 processor
-){  E_interrupt_Q_local_apic_P( 0x830, ( (N64)processor << 32 ) | ( 5 << 8 ));
+){  E_main_Q_msr_P( 0x830, ( (N64)processor << 32 ) | ( 5 << 8 ));
 }
 //==============================================================================
 __attribute__ (( __warn_unused_result__ ))
@@ -1066,7 +1077,11 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         || physical_address == 0xfc010000 //NDFN
                                         || physical_address == 0xfc011000 //NDFN
                                         )
-                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pcd;
+                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt | E_cpu_Z_page_entry_S_pcd;
+                                        else if( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
+                                        && physical_address < E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p ), H_oux_E_mem_S_page_size )
+                                        )
+                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pat;
                                     }
                                 }else
                                 {   pt[ pt_i ] = 0;
@@ -1266,13 +1281,15 @@ H_uefi_I_main(
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader. ©overcq <overcq@int.pl>. http://github.com/overcq\r\n" );
     if( status < 0 )
         return status;
-    N32 ret;
+    N32 ecx, edx;
     __asm__ volatile (
     "\n"    "cpuid"
-    : "=c" (ret)
+    : "=c" (ecx), "=d" (edx)
     : "a" (1)
     );
-    if( !( ret & ( 1 << 21 ))) // x2APIC
+    if( !( ecx & ( 1 << 21 )) // x2APIC
+    || !( edx & ( 1 << 16 )) // PAT
+    )
         return ~0;
     struct H_uefi_Z_guid H_uefi_Z_guid_S_graphics_S = H_uefi_Z_guid_S_graphics;
     struct H_uefi_Z_protocol_Z_graphics *graphics;
@@ -1295,9 +1312,7 @@ H_uefi_I_main(
         && info->pixel_format != H_uefi_Z_pixel_format_S_bitmask
         )
             continue;
-        if( info->horizontal_resolution <= 1024 //TEST Tymczasowo, ponieważ w oknie maszyny wirtualnej włączają się paski przewijania.
-        && selected_info.horizontal_resolution <= info->horizontal_resolution
-        )
+        if( selected_info.horizontal_resolution <= info->horizontal_resolution )
         {   selected_info = *info;
             selected_mode = mode;
         }
@@ -1687,19 +1702,15 @@ H_uefi_I_main(
     {   E_main_I_out_8( 0x21, 0xff );
         E_main_I_out_8( 0xa1, 0xff );
     }
+    // Przygotowanie ‘write‐combining’ (dla ‘framebuffera’).
+    N64 v = E_main_Q_msr_R( 0x277 );
+    v &= ~0x70000;
+    v |= 0x10000;
+    E_main_Q_msr_P( 0x277, v );
     // Włączenie x2APIC.
-    N64 v_high, v_low;
-    __asm__ volatile (
-    "\n"    "rdmsr"
-    : "=d" ( v_high ), "=a" ( v_low )
-    : "c" ( 0x1b )
-    );
-    v_low |= ( 1 << 11 ) | ( 1 << 10 );
-    __asm__ volatile (
-    "\n"    "wrmsr"
-    :
-    : "c" ( 0x1b ), "d" ( v_high ), "a" ( v_low )
-    );
+    v = E_main_Q_msr_R( 0x1b );
+    v |= ( 1 << 11 ) | ( 1 << 10 );
+    E_main_Q_msr_P( 0x1b, v );
     N pml4, start_end_address;
     status = E_main_I_allocate_page_table( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_l, memory_size, reserved_from_end, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages );
     if( status < 0 )
