@@ -1079,7 +1079,7 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                         )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt | E_cpu_Z_page_entry_S_pcd;
                                         else if( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
-                                        && physical_address < E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( *E_main_S_kernel_args.framebuffer.p ), H_oux_E_mem_S_page_size )
+                                        && physical_address < E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.framebuffer.p + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( N32 ), H_oux_E_mem_S_page_size )
                                         )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pat;
                                     }
@@ -1278,7 +1278,7 @@ H_uefi_Z_api
 H_uefi_I_main(
   P image_handle
 , struct H_uefi_Z_system_table *system_table
-){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader. ©overcq <overcq@int.pl>. http://github.com/overcq\r\n" );
+){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader ©overcq <overcq@int.pl> http://github.com/overcq\r\n" );
     if( status < 0 )
         return status;
     N32 ecx, edx;
@@ -1563,7 +1563,7 @@ H_uefi_I_main(
     struct H_uefi_Z_memory_descriptor *memory_map = (P)( (Pc)E_main_S_memory_map + memory_map_l );
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
-    memory_map->pages = graphics->mode->framebuffer_l / H_oux_E_mem_S_page_size + ( graphics->mode->framebuffer_l % H_oux_E_mem_S_page_size ? 1 : 0 );
+    memory_map->pages = E_simple_Z_n_I_align_up_to_v2( E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * sizeof( N32 ), H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
     memory_map_l += E_main_S_descriptor_l;
     memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
@@ -2149,7 +2149,7 @@ H_uefi_I_main(
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     if( !~E_font_M() )
         goto End;
-    E_font_I_print( "OUX/C+ OS bootloader. ©overcq <overcq@int.pl>. https://github.com/overcq\n" );
+    E_font_I_print( "OUX/C+ OS bootloader ©overcq <overcq@int.pl> https://github.com/overcq\n" );
     E_font_W();
     if( !~E_main_M_madt( E_main_S_apic_content, E_main_S_apic_content_l ))
         goto End;

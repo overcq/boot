@@ -2630,6 +2630,9 @@ E_font_I_print( Pc s
         if( ~u )
             E_font_I_print_u(u);
     }
+    __asm__ volatile (
+    "\n"    "sfence"
+    );
     return 0;
 }
 void
