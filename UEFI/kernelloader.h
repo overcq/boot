@@ -791,6 +791,7 @@ struct E_main_Z_kernel_args
   P io_apic_address;
   struct E_interrupt_Z_gsi *gsi;
   P *processor_proc;
+  N32 sata_ahci_address;
   N32 processor_start_page;
   N32 processor_n;
   N8 gsi_n;
@@ -907,4 +908,6 @@ void E_vga_P_pixel( N32, N32, N32 );
 void E_vga_I_set_pixel_aa( N32, N32, N32, F, N );
 void E_vga_I_draw_rect( N32, N32, N32, N32, N32 );
 void E_vga_I_fill_rect( N32, N32, N32, N32, N32 );
+//==============================================================================
+N E_pci_I_check_buses(void);
 /******************************************************************************/
