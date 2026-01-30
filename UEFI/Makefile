@@ -57,7 +57,7 @@ init-vmware:
 	&& loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
 	&& trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
 	&& mkfs.fat -F 32 $${loopdev}p1 \
-	&& ../../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 4096
+	&& ../../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p2 512
 install-vmware:
 	ocq_mnt=/mnt/oth; \
 	mkdir -p $$ocq_mnt \

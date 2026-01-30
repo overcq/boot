@@ -635,7 +635,7 @@ struct H_uefi_Z_protocol_Z_block_io_Z_media
   N64 last_block;
   N64 lowest_aligned_lba;
   N32 logical_blocks_per_physical_block;
-  N32 optimal_transfer_lenght_granularity;
+  N32 optimal_transfer_length_granularity;
 };
 struct H_uefi_Z_protocol_Z_block_io
 { N64 revision;
@@ -720,7 +720,7 @@ struct E_mem_blk_Z
   B reserved_from_end;
 };
 //==============================================================================
-S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32 );
+S H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *, struct H_uefi_Z_protocol_Z_disk_io *, N32, N );
 S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size(void);
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
@@ -791,7 +791,6 @@ struct E_main_Z_kernel_args
   P io_apic_address;
   struct E_interrupt_Z_gsi *gsi;
   P *processor_proc;
-  N32 sata_ahci_address;
   N32 processor_start_page;
   N32 processor_n;
   N8 gsi_n;

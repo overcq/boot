@@ -129,6 +129,8 @@ struct __attribute__ (( __packed__ )) E_main_I_tss
 B E_main_S_pic_mode = no;
 P E_main_S_apic_content;
 N E_main_S_apic_content_l;
+N32 E_main_S_sata_ahci_addresses[8];
+N8 E_main_S_sata_ahci_n;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
 //==============================================================================
@@ -636,13 +638,17 @@ E_main_Q_memory_map_R_saved_n( struct H_uefi_Z_memory_descriptor *memory_map
     struct H_uefi_Z_memory_descriptor *memory_map_ = memory_map;
     for_n( i, memory_map_n )
     {   if( memory_map_->type == H_uefi_Z_memory_Z_reserved //TODO Czy potrzebne?
+        || memory_map_->type == H_uefi_Z_memory_Z_boot_services_code
+        || memory_map_->type == H_uefi_Z_memory_Z_boot_services_data
         || memory_map_->type == H_uefi_Z_memory_Z_runtime_services_code //TODO Czy potrzebne?
         || memory_map_->type == H_uefi_Z_memory_Z_runtime_services_data //TODO Czy potrzebne?
+        || memory_map_->type == H_uefi_Z_memory_Z_conventional
         || memory_map_->type == H_uefi_Z_memory_Z_acpi_reclaim //TODO Czy potrzebne?
         || memory_map_->type == H_uefi_Z_memory_Z_acpi_nvs
         || memory_map_->type == H_uefi_Z_memory_Z_memory_mapped_io
         || memory_map_->type == H_uefi_Z_memory_Z_memory_mapped_io_port_space
         || memory_map_->type == H_uefi_Z_memory_Z_pal_code //TODO Czy potrzebne?
+        || memory_map_->type == H_uefi_Z_memory_Z_processor_startup_page
         )
             n++;
         memory_map_ = (P)( (Pc)memory_map_ + descriptor_l );
@@ -1090,14 +1096,21 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                             return status;
                                         N physical_address = memory_map->physical_start + physical_pages * H_oux_E_mem_S_page_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
+                                        B sata_ahci = no;
+                                        for_n( i, E_main_S_sata_ahci_n )
+                                            if( physical_address == E_main_S_sata_ahci_addresses[i]
+                                            || physical_address == E_main_S_sata_ahci_addresses[i] + 0x1000
+                                            )
+                                            {   sata_ahci = yes;
+                                                break;
+                                            }
                                         if( physical_address == (N)E_main_S_kernel_args.local_apic_address
                                         || physical_address == (N)E_main_S_kernel_args.io_apic_address
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
                                         )
-                                        || physical_address == 0xfc010000 //NDFN
-                                        || physical_address == 0xfc011000 //NDFN
+                                        || sata_ahci
                                         )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt | E_cpu_Z_page_entry_S_pcd;
                                         else if( physical_address >= (N)E_main_S_kernel_args.framebuffer.p
@@ -1446,20 +1459,26 @@ H_uefi_I_main(
         return status;
     struct H_uefi_Z_guid H_uefi_Z_guid_S_block_io_S = H_uefi_Z_guid_S_block_io;
     N kernel_size;
+    N block_size;
     for_n( disk_io_handles_i, disk_io_handles_n )
     {   struct H_uefi_Z_protocol_Z_block_io *block_io;
         status = system_table->boot_services->open_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_block_io_S, ( P * )&block_io, image_handle, 0, H_uefi_Z_open_protocol_Z_attribute_S_by_handle_protocol );
         if( status < 0 )
             continue;
         N32 media_id = block_io->media->media_id;
+        B logical_partition = block_io->media->logical_partition;
+        if( !logical_partition ) //NDFN Liczenie na to, że partycje są wyliczane po całym dysku.
+            block_size = block_io->media->logical_blocks_per_physical_block * block_io->media->block_size;
         status = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_block_io_S, image_handle, 0 );
         if( status < 0 )
             break;
+        if( !logical_partition )
+            continue;
         struct H_uefi_Z_protocol_Z_disk_io *disk_io;
         status = system_table->boot_services->open_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, ( P * )&disk_io, image_handle, 0, H_uefi_Z_open_protocol_Z_attribute_S_by_handle_protocol );
         if( status < 0 )
             continue;
-        status = H_oux_E_fs_Q_disk_M( system_table, disk_io, media_id );
+        status = H_oux_E_fs_Q_disk_M( system_table, disk_io, media_id, block_size );
         if( status < 0 )
         {   S status_ = system_table->boot_services->close_protocol( disk_io_handles[ disk_io_handles_i ], &H_uefi_Z_guid_S_disk_io_S, image_handle, 0 );
             if( status_ < 0 )
@@ -1563,12 +1582,12 @@ H_uefi_I_main(
     && status != H_uefi_Z_error_S_buffer_too_small
     )
         return status;
-    memory_map_l += ( 2 + 1 + 1 + 1 + 1 + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 1 + 1 + 1 + J_a_R_n( E_main_S_sata_ahci_addresses ) + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w następującym “M_pool”
      * 1 na dopisanie bloku ‘framebuffer’
      * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
-     * 1 na dopisanie bloku pamięci SATA AHCI
+     * “J_a_R_n( E_main_S_sata_ahci_addresses )” na dopisanie bloków pamięci SATA AHCI
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
      * 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów
      * 2 na możliwość przenoszenia ‘bootloadera’
@@ -1602,7 +1621,7 @@ H_uefi_I_main(
     v = E_main_Q_msr_R( 0x1b );
     v |= ( 1 << 11 ) | ( 1 << 10 );
     E_main_Q_msr_P( 0x1b, v );
-    E_main_S_kernel_args.sata_ahci_address = 0;
+    E_main_S_sata_ahci_n = 0;
     if( E_pci_I_check_buses() )
         goto End;
     struct H_uefi_Z_memory_descriptor *memory_map = (P)( (Pc)E_main_S_memory_map + memory_map_l );
@@ -1620,11 +1639,11 @@ H_uefi_I_main(
     memory_map->physical_start = (N)E_main_S_kernel_args.io_apic_address;
     memory_map->pages = 1;
     memory_map_l += E_main_S_descriptor_l;
-    if( E_main_S_kernel_args.sata_ahci_address )
+    for_n_( i, E_main_S_sata_ahci_n )
     {   memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
         memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
-        memory_map->physical_start = E_main_S_kernel_args.sata_ahci_address;
-        memory_map->pages = 2;
+        memory_map->physical_start = E_main_S_sata_ahci_addresses[i];
+        memory_map->pages = 2; //TODO AHCI spec says BAR5 is usually small, but let's stick with 2 pages as requested or seen before.
         memory_map_l += E_main_S_descriptor_l;
     }
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
@@ -2085,13 +2104,17 @@ H_uefi_I_main(
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n )
     {   if( memory_map->type == H_uefi_Z_memory_Z_reserved //TODO Czy potrzebne?
+        || memory_map->type == H_uefi_Z_memory_Z_boot_services_code
+        || memory_map->type == H_uefi_Z_memory_Z_boot_services_data
         || memory_map->type == H_uefi_Z_memory_Z_runtime_services_code //TODO Czy potrzebne?
         || memory_map->type == H_uefi_Z_memory_Z_runtime_services_data //TODO Czy potrzebne?
+        || memory_map->type == H_uefi_Z_memory_Z_conventional
         || memory_map->type == H_uefi_Z_memory_Z_acpi_reclaim //TODO Czy potrzebne?
         || memory_map->type == H_uefi_Z_memory_Z_acpi_nvs
         || memory_map->type == H_uefi_Z_memory_Z_memory_mapped_io
         || memory_map->type == H_uefi_Z_memory_Z_memory_mapped_io_port_space
         || memory_map->type == H_uefi_Z_memory_Z_pal_code //TODO Czy potrzebne?
+        || memory_map->type == H_uefi_Z_memory_Z_processor_startup_page
         )
         {   my_memory_map->physical_start = memory_map->physical_start;
             my_memory_map->virtual_start = memory_map->virtual_start;
