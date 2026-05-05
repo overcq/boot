@@ -343,6 +343,7 @@ struct __attribute__ (( __packed__ )) E_pci_Z_header_Z_bist
 //==============================================================================
 extern N32 E_main_S_sata_ahci_addresses[8];
 extern N8 E_main_S_sata_ahci_n;
+extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 //==============================================================================
 extern N32 E_main_I_in_32( N16 );
 extern void E_main_I_out_32( N16, N32 );
@@ -371,7 +372,13 @@ E_pci_I_check_device( N8 bus_i
 , N8 device_i
 , N8 function_i
 , N32 ids
-){  N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
+){  N32 bist_24 = E_pci_I_read( bus_i, device_i, function_i, 0xc );
+    struct E_pci_Z_header_Z_bist *bist = ( struct E_pci_Z_header_Z_bist * )(( N8 * )&bist_24 + 3 );
+    if( bist->capable )
+    {   bist->start = yes;
+        E_pci_I_write( bus_i, device_i, function_i, 0xc, bist_24 );
+    }
+    N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
     N8 class = rev_prog_sub_class >> 24;
     N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
     if( class == E_pci_Z_header_Z_class_S_mass_storage
@@ -382,14 +389,23 @@ E_pci_I_check_device( N8 bus_i
         E_main_S_sata_ahci_addresses[ E_main_S_sata_ahci_n++ ] = E_pci_I_read( bus_i, device_i, function_i, 0x24 );
     }
     switch(ids)
-    { case 0ULL: // Padding to avoid empty switch if needed, or keep existing cases.
-        break;
-    }
-    N32 bist_24 = E_pci_I_read( bus_i, device_i, function_i, 0xc );
-    struct E_pci_Z_header_Z_bist *bist = ( struct E_pci_Z_header_Z_bist * )(( N8 * )&bist_24 + 3 );
-    if( bist->capable )
-    {   bist->start = yes;
-        E_pci_I_write( bus_i, device_i, function_i, 0xc, bist_24 );
+    { case 0x100f8086:
+        {   N offset = 0x10;
+            E_main_S_ethernet_address = E_pci_I_read( bus_i, device_i, function_i, offset );
+            if(( E_main_S_ethernet_address & 6 ) == 4 )
+            {   offset += sizeof( N32 );
+                E_main_S_ethernet_address |= E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
+            }
+            E_main_S_ethernet_address &= ~0xf;
+            offset += sizeof( N32 );
+            E_main_S_ethernet_eeprom_address = E_pci_I_read( bus_i, device_i, function_i, offset );
+            if(( E_main_S_ethernet_eeprom_address & 6 ) == 4 )
+            {   offset += sizeof( N32 );
+                E_main_S_ethernet_eeprom_address |= E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
+            }
+            E_main_S_ethernet_eeprom_address &= ~0xf;
+            break;
+        }
     }
     return 0;
 }

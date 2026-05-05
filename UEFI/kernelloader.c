@@ -130,6 +130,7 @@ B E_main_S_pic_mode = no;
 P E_main_S_apic_content;
 N E_main_S_apic_content_l;
 N32 E_main_S_sata_ahci_addresses[8];
+N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N8 E_main_S_sata_ahci_n;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
@@ -1110,6 +1111,10 @@ E_main_I_allocate_page_table( struct H_uefi_Z_memory_descriptor *memory_map
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
                                         )
+                                        || ( physical_address >= E_main_S_ethernet_address
+                                          && physical_address < E_main_S_ethernet_address + 0x20000
+                                        )
+                                        || physical_address == E_main_S_ethernet_eeprom_address
                                         || sata_ahci
                                         )
                                             pt[ pt_i ] |= E_cpu_Z_page_entry_S_pwt | E_cpu_Z_page_entry_S_pcd;
@@ -1582,12 +1587,13 @@ H_uefi_I_main(
     && status != H_uefi_Z_error_S_buffer_too_small
     )
         return status;
-    memory_map_l += ( 2 + 1 + 1 + 1 + J_a_R_n( E_main_S_sata_ahci_addresses ) + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 1 + 1 + 1 + J_a_R_n( E_main_S_sata_ahci_addresses ) + 2 + 1 + 1 + 2 + 2 * 2 ) * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w następującym “M_pool”
      * 1 na dopisanie bloku ‘framebuffer’
      * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
      * “J_a_R_n( E_main_S_sata_ahci_addresses )” na dopisanie bloków pamięci SATA AHCI
+     * 2 na dopisanie bloków “ethernet_address”
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
      * 1 na możliwość podziału wirtualnych adresów przez blok tego programu pozostający w mapowaniu identycznym do fizycznych adresów
      * 2 na możliwość przenoszenia ‘bootloadera’
@@ -1643,9 +1649,19 @@ H_uefi_I_main(
     {   memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
         memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
         memory_map->physical_start = E_main_S_sata_ahci_addresses[i];
-        memory_map->pages = 2; //TODO AHCI spec says BAR5 is usually small, but let's stick with 2 pages as requested or seen before.
+        memory_map->pages = 2;
         memory_map_l += E_main_S_descriptor_l;
     }
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = (N)E_main_S_ethernet_address;
+    memory_map->pages = 0x20000 / H_oux_E_mem_S_page_size;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)( (Pc)memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_Z_memory_mapped_io;
+    memory_map->physical_start = (N)E_main_S_ethernet_eeprom_address;
+    memory_map->pages = 1;
+    memory_map_l += E_main_S_descriptor_l;
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_sort_physical( E_main_S_memory_map, E_main_S_descriptor_l, memory_map_n );
     N loader_start, loader_end;
