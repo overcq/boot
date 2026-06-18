@@ -21,13 +21,16 @@ struct
   N32 bitmap_n;
   N8 height;
 }font;
-N32 E_font_S_x = 2;
-N32 E_font_S_y = 2;
+N32 E_font_S_x, E_font_S_y;
 N32 E_font_S_color = E_vga_S_text_color;
+N8 E_font_S_size = 1;
+N8 E_font_S_thickness = 1;
 //==============================================================================
 N
 E_font_M( void
-){  font.height = 8;
+){  E_font_S_x = E_font_S_thickness + 1;
+    E_font_S_y = E_font_S_size + 1;
+    font.height = 8;
     font.default_i = 63;
     font.bitmap_n = 177;
     Mt_( font.bitmap, font.bitmap_n );
@@ -3428,18 +3431,21 @@ E_font_W( void
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N
-E_font_I_draw(
-  N x
-, N y
-, N color
-, U u
-){  N32 min = 0;
+E_font_I_draw( U u
+, N32 x
+, N32 y
+, N32 video_color
+, N8 size
+, N8 thickness
+){  size++;
+    thickness++;
+    N32 min = 0;
     N32 max = font.bitmap_n - 1;
     N32 i = max / 2;
     O{  if( font.bitmap[i].u == u )
         {   N j = 0;
             C c;
-            N x_, y_ = y;
+            N32 x_, y_ = y;
             for_n( font_y, font.height )
             {   x_ = x;
                 for_n( font_x, font.bitmap[i].width )
@@ -3458,25 +3464,22 @@ E_font_I_draw(
                               brightness = 1;
                               break;
                         }
-                        E_vga_I_set_pixel_aa(
-                          x_, y_
-                        , color
-                        , brightness
-                        , ~0
-                        );
-                        E_vga_I_set_pixel_aa(
-                          x_ + 1, y_
-                        , color
-                        , brightness
-                        , ~0
-                        );
+                        for_n( j, size )
+                        {   for_n( i, thickness )
+                                E_vga_I_set_pixel_aa(
+                                  x_ + i, y_ + j
+                                , video_color
+                                , brightness
+                                , ~0
+                                );
+                        }
                     }
-                    x_ += 2;
+                    x_ += thickness;
                     j++;
                 }
-                y_++;
+                y_ += size;
             }
-            return 2 * font.bitmap[i].width;
+            return thickness * font.bitmap[i].width;
         }
         if( font.bitmap[i].u > u )
         {   if( i == min )
@@ -3502,11 +3505,11 @@ E_font_I_scroll_fwd( N dy
 }
 void
 E_font_I_print_nl( void
-){  E_font_S_x = 2;
-    if( E_font_S_y + 2 * ( font.height + 2 ) > E_main_S_kernel_args.framebuffer.height )
-        E_font_I_scroll_fwd( 2 + font.height );
+){  E_font_S_x = E_font_S_size + 1;
+    if( E_font_S_y + ( E_font_S_size + 1 ) * ( font.height + E_font_S_size + 1 ) > E_main_S_kernel_args.framebuffer.height )
+        E_font_I_scroll_fwd( E_font_S_size + 1 + font.height );
     else
-        E_font_S_y += font.height + 2;
+        E_font_S_y += font.height + E_font_S_size + 1;
 }
 void
 E_font_I_print_u( U u
@@ -3538,11 +3541,11 @@ E_font_I_print_u( U u
     {   u = font.bitmap[ font.default_i ].u;
         dx = font.bitmap[ font.default_i ].width;
     }
-    dx *= 2;
-    if( E_font_S_x + dx + 2 > E_main_S_kernel_args.framebuffer.width )
+    dx *= E_font_S_thickness + 1;
+    if( E_font_S_x + dx + E_font_S_thickness + 1 > E_main_S_kernel_args.framebuffer.width )
         E_font_I_print_nl();
-    E_font_I_draw( E_font_S_x, E_font_S_y, E_font_S_color, u );
-    E_font_S_x += dx + 2;
+    E_font_I_draw( u, E_font_S_x, E_font_S_y, E_font_S_color, E_font_S_size, E_font_S_thickness );
+    E_font_S_x += dx + E_font_S_thickness + 1;
 }
 N
 E_font_I_print( Pc s
