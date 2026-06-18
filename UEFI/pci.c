@@ -394,14 +394,14 @@ E_pci_I_check_device( N8 bus_i
             E_main_S_ethernet_address = E_pci_I_read( bus_i, device_i, function_i, offset );
             if(( E_main_S_ethernet_address & 6 ) == 4 )
             {   offset += sizeof( N32 );
-                E_main_S_ethernet_address |= E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
+                E_main_S_ethernet_address |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
             }
             E_main_S_ethernet_address &= ~0xf;
             offset += sizeof( N32 );
             E_main_S_ethernet_eeprom_address = E_pci_I_read( bus_i, device_i, function_i, offset );
             if(( E_main_S_ethernet_eeprom_address & 6 ) == 4 )
             {   offset += sizeof( N32 );
-                E_main_S_ethernet_eeprom_address |= E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
+                E_main_S_ethernet_eeprom_address |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
             }
             E_main_S_ethernet_eeprom_address &= ~0xf;
             break;
