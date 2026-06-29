@@ -2,7 +2,7 @@
 *   ___   public
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   kernel
+*   ---   UEFI boot loader
 *         VGA driver
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒16 K
 *******************************************************************************/

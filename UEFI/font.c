@@ -2,7 +2,7 @@
 *   ___   public
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   kernel
+*   ---   UEFI boot loader
 *         font
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒16 L
 *******************************************************************************/
@@ -3405,11 +3405,7 @@ E_font_M( void
         }
         Mt_( font.bitmap[i].bitmap, font.bitmap[i].width * font.height / 4 + ( font.bitmap[i].width * font.height % 4 ? 1 : 0 ));
         if( !font.bitmap[i].bitmap )
-        {   for_n( j, i )
-                W( font.bitmap[j].bitmap );
-            W( font.bitmap );
-            return ~0;
-        }
+            return ~2;
         N8 c;
         for_n( j, font.bitmap[i].width * font.height )
         {   if( j % 4 == 0 )
@@ -3420,14 +3416,17 @@ E_font_M( void
         }
         if( j % 4 == 1 || j % 4 == 2 || j % 4 == 3 )
             font.bitmap[i].bitmap[ j / 4 + 1 ] = c;
+        K_( ~2, W(bitmap) );
     }
     return 0;
 }
-void
+N
 E_font_W( void
 ){  for_n( i, font.bitmap_n )
-        W( font.bitmap[i].bitmap );
-    W( font.bitmap );
+    {   K_( ~2, W( font.bitmap[i].bitmap ));
+    }
+    K_( ~1, W( font.bitmap ));
+    return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N

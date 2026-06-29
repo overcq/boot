@@ -46,6 +46,7 @@ typedef __int128            S128;
 //------------------------------------------------------------------------------
 #define J_autogen_S                         _autogen
 #define J_autogen(a)                        J_a_b( a, J_autogen_S )
+#define J_autogen_line(a)                   J_autogen( J_a_b( a, __LINE__ ))
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define O                                   while(yes)
 #define for_n_(i_var,n)                     for( i_var = 0; i_var != (n); i_var++ )
@@ -66,6 +67,41 @@ typedef __int128            S128;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define _inline                             static __attribute__ (( __always_inline__, __unused__ ))
 #define _internal                           static
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ‹Zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają kod błędu.
+#define K(statement) \
+  N J_autogen_line(r) = (statement); \
+  if( (S)J_autogen_line(r) < 0 \
+  && ~J_autogen_line(r) \
+  ) \
+      return J_autogen_line(r); \
+  if( ~J_autogen_line(r) ) \
+  { \
+  }else
+// ‹Zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają adres.
+#define Kp(statement) \
+  N J_autogen_line(r) = (N)(statement); \
+  if( !~J_autogen_line(r) ) \
+      return ~2; \
+  if( J_autogen_line(r) ) \
+  { \
+  }else
+// ‹Zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają kod błędu.
+#define K_(error,statement) \
+  N J_autogen_line(r) = (statement); \
+  if( (S)J_autogen_line(r) >= 0 ) \
+  { \
+  }else \
+      return J_autogen_line(r) < (error) ? J_autogen_line(r) : (error)
+// ‹Zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają adres.
+#define Kp_(error,statement) \
+  N J_autogen_line(r) = (N)(statement); \
+  if( !~J_autogen_line(r) ) \
+      return ~2; \
+  if( J_autogen_line(r) ) \
+  { \
+  }else \
+      return (error)
 //==============================================================================
 #include "simple.h"
 //==============================================================================
@@ -873,6 +909,25 @@ struct E_base_Z_image_relocation
   N16 entries[];
 };
 //==============================================================================
+N E_font_M(void);
+N E_font_W(void);
+N E_font_I_draw( U, N32, N32, N32, N8, N8 );
+void E_font_I_print_nl(void);
+void E_font_I_print_u(U);
+N E_font_I_print( Pc );
+void E_font_I_print_hex(N);
+//==============================================================================
+Pc E_mem_Q_mask_M( N );
+B E_mem_Q_mask_R( Pc, N );
+N E_mem_Q_mask_R_first_clear( Pc, N );
+void E_mem_Q_mask_P_set( Pc, N );
+void E_mem_Q_mask_P_clear( Pc, N );
+N E_mem_Q_mask_I_resize( Pc *, N, N );
+//==============================================================================
+N E_pci_I_check_buses(void);
+//==============================================================================
+Pc E_text_Z_su_R_u( Pc, U *);
+//==============================================================================
 #define E_vga_S_background_color            0xdbdbdb
 #define E_vga_S_text_color                  0
 enum E_vga_Z_aa_pixel
@@ -886,16 +941,6 @@ enum E_vga_Z_aa_pixel
   E_vga_Z_aa_pixel_S_ne = 1 << 7
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N E_font_M(void);
-void E_font_W(void);
-N E_font_I_draw( U, N32, N32, N32, N8, N8 );
-void E_font_I_print_nl(void);
-void E_font_I_print_u(U);
-N E_font_I_print( Pc );
-void E_font_I_print_hex(N);
-//==============================================================================
-Pc E_text_Z_su_R_u( Pc, U *);
-//==============================================================================
 N32 E_vga_Z_color_M( N8, N8, N8 );
 N8 E_vga_Z_color_R_red( N32 );
 N8 E_vga_Z_color_R_green( N32 );
@@ -907,6 +952,4 @@ void E_vga_P_pixel( N32, N32, N32 );
 void E_vga_I_set_pixel_aa( N32, N32, N32, F, N );
 void E_vga_I_draw_rect( N32, N32, N32, N32, N32 );
 void E_vga_I_fill_rect( N32, N32, N32, N32, N32 );
-//==============================================================================
-N E_pci_I_check_buses(void);
 /******************************************************************************/

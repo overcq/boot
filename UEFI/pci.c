@@ -1,4 +1,3 @@
-//-*-C-*-
 /*******************************************************************************
 *   ___   public
 *  ¦OUX¦  C+
@@ -348,7 +347,7 @@ extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 extern N32 E_main_I_in_32( N16 );
 extern void E_main_I_out_32( N16, N32 );
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N E_pci_I_check_bus( N8 );
+N E_pci_I_check_bus( N8, Pc );
 //==============================================================================
 N32
 E_pci_I_read( N8 bus
@@ -413,6 +412,7 @@ N
 E_pci_I_check_function( N8 bus_i
 , N8 device_i
 , N8 function_i
+, Pc bus_mask
 ){  N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
     N8 class = rev_prog_sub_class >> 24;
     N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
@@ -421,27 +421,27 @@ E_pci_I_check_function( N8 bus_i
     )
     {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
         N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
-        N r = E_pci_I_check_bus( secondary_bus );
-        if(r)
+        N r = E_pci_I_check_bus( secondary_bus, bus_mask );
+        if( (S)r < 0 )
             return r;
     }
     return 0;
 }
 N
 E_pci_I_check_bus( N8 bus_i
-){  static N8 bus_mask[ 256 / 8 ];
-    if( bus_mask[ bus_i / 8 ] & ( 1 << ( bus_i % 8 )))
+, Pc bus_mask
+){  if( E_mem_Q_mask_R( bus_mask, bus_i ))
         return 0;
-    bus_mask[ bus_i / 8 ] |= ( 1 << ( bus_i % 8 ));
+    E_mem_Q_mask_P_set( bus_mask, bus_i );
     for_n( device_i, 32 )
     {   N32 ids = E_pci_I_read( bus_i, device_i, 0, 0 );
         if( !~ids )
             continue;
         N r = E_pci_I_check_device( bus_i, device_i, 0, ids );
-        if(r)
+        if( (S)r < 0 )
             return r;
-        r = E_pci_I_check_function( bus_i, device_i, 0 );
-        if(r)
+        r = E_pci_I_check_function( bus_i, device_i, 0, bus_mask );
+        if( (S)r < 0 )
             return r;
         N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xe );
         if( header_type & 0x80 )
@@ -449,10 +449,10 @@ E_pci_I_check_bus( N8 bus_i
             {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
                 if( ~ids )
                 {   r = E_pci_I_check_device( bus_i, device_i, 1 + function_i, ids );
-                    if(r)
+                    if( (S)r < 0 )
                         return r;
-                    r = E_pci_I_check_function( bus_i, device_i, 1 + function_i );
-                    if(r)
+                    r = E_pci_I_check_function( bus_i, device_i, 1 + function_i, bus_mask );
+                    if( (S)r < 0 )
                         return r;
                 }
             }
@@ -462,16 +462,17 @@ E_pci_I_check_bus( N8 bus_i
 }
 N
 E_pci_I_check_buses( void
-){  N8 header_type = E_pci_I_read( 0, 0, 0, 0xe );
+){  C bus_mask[ 256 / 8 ];
+    _0( &bus_mask[0], 256 / 8 );
+    N8 header_type = E_pci_I_read( 0, 0, 0, 0xe );
     N r;
     if( header_type & 0x80 )
     {   for_n( function_i, 8 )
-        {   r = E_pci_I_check_bus( function_i );
-            if(r)
-                goto End;
+        {   K( E_pci_I_check_bus( function_i, bus_mask ))
+                return ~0;
         }
     }else
-        r = E_pci_I_check_bus(0);
-End:return r;
+        r = E_pci_I_check_bus( 0, bus_mask );
+    return r;
 }
 /******************************************************************************/
