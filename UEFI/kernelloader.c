@@ -139,7 +139,7 @@ void
 E_main_I_out_8( N16 port
 , N8 v
 ){  __asm__ volatile (
-    "\n"    "out    %0,%1"
+    "\n" "out   %0,%1"
     :
     : "a" (v), "d" (port)
     );
@@ -148,7 +148,7 @@ N32
 E_main_I_in_32( N16 port
 ){  N32 v;
     __asm__ volatile (
-    "\n"    "in     %1,%0"
+    "\n" "in    %1,%0"
     : "=a" (v)
     : "d" (port)
     );
@@ -158,7 +158,7 @@ void
 E_main_I_out_32( N16 port
 , N32 v
 ){  __asm__ volatile (
-    "\n"    "out    %0,%1"
+    "\n" "out   %0,%1"
     :
     : "a" (v), "d" (port)
     );
@@ -174,7 +174,7 @@ N64
 E_main_Q_msr_R( N32 i
 ){  N32 l, h;
     __asm__ volatile (
-    "\n"    "rdmsr"
+    "\n" "rdmsr"
     : "=a" (l), "=d" (h)
     : "c" (i)
     );
@@ -184,7 +184,7 @@ void
 E_main_Q_msr_P( N32 i
 , N64 v
 ){  __asm__ volatile (
-    "\n"    "wrmsr"
+    "\n" "wrmsr"
     :
     : "c" (i), "d" ( v >> 32 ), "a" ( v & 0xffffffff )
     );
@@ -1323,7 +1323,7 @@ H_uefi_I_main(
         return status;
     N32 ecx, edx;
     __asm__ volatile (
-    "\n"    "cpuid"
+    "\n" "cpuid"
     : "=c" (ecx), "=d" (edx)
     : "a" (1)
     );
@@ -1572,7 +1572,7 @@ H_uefi_I_main(
             return ~0;
     for_n_( i, ( (N)kernel_data.dynstr - (N)kernel_data.exports ) / sizeof( *kernel_data.exports ))
         if( kernel_data.exports[i].offset < (N)kernel_data.text - (N)E_main_S_kernel_args.kernel
-        || kernel_data.exports[i].offset >= (N)kernel_data.data - (N)E_main_S_kernel_args.kernel
+        || kernel_data.exports[i].offset >= (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size )
         )
             return ~0;
     P event;
@@ -1611,7 +1611,7 @@ H_uefi_I_main(
     if( status < 0 )
         goto End;
     __asm__ volatile (
-    "\n"    "cli"
+    "\n" "cli"
     );
     // Wyłączenie PIC.
     if( E_main_S_pic_mode )
@@ -1987,7 +1987,7 @@ H_uefi_I_main(
     E_main_S_memory_map_n = memory_map_n;
     E_main_S_system_table = system_table;
     __asm__ volatile (
-    "\n"    "mov    %%rsp,%0"
+    "\n" "mov   %%rsp,%0"
     : "=g" ( E_main_S_loader_stack )
     );
     status = system_table->runtime_services->P_virtual_address_map( memory_map_l, E_main_S_descriptor_l, descriptor_version, E_main_S_memory_map );
@@ -2012,8 +2012,8 @@ H_uefi_I_main(
         if( status < 0 )
             goto End;
         __asm__ volatile (
-        "\n"    "lea    0f(%0),%%rax"
-        "\n"    "jmp    *%%rax"
+        "\n" "lea   0f(%0),%%rax"
+        "\n" "jmp   *%%rax"
         "\n0:"
         :
         : "r" ( loader_start - loader_start_old )
@@ -2021,8 +2021,8 @@ H_uefi_I_main(
         );
     }
     __asm__ volatile (
-    "\n"    "mov    %0,%%rsp"
-    "\n"    "mov    %1,%%cr3"
+    "\n" "mov   %0,%%rsp"
+    "\n" "mov   %1,%%cr3"
     :
     : "g" ( E_main_S_loader_stack ), "r" (pml4)
     );
@@ -2053,29 +2053,29 @@ H_uefi_I_main(
     id.base = (N)&idt[0];
     id.limit = sizeof(idt) - 1;
     __asm__ volatile (
-    "\n"    "lgdt   %0"
-    "\n"    "mov    $3 << 3,%%ax"
-    "\n"    "lldt   %%ax"
-    "\n"    "lidt   %1"
-    "\n"    "mov    $2 << 3,%%ax"
-    "\n"    "mov    %%ax,%%ds"
-    "\n"    "mov    %%ax,%%es"
-    "\n"    "mov    %%ax,%%ss"
-    "\n"    "mov    %%ax,%%fs"
-    "\n"    "mov    %%ax,%%gs"
-    "\n"    "movw   $1 << 3,-8(%%rsp)"
-    "\n"    "movq   $0f,-16(%%rsp)"
-    "\n"    ".byte  0x48"
-    "\n"    "ljmp   *-16(%%rsp)"
-    "\n0:"  "mov    $5 << 3,%%ax"
-    "\n"    "ltr    %%ax"
+    "\n" "lgdt  %0"
+    "\n" "mov   $3 << 3,%%ax"
+    "\n" "lldt  %%ax"
+    "\n" "lidt  %1"
+    "\n" "mov   $2 << 3,%%ax"
+    "\n" "mov   %%ax,%%ds"
+    "\n" "mov   %%ax,%%es"
+    "\n" "mov   %%ax,%%ss"
+    "\n" "mov   %%ax,%%fs"
+    "\n" "mov   %%ax,%%gs"
+    "\n" "movw  $1 << 3,-8(%%rsp)"
+    "\n" "movq  $0f,-16(%%rsp)"
+    "\n" ".byte 0x48"
+    "\n" "ljmp  *-16(%%rsp)"
+    "\n0: mov   $5 << 3,%%ax"
+    "\n" "ltr   %%ax"
     :
     : "p" ( &gd.limit ), "p" ( &id.limit )
     : "ax"
     );
     // Przeniesienie stosu.
     __asm__ volatile (
-    "\n"    "mov    %%rsp,%0"
+    "\n" "mov   %%rsp,%0"
     : "=g" ( E_main_S_loader_stack )
     );
     if((( (N)E_main_S_kernel_args.kernel_stack + stack_size - H_oux_E_mem_S_page_size ) | ( E_main_S_loader_stack & 0xfff )) != E_main_S_loader_stack )
@@ -2084,7 +2084,7 @@ H_uefi_I_main(
         , H_oux_E_mem_S_page_size - ( E_main_S_loader_stack & 0xfff )
         );
         __asm__ volatile (
-        "\n"    "lea    %0,%%rsp"
+        "\n" "lea   %0,%%rsp"
         :
         : "p" (( (N)E_main_S_kernel_args.kernel_stack + stack_size - H_oux_E_mem_S_page_size ) | ( E_main_S_loader_stack & 0xfff ))
         );
@@ -2179,8 +2179,8 @@ H_uefi_I_main(
     i = (Pc)&E_mp_init_S_gd - (Pc)&E_mp_init_I + 2;
     *( N * )( p + i ) = E_main_S_kernel_args.processor_start_page + (Pc)&E_mp_init_S_gdt - (Pc)&E_mp_init_I;
     for_n_( i, E_main_S_kernel_args.processor_n - 1 )
-    {   E_interrupt_I_ipi_init( 1 + i );
-        E_main_S_kernel_args.processor_proc[i] = (P)~0ULL;
+    {   E_main_S_kernel_args.processor_proc[i] = (P)~0ULL;
+        E_interrupt_I_ipi_init( 1 + i );
     }
     E_main_S_kernel_args.bootloader = (P)loader_start;
     E_main_S_kernel_args.uefi_runtime_services.R_time = system_table->runtime_services->R_time;
@@ -2196,20 +2196,20 @@ H_uefi_I_main(
     E_main_S_kernel_args.uefi_runtime_services.R_capsule_capabilities = system_table->runtime_services->R_capsule_capabilities;
     E_main_S_kernel_args.uefi_runtime_services.R_variable_info = system_table->runtime_services->R_variable_info;
     __asm__ volatile (
-    "\n"    "mov    %%cr0,%%rax"
-    "\n"    "and    %0,%%rax"
-    "\n"    "or     %1,%%rax"
-    "\n"    "mov    %%rax,%%cr0"
-    "\n"    "mov    %%cr3,%%rax"
-    "\n"    "and    %2,%%rax"
-    "\n"    "mov    %%rax,%%cr3"
-    "\n"    "mov    %%cr4,%%rax"
-    "\n"    "and    %3,%%rax"
-    "\n"    "or     %4,%%rax"
-    "\n"    "mov    %%rax,%%cr4"
-    "\n"    "mov    %%cr8,%%rax"
-    "\n"    "and    $~0xf,%%rax"
-    "\n"    "mov    %%rax,%%cr8"
+    "\n" "mov   %%cr0,%%rax"
+    "\n" "and   %0,%%rax"
+    "\n" "or    %1,%%rax"
+    "\n" "mov   %%rax,%%cr0"
+    "\n" "mov   %%cr3,%%rax"
+    "\n" "and   %2,%%rax"
+    "\n" "mov   %%rax,%%cr3"
+    "\n" "mov   %%cr4,%%rax"
+    "\n" "and   %3,%%rax"
+    "\n" "or    %4,%%rax"
+    "\n" "mov   %%rax,%%cr4"
+    "\n" "mov   %%cr8,%%rax"
+    "\n" "and   $~0xf,%%rax"
+    "\n" "mov   %%rax,%%cr8"
     :
     : "i" ( ~( E_cpu_Z_cr0_S_em | E_cpu_Z_cr0_S_ts | E_cpu_Z_cr0_S_nw | E_cpu_Z_cr0_S_cd ))
     , "i" ( E_cpu_Z_cr0_S_mp | E_cpu_Z_cr0_S_ne | E_cpu_Z_cr0_S_wp )
@@ -2220,15 +2220,15 @@ H_uefi_I_main(
     );
     // Przed wyrzuceniem z pamięci programu ‘bootloadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.
     __asm__ volatile (
-    "\n"    "mov    %0,%%rsp"
-    "\n"    "jmp    *%1"
+    "\n" "mov   %0,%%rsp"
+    "\n" "jmp   *%1"
     :
     : "g" ( (N)E_main_S_kernel_args.kernel_stack + stack_size ), "r" ( kernel_data.entry ), "D" ( &E_main_S_kernel_args )
     );
     __builtin_unreachable();
 End:__asm__ volatile (
-    "\n0:"  "hlt"
-    "\n"    "jmp    0b"
+    "\n0: hlt"
+    "\n" "jmp   0b"
     );
     __builtin_unreachable();
 }

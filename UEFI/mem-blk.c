@@ -77,21 +77,27 @@ E_mem_M(
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = E_mem_Q_blk_S_allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( stack_address - E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = E_mem_Q_blk_S_free_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].p = (P)stack_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].u = H_oux_E_mem_S_page_size;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].n = stack_size / H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].p = (P)memory_map_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].u = sizeof( struct H_oux_E_mem_Z_memory_map );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].n = memory_map_size / sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].p = (P)page_table_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].u = 1;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].p = (P)kernel_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].u = 1;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].n = kernel_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].context_rip = 0;
     }else
     {   E_main_S_kernel_args.mem_blk.allocated = (P)( memory_map_address + memory_map_size + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
         E_main_S_kernel_args.mem_blk.free_id = 3;
@@ -99,21 +105,27 @@ E_mem_M(
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].p = (P)kernel_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].u = 1;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].n = kernel_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].p = (P)page_table_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].u = 1;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].p = (P)memory_map_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].u = sizeof( struct H_oux_E_mem_Z_memory_map );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].n = memory_map_size / sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = E_mem_Q_blk_S_free_n_init;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( memory_map_address + memory_map_size );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = E_mem_Q_blk_S_allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_rip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].p = (P)stack_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].u = H_oux_E_mem_S_page_size;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].n = stack_size / H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].context_rip = 0;
     }
     struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
     if( reserved_from_end )
@@ -193,15 +205,15 @@ E_mem_Q_blk_I_copy_fwd( P dst
     {   N l_1 = ( l - l_0 ) / sizeof(N128);
         N l_2 = ( l - l_0 ) % sizeof(N128);
         __asm__ volatile (
-        "\n"    "rep movsb"
+        "\n" "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
         :
         : "memory"
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movaps %1,%%xmm0"
-            "\n"    "movaps %%xmm0,%0"
+            "\n" "movaps    %1,%%xmm0"
+            "\n" "movaps    %%xmm0,%0"
             :
             : "p" ( dst_x++ ), "p" ( src_x++ )
             : "xmm0", "memory"
@@ -212,7 +224,7 @@ E_mem_Q_blk_I_copy_fwd( P dst
     }
         #endif
     __asm__ volatile (
-    "\n"    "rep movsb"
+    "\n" "rep movsb"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
     : "memory"
@@ -224,7 +236,7 @@ E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
 ){  __asm__ volatile (
-    "\n"    "std"
+    "\n" "std"
     );
         #ifdef __SSE__
     N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof(N128) );
@@ -240,15 +252,15 @@ E_mem_Q_blk_I_copy_rev( P dst
         N l_1 = ( l - l_0 ) / sizeof(N128);
         N l_2 = ( l - l_0 ) % sizeof(N128);
         __asm__ volatile (
-        "\n"    "rep movsb"
+        "\n" "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
         :
         : "memory"
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movaps %1,%%xmm0"
-            "\n"    "movaps %%xmm0,%0"
+            "\n" "movaps    %1,%%xmm0"
+            "\n" "movaps    %%xmm0,%0"
             :
             : "p" ( --dst_x ), "p" ( --src_x )
             : "xmm0", "memory"
@@ -262,8 +274,8 @@ E_mem_Q_blk_I_copy_rev( P dst
         src = (Pc)src + l - 1;
     }
     __asm__ volatile (
-    "\n"    "rep movsb"
-    "\n"    "cld"
+    "\n" "rep movsb"
+    "\n" "cld"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
     : "memory"
@@ -305,7 +317,7 @@ E_mem_Q_blk_P_fill_c( P p
     {   N l_1 = ( l - l_0 ) / sizeof(N128);
         N l_2 = ( l - l_0 ) % sizeof(N128);
         __asm__ volatile (
-        "\n"    "rep stosb"
+        "\n" "rep stosb"
         : "+D" (p), "+c" ( l_0 )
         : "a" (c)
         : "memory"
@@ -314,15 +326,15 @@ E_mem_Q_blk_P_fill_c( P p
         p = &x;
         N cx = sizeof(N128);
         __asm__ volatile (
-        "\n"    "rep stosb"
-        "\n"    "movaps %2,%%xmm0"
+        "\n" "rep stosb"
+        "\n" "movaps    %2,%%xmm0"
         : "+D" (p), "+c" (cx)
         : "m" (x), "a" (c)
         : "xmm0", "memory"
         );
         for_n( i, l_1 )
             __asm__ volatile (
-            "\n"    "movaps %%xmm0,%0"
+            "\n" "movaps    %%xmm0,%0"
             :
             : "p" ( p_x++ )
             : "memory"
@@ -332,7 +344,7 @@ E_mem_Q_blk_P_fill_c( P p
     }
         #endif
     __asm__ volatile (
-    "\n"    "rep stosb"
+    "\n" "rep stosb"
     : "+D" (p), "+c" (l)
     : "a" (c)
     : "memory"

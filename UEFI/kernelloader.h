@@ -744,6 +744,7 @@ struct E_mem_Q_blk_Z_allocated
 { Pc p;
   N n;
   N u;
+  P context_rip;
 };
 struct E_mem_blk_Z
 { struct E_mem_Q_blk_Z_allocated *allocated;

@@ -3558,7 +3558,7 @@ E_font_I_print( Pc s
             E_font_I_print_u(u);
     }
     __asm__ volatile (
-    "\n"    "sfence"
+    "\n" "sfence"
     );
     return 0;
 }
