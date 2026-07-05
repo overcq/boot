@@ -421,9 +421,8 @@ E_pci_I_check_function( N8 bus_i
     )
     {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
         N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
-        N r = E_pci_I_check_bus( secondary_bus, bus_mask );
-        if( (S)r < 0 )
-            return r;
+        K( E_pci_I_check_bus( secondary_bus, bus_mask ))
+            return ~0;
     }
     return 0;
 }
@@ -437,23 +436,19 @@ E_pci_I_check_bus( N8 bus_i
     {   N32 ids = E_pci_I_read( bus_i, device_i, 0, 0 );
         if( !~ids )
             continue;
-        N r = E_pci_I_check_device( bus_i, device_i, 0, ids );
-        if( (S)r < 0 )
-            return r;
-        r = E_pci_I_check_function( bus_i, device_i, 0, bus_mask );
-        if( (S)r < 0 )
-            return r;
+        K( E_pci_I_check_device( bus_i, device_i, 0, ids ))
+            return ~0;
+        K( E_pci_I_check_function( bus_i, device_i, 0, bus_mask ))
+            return ~0;
         N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xe );
         if( header_type & 0x80 )
         {   for_n( function_i, 7 )
             {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
                 if( ~ids )
-                {   r = E_pci_I_check_device( bus_i, device_i, 1 + function_i, ids );
-                    if( (S)r < 0 )
-                        return r;
-                    r = E_pci_I_check_function( bus_i, device_i, 1 + function_i, bus_mask );
-                    if( (S)r < 0 )
-                        return r;
+                {   K( E_pci_I_check_device( bus_i, device_i, 1 + function_i, ids ))
+                        return ~0;
+                    K( E_pci_I_check_function( bus_i, device_i, 1 + function_i, bus_mask ))
+                        return ~0;
                 }
             }
         }
@@ -465,14 +460,15 @@ E_pci_I_check_buses( void
 ){  C bus_mask[ 256 / 8 ];
     _0( &bus_mask[0], 256 / 8 );
     N8 header_type = E_pci_I_read( 0, 0, 0, 0xe );
-    N r;
     if( header_type & 0x80 )
     {   for_n( function_i, 8 )
         {   K( E_pci_I_check_bus( function_i, bus_mask ))
                 return ~0;
         }
     }else
-        r = E_pci_I_check_bus( 0, bus_mask );
-    return r;
+    {   K( E_pci_I_check_bus( 0, bus_mask ))
+            return ~0;
+    }
+    return 0;
 }
 /******************************************************************************/

@@ -68,40 +68,79 @@ typedef __int128            S128;
 #define _inline                             static __attribute__ (( __always_inline__, __unused__ ))
 #define _internal                           static
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ‹Zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają kod błędu.
+#define K_error(error) \
+  ( (S)(error) < 0 \
+  && (S)(error) > ~5 \
+  )
+// Emisja ‹zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają kod błędu.
 #define K(statement) \
   N J_autogen_line(r) = (statement); \
-  if( (S)J_autogen_line(r) < 0 \
+  if( K_error( J_autogen_line(r) ) \
   && ~J_autogen_line(r) \
   ) \
       return J_autogen_line(r); \
   if( ~J_autogen_line(r) ) \
   { \
   }else
-// ‹Zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają adres.
+// Emisja ‹zdarzenia› w procedurze — dla otaczania wywołań procedur, które zwracają adres.
 #define Kp(statement) \
   N J_autogen_line(r) = (N)(statement); \
-  if( !~J_autogen_line(r) ) \
-      return ~2; \
+  if( K_error( J_autogen_line(r) )) \
+      return J_autogen_line(r); \
   if( J_autogen_line(r) ) \
   { \
   }else
-// ‹Zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają kod błędu.
+// Emisja ‹zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają kod błędu.
 #define K_(error,statement) \
   N J_autogen_line(r) = (statement); \
-  if( (S)J_autogen_line(r) >= 0 ) \
+  if( !K_error( J_autogen_line(r) )) \
   { \
   }else \
       return J_autogen_line(r) < (error) ? J_autogen_line(r) : (error)
-// ‹Zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają adres.
+// Emisja ‹zdarzenia› w bloku wyjścia procedury — dla otaczania wywołań procedur, które zwracają adres.
 #define Kp_(error,statement) \
   N J_autogen_line(r) = (N)(statement); \
-  if( !~J_autogen_line(r) ) \
-      return ~2; \
+  if( K_error( J_autogen_line(r) )) \
+      return J_autogen_line(r); \
   if( J_autogen_line(r) ) \
   { \
   }else \
       return (error)
+//------------------------------------------------------------------------------
+// Emisja ‹zdarzenia› w procedurze zwracającej adres — dla otaczania wywołań procedur, które zwracają kod błędu.
+#define KP(statement) \
+  N J_autogen_line(r) = (statement); \
+  if( K_error( J_autogen_line(r) ) \
+  && ~J_autogen_line(r) \
+  ) \
+      return (P)J_autogen_line(r); \
+  if( ~J_autogen_line(r) ) \
+  { \
+  }else
+// Emisja ‹zdarzenia› w procedurze zwracającej adres — dla otaczania wywołań procedur, które zwracają adres.
+#define KPp(statement) \
+  N J_autogen_line(r) = (N)(statement); \
+  if( K_error( J_autogen_line(r) )) \
+      return (P)J_autogen_line(r); \
+  if( J_autogen_line(r) ) \
+  { \
+  }else
+// Emisja ‹zdarzenia› w bloku wyjścia procedury zwracającej adres — dla otaczania wywołań procedur, które zwracają kod błędu.
+#define KP_(error,statement) \
+  N J_autogen_line(r) = (statement); \
+  if( !K_error( J_autogen_line(r) )) \
+  { \
+  }else \
+      return (P)( J_autogen_line(r) < (error) ? J_autogen_line(r) : (error) )
+// Emisja ‹zdarzenia› w bloku wyjścia procedury zwracającej adres — dla otaczania wywołań procedur, które zwracają adres.
+#define KPp_(error,statement) \
+  N J_autogen_line(r) = (N)(statement); \
+  if( K_error( J_autogen_line(r) )) \
+      return (P)J_autogen_line(r); \
+  if( J_autogen_line(r) ) \
+  { \
+  }else \
+      return (P)(error)
 //==============================================================================
 #include "simple.h"
 //==============================================================================
@@ -744,7 +783,7 @@ struct E_mem_Q_blk_Z_allocated
 { Pc p;
   N n;
   N u;
-  P context_rip;
+  P context_ip;
 };
 struct E_mem_blk_Z
 { struct E_mem_Q_blk_Z_allocated *allocated;
