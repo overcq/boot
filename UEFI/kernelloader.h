@@ -101,7 +101,7 @@ typedef __int128            S128;
 #define Kp_(error,statement) \
   N J_autogen_line(r) = (N)(statement); \
   if( K_error( J_autogen_line(r) )) \
-      return J_autogen_line(r); \
+      return J_autogen_line(r) < (error) ? J_autogen_line(r) : (error); \
   if( J_autogen_line(r) ) \
   { \
   }else \
@@ -136,7 +136,7 @@ typedef __int128            S128;
 #define KPp_(error,statement) \
   N J_autogen_line(r) = (N)(statement); \
   if( K_error( J_autogen_line(r) )) \
-      return (P)J_autogen_line(r); \
+      return (P)( J_autogen_line(r) < (error) ? J_autogen_line(r) : (error) ); \
   if( J_autogen_line(r) ) \
   { \
   }else \
