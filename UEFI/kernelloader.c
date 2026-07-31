@@ -199,15 +199,14 @@ __attribute__ (( __warn_unused_result__ ))
 S
 H_uefi_I_print_n( struct H_uefi_Z_system_table *system_table
 , N v
-, N v_l
 , N base
 ){  Pc16 s;
-    N n = ( base == 2 || base == 16 ? 2 : base == 8 ? 1 : 0 ) + E_text_Z_n_N_s_G( v, v_l, base ) + 1;
+    N n = ( base == 2 || base == 16 ? 2 : base == 8 ? 1 : 0 ) + E_text_Z_n_N_s_G( v, base ) + 1;
     S status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_loader_data, n * sizeof( C16 ), ( P * )&s );
     if( status < 0 )
         return status;
     s[ n - 1 ] = L'\0';
-    E_text_Z_n_N_s( s + n - 1, v, v_l, base );
+    E_text_Z_n_N_s( s + n - 1, v, base );
     if( base == 2
     || base == 8
     || base == 16
@@ -275,7 +274,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                 status = system_table->output->output( system_table->output, L"(" );
                 if( status < 0 )
                     return status;
-                status = H_uefi_I_print_n( system_table, header->revision, sizeof( header->revision ), 10 );
+                status = H_uefi_I_print_n( system_table, header->revision, 10 );
                 if( status < 0 )
                     return status;
                 if( E_mem_Q_blk_T_eq( &header->signature[0], "APIC", sizeof( xsdt->header.signature )))
@@ -378,13 +377,13 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                     status = system_table->output->output( system_table->output, L"(" );
                     if( status < 0 )
                         return status;
-                    status = H_uefi_I_print_n( system_table, header->revision, sizeof( header->revision ), 10 );
+                    status = H_uefi_I_print_n( system_table, header->revision, 10 );
                     if( status < 0 )
                         return status;
                     status = system_table->output->output( system_table->output, L"),FACS(" );
                     if( status < 0 )
                         return status;
-                    status = H_uefi_I_print_n( system_table, facs->version, sizeof( facs->version ), 10 );
+                    status = H_uefi_I_print_n( system_table, facs->version, 10 );
                     if( status < 0 )
                         return status;
                     status = system_table->output->output( system_table->output, L")" );

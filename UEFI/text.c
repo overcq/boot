@@ -11,10 +11,8 @@
 Pc16
 E_text_Z_n_N_s( Pc16 s_end
 , N n
-, N l
 , N base
-){  n = E_simple_Z_n_I_mod_i2( n, l * 8 );
-    do
+){  do
     {   N k = n % base;
         *--s_end = k < 10
         ? L'0' + k
@@ -24,10 +22,8 @@ E_text_Z_n_N_s( Pc16 s_end
 }
 N
 E_text_Z_n_N_s_G( N n
-, N l
 , N base
 ){  N i = 0;
-    n = E_simple_Z_n_I_mod_i2( n, l * 8 );
     do
     {   i++;
     }while( n /= base );

@@ -194,16 +194,15 @@ E_mem_Q_blk_I_copy_fwd( P dst
 , N l
 ){
         #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N128) );
-    N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof(N128) );
+    N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof( N128 ));
+    N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof( N128 ));
     N l_0 = (Pc)src_x - (Pc)src;
+    N l_1 = ( l - l_0 ) / sizeof( N128 );
     if( l > l_0
-    && l - l_0 >= sizeof(N128)
-    && dst_x != src_x
-    && (Pc)dst_x - (Pc)dst == (Pc)src_x - (Pc)src
+    && l_1
+    && (Pc)dst_x - (Pc)dst == l_0
     )
-    {   N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
+    {   N l_2 = ( l - l_0 ) % sizeof( N128 );
         __asm__ volatile (
         "\n" "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
@@ -239,18 +238,17 @@ E_mem_Q_blk_I_copy_rev( P dst
     "\n" "std"
     );
         #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof(N128) );
-    N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof(N128) );
+    N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof( N128 ));
+    N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof( N128 ));
     N l_0 = (Pc)src + l - (Pc)src_x;
+    N l_1 = ( l - l_0 ) / sizeof( N128 );
     if( l > l_0
-    && l - l_0 >= sizeof(N128)
-    && dst_x != src_x
-    && (Pc)dst + l - (Pc)dst_x == (Pc)src + l - (Pc)src_x
+    && l_1
+    && (Pc)dst + l - (Pc)dst_x == l_0
     )
     {   dst = (Pc)dst + l - 1;
         src = (Pc)src + l - 1;
-        N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
+        N l_2 = ( l - l_0 ) % sizeof( N128 );
         __asm__ volatile (
         "\n" "rep movsb"
         : "+D" (dst), "+S" (src), "+c" ( l_0 )
@@ -285,7 +283,9 @@ void
 E_mem_Q_blk_I_copy( P dst
 , P src
 , N l
-){  if( !l )
+){  if( !l
+    || dst == src
+    )
         return;
     if( (Pc)dst < (Pc)src
     || (Pc)dst >= (Pc)src + l
@@ -309,25 +309,25 @@ E_mem_Q_blk_P_fill_c( P p
 , C c
 ){
         #ifdef __SSE__
-    N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof(N128) );
+    N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof( N128 ));
     N l_0 = (Pc)p_x - (Pc)p;
+    N l_1 = ( l - l_0 ) / sizeof( N128 );
     if( l > l_0
-    && l - l_0 >= sizeof(N128)
+    && l_1
     )
-    {   N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
+    {   N l_2 = ( l - l_0 ) % sizeof( N128 );
         __asm__ volatile (
         "\n" "rep stosb"
         : "+D" (p), "+c" ( l_0 )
         : "a" (c)
         : "memory"
         );
-        N128 __attribute__ (( __aligned__(16) )) x;
+        N128 x;
         p = &x;
-        N cx = sizeof(N128);
+        N cx = sizeof( N128 );
         __asm__ volatile (
         "\n" "rep stosb"
-        "\n" "movaps    %2,%%xmm0"
+        "\n" "movups    %2,%%xmm0"
         : "+D" (p), "+c" (cx)
         : "m" (x), "a" (c)
         : "xmm0", "memory"
@@ -337,7 +337,7 @@ E_mem_Q_blk_P_fill_c( P p
             "\n" "movaps    %%xmm0,%0"
             :
             : "p" ( p_x++ )
-            : "memory"
+            : "xmm0", "memory"
             );
         p = p_x;
         l = l_2;
