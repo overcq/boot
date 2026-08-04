@@ -63,17 +63,18 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
 , struct H_uefi_Z_protocol_Z_disk_io *disk_io
 , N32 media_id
 , N block_size
-){  Pc sector;
-    S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_loader_data, 1, ( N64 * )&sector );
+){  N pages = E_simple_Z_n_I_align_up_to_v2( block_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
+    Pc sector;
+    S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_loader_data, pages, ( N64 * )&sector );
     if( status < 0 )
         return status;
-    status = disk_io->read( disk_io, media_id, 0, H_oux_E_mem_S_page_size, sector );
+    H_oux_E_fs_S_sector_size = block_size;
+    status = disk_io->read( disk_io, media_id, 0, H_oux_E_fs_S_sector_size, sector );
     if( status < 0 )
         goto Error_0;
-    if( !E_mem_Q_blk_T_eq( sector, H_oux_E_fs_Q_device_S_ident, sizeof( H_oux_E_fs_Q_device_S_ident ) - 1 ))
+    if( !E_mem_Q_blk_T_eq( sector, H_oux_E_fs_Q_device_S_ident, J_s0_R_l( H_oux_E_fs_Q_device_S_ident )))
         goto Error_0;
-    H_oux_E_fs_S_sector_size = block_size;
-    N64 *block_table_n_ = (P)H_oux_J_align_up_p( sector + sizeof( H_oux_E_fs_Q_device_S_ident ) - 1, sizeof(N64) );
+    N64 *block_table_n_ = (P)H_oux_J_align_up_p( sector + J_s0_R_l( H_oux_E_fs_Q_device_S_ident ), sizeof( N64 ));
     N64 block_table_n = block_table_n_[0];
     N64 block_table_block_table_n = block_table_n_[1];
     N64 block_table_directory_table_start = block_table_n_[2];
@@ -997,7 +998,7 @@ End_loop_1:
 End_loop_2:
     if( file_table_i == block_table_file_table_n )
         goto Error_1;
-    status = system_table->boot_services->W_pages(( N64 )sector, 1 );;
+    status = system_table->boot_services->W_pages(( N64 )sector, 1 );
     return status;
 Error_1:
     S status_1 = system_table->boot_services->W_pool( H_oux_E_fs_S_block_table );
