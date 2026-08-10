@@ -53,7 +53,7 @@ init-vmware:
 	mkdir -p $$ocq_mnt \
 	&& vmware-mount -f /mnt/hgfs/kernel\ UEFI/kernel\ UEFI.vmdk $$ocq_mnt \
 	&& trap 'vmware-mount -d $$ocq_mnt' EXIT \
-	&& parted -fs $$ocq_mnt/flat mklabel gpt mkpart primary fat32 0 100MB set 1 esp on mkpart primary 100MB 1GB \
+	&& parted -fs $$ocq_mnt/flat -a minimal mklabel gpt mkpart primary fat32 0 100MB set 1 esp on mkpart primary 100MB 1GB \
 	&& loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
 	&& trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
 	&& mkfs.fat -F 32 $${loopdev}p1 \
