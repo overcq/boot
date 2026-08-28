@@ -25,10 +25,8 @@ typedef void                *P;
 typedef C                   *Pc;
 typedef C16                 *Pc16;
 typedef N                   *Pn;
-    #ifdef __SSE__
 typedef unsigned __int128   N128;
 typedef __int128            S128;
-    #endif
 //------------------------------------------------------------------------------
 #define false                               0
 #define true                                1
@@ -145,8 +143,6 @@ typedef __int128            S128;
 #include "simple.h"
 //==============================================================================
 #define H_oux_E_mem_S_page_size             0x1000
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define H_oux_J_align_up_p(p,t)             E_simple_Z_p_I_align_up_to_v2( p, sizeof(t) )
 //==============================================================================
 Pc16 E_text_Z_n_N_s( Pc16, N, N );
 N E_text_Z_n_N_s_G( N, N );
@@ -221,7 +217,7 @@ struct H_uefi_Z_table_header
   N32 crc32;
   N32 reserved;
 };
-struct H_uefi_Z_memory_descriptor
+struct H_uefi_Z_memory_type_descriptor
 { N32 type;
   N32 pad;
   N64 physical_start;
@@ -296,28 +292,28 @@ enum H_uefi_Z_allocate
 , H_uefi_Z_allocate_Z_n
 };
 enum H_uefi_Z_memory
-{ H_uefi_Z_memory_Z_reserved
-, H_uefi_Z_memory_Z_loader_code
-, H_uefi_Z_memory_Z_loader_data
-, H_uefi_Z_memory_Z_boot_services_code
-, H_uefi_Z_memory_Z_boot_services_data
-, H_uefi_Z_memory_Z_runtime_services_code
-, H_uefi_Z_memory_Z_runtime_services_data
-, H_uefi_Z_memory_Z_conventional
-, H_uefi_Z_memory_Z_unusable
-, H_uefi_Z_memory_Z_acpi_reclaim
-, H_uefi_Z_memory_Z_acpi_nvs
-, H_uefi_Z_memory_Z_memory_mapped_io
-, H_uefi_Z_memory_Z_memory_mapped_io_port_space
-, H_uefi_Z_memory_Z_pal_code
-, H_uefi_Z_memory_Z_persistent
-, H_uefi_Z_memory_Z_unaccepted
-, H_uefi_Z_memory_Z_kernel = 0x80000000U
-, H_uefi_Z_memory_Z_processor_startup_page
+{ H_uefi_Z_memory_type_S_reserved
+, H_uefi_Z_memory_type_S_loader_code
+, H_uefi_Z_memory_type_S_loader_data
+, H_uefi_Z_memory_type_S_boot_services_code
+, H_uefi_Z_memory_type_S_boot_services_data
+, H_uefi_Z_memory_type_S_runtime_services_code
+, H_uefi_Z_memory_type_S_runtime_services_data
+, H_uefi_Z_memory_type_S_conventional
+, H_uefi_Z_memory_type_S_unusable
+, H_uefi_Z_memory_type_S_acpi_reclaim
+, H_uefi_Z_memory_type_S_acpi_nvs
+, H_uefi_Z_memory_type_S_memory_mapped_io
+, H_uefi_Z_memory_type_S_memory_mapped_io_port_space
+, H_uefi_Z_memory_type_S_pal_code
+, H_uefi_Z_memory_type_S_persistent
+, H_uefi_Z_memory_type_S_unaccepted
+, H_uefi_Z_memory_type_S_kernel = 0x80000000U
+, H_uefi_Z_memory_type_S_processor_startup_page
 };
-#define H_uefi_Z_memory_protection_S_write      0x1000
-#define H_uefi_Z_memory_protection_S_read       0x2000
-#define H_uefi_Z_memory_protection_S_execute    0x4000
+#define H_uefi_Z_memory_type_protection_S_write      0x1000
+#define H_uefi_Z_memory_type_protection_S_read       0x2000
+#define H_uefi_Z_memory_type_protection_S_execute    0x4000
 typedef void ( H_uefi_Z_api H_uefi_Z_notify_I )( P event, P context );
 enum H_uefi_Z_timer_delay
 { H_uefi_Z_timer_delay_Z_cancel
@@ -358,7 +354,7 @@ struct H_uefi_Z_runtime_services
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_time )( struct H_uefi_Z_time *time );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_wakeup_time )( B *enabled, B *pending, struct H_uefi_Z_time *time );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_wakeup_time )( B enable, struct H_uefi_Z_time *time );
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_virtual_address_map )( N memory_map_l, N descriptor_size, N32 descriptor_version, struct H_uefi_Z_memory_descriptor *memory_map );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *P_virtual_address_map )( N memory_map_l, N descriptor_size, N32 descriptor_version, struct H_uefi_Z_memory_type_descriptor *memory_map );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *convert_pointer )( N debug_disposition, P *address );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_variable )( Pc16 name, struct H_uefi_Z_guid *vendor_guid, N32 attrbutes, N *data_l, P *data );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_next_variable_name )( N *name_l, Pc16 name, struct H_uefi_Z_guid *vendor_guid );
@@ -376,7 +372,7 @@ struct H_uefi_Z_boot_services
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *Q_tpl_I_restore )( N tpl );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_pages )( enum H_uefi_Z_allocate type, enum H_uefi_Z_memory memory_type, N pages_n, N64 *physical_address );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *W_pages )( N64 physical_address, N pages_n );
-  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_memory_map )( N *memory_map_l, struct H_uefi_Z_memory_descriptor *memory_map, N *map_key, N *descriptor_l, N32 *descriptor_version );
+  S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_memory_map )( N *memory_map_l, struct H_uefi_Z_memory_type_descriptor *memory_map, N *map_key, N *descriptor_l, N32 *descriptor_version );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_pool )( enum H_uefi_Z_memory memory_type, N l, P *buffer );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *W_pool )( P buffer );
   S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *M_event )( N32 type, N tpl, H_uefi_Z_notify_I *notify_proc, P notify_context, P *event );
@@ -801,17 +797,14 @@ S H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table * );
 N64 H_oux_E_fs_Q_kernel_R_size(void);
 S H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_protocol_Z_disk_io *, N32, Pc );
 //==============================================================================
-struct H_oux_Z_pixel_shifts
-{ N8 red;
-  N8 green;
-  N8 blue;
-};
 struct H_main_Z_framebuffer
-{ volatile N32 *p;
+{ volatile N8 *p;
   N32 width, height;
   N32 pixels_per_scan_line;
-  enum H_uefi_Z_pixel_format pixel_format;
-  struct H_oux_Z_pixel_shifts pixel_shifts;
+  N8 bits_per_pixel;
+  N8 blue_size, blue_shift;
+  N8 green_size, green_shift;
+  N8 red_size, red_shift;
 };
 struct H_main_Z_uefi_runtime_services
 { S ( H_uefi_Z_api __attribute__ (( __warn_unused_result__ )) *R_time )( struct H_uefi_Z_time *time, struct H_uefi_Z_time_capabilities *capabilities );
@@ -853,7 +846,7 @@ struct E_main_Z_kernel_args
 { struct E_mem_blk_Z mem_blk;
   struct H_oux_E_mem_Z_memory_map *memory_map;
   N memory_map_n;
-  P bootloader;
+  P boot_loader;
   P kernel;
   P page_table;
   N additional_pages;
@@ -964,7 +957,8 @@ void E_mem_Q_mask_P_set( Pc, N );
 void E_mem_Q_mask_P_clear( Pc, N );
 N E_mem_Q_mask_I_resize( Pc *, N, N );
 //==============================================================================
-N E_pci_I_check_buses(void);
+N E_pci_I_check_buses_0(void);
+N E_pci_I_check_buses( N * );
 //==============================================================================
 Pc E_text_Z_su_R_u( Pc, U *);
 //==============================================================================

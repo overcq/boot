@@ -2,7 +2,7 @@
 *   ___   public
 *  ¦OUX¦  C+
 *  ¦/C+¦  OUX/C+ OS
-*   ---   UEFI boot loader
+*   ---   BIOS boot loader
 *         PCI driver
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”             2025‒6‒25 T
 *******************************************************************************/
@@ -340,9 +340,6 @@ struct __attribute__ (( __packed__ )) E_pci_Z_header_Z_bist
   N8 capable            :1;
 };
 //==============================================================================
-extern struct H_uefi_Z_memory_type_descriptor *E_main_S_memory_map;
-extern N E_main_S_descriptor_l;
-//------------------------------------------------------------------------------
 extern N32 E_main_S_sata_ahci_addresses[8];
 extern N8 E_main_S_sata_ahci_n;
 extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
@@ -350,8 +347,7 @@ extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 extern N32 E_main_I_in_32( N16 );
 extern void E_main_I_out_32( N16, N32 );
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N E_pci_I_check_bus_0( N8, Pc );
-N E_pci_I_check_bus( N *, N8, Pc );
+N E_pci_I_check_bus( struct E_main_Z_memory_map_entry **, N8, Pc );
 //==============================================================================
 N32
 E_pci_I_read( N8 bus
@@ -371,152 +367,7 @@ E_pci_I_write( N8 bus
     E_main_I_out_32( 0xcfc, value );
 }
 N
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-E_pci_I_check_device_0( N8 bus_i
-, N8 device_i
-, N8 function_i
-, N8 header_type
-){  // Obliczenie liczby koniecznych do dodania bloków pamięci MMIO do mapy pamięci.
-    N n = 0;
-    N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
-    N8 class = rev_prog_sub_class >> 24;
-    switch( header_type )
-    { case E_pci_Z_header_Z_header_type_S_general:
-        {   if( class != E_pci_Z_header_Z_class_S_bridge )
-            {   N8 offset = 0x10;
-                do
-                {   N64 address = E_pci_I_read( bus_i, device_i, function_i, offset );
-                    if( !address
-                    || ( address & 1 ) // I/O space
-                    )
-                        continue;
-                    if(( address & 6 ) == 4 )
-                        offset += sizeof( N32 );
-                    n++;
-                }while(( offset += sizeof( N32 )) != 0x28 );
-            }
-            break;
-        }
-      case E_pci_Z_header_Z_header_type_S_pci2pci_bridge:
-        {   N8 offset = 0x10;
-            do
-            {   N64 address = E_pci_I_read( bus_i, device_i, function_i, offset );
-                if( !address
-                || ( address & 1 ) // I/O space
-                )
-                    continue;
-                if(( address & 6 ) == 4 )
-                    offset += sizeof( N32 );
-                n++;
-            }while(( offset += sizeof( N32 )) != 0x18 );
-            N64 base = E_pci_I_read( bus_i, device_i, function_i, 0x20 );
-            N64 limit = ( base >> 16 ) & 0xfff0;
-            base &= 0xfff0;
-            if( base
-            && limit
-            && base <= limit
-            )
-                n++;
-            base = E_pci_I_read( bus_i, device_i, function_i, 0x24 );
-            limit = ( base >> 16 ) & 0xfff0;
-            if(( base & 0xf ) == 1 )
-            {   base |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, 0x28 ) << 16;
-                limit |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, 0x2c ) << 16;
-            }
-            base &= 0xfff0;
-            if( base
-            && limit
-            && base <= limit
-            )
-                n++;
-            break;
-        }
-    }
-    return n;
-}
-N
-E_pci_I_check_function_0( N8 bus_i
-, N8 device_i
-, N8 function_i
-, Pc bus_mask
-){  N n = 0;
-    N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
-    N8 class = rev_prog_sub_class >> 24;
-    N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
-    if( class == E_pci_Z_header_Z_class_S_bridge
-    && subclass == E_pci_Z_header_Z_subclass_bridge_S_pci2pci
-    )
-    {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
-        N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
-        n = E_pci_I_check_bus_0( secondary_bus, bus_mask );
-        K(n)
-            return ~0;
-    }
-    return n;
-}
-N
-E_pci_I_check_bus_0( N8 bus_i
-, Pc bus_mask
-){  if( E_mem_Q_mask_R( bus_mask, bus_i ))
-        return 0;
-    E_mem_Q_mask_P_set( bus_mask, bus_i );
-    N n = 0;
-    for_n( device_i, 32 )
-    {   N32 ids = E_pci_I_read( bus_i, device_i, 0, 0 );
-        if( !~ids )
-            continue;
-        N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xc ) >> 16;
-        N r = E_pci_I_check_device_0( bus_i, device_i, 0, header_type & 0x7f );
-        K(r)
-            return ~0;
-        n += r;
-        r = E_pci_I_check_function_0( bus_i, device_i, 0, bus_mask );
-        K(r)
-            return ~0;
-        n += r;
-        if( header_type & 0x80 )
-        {   for_n( function_i, 7 )
-            {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
-                if( ~ids )
-                {   r = E_pci_I_check_device_0( bus_i, device_i, 1 + function_i, header_type & 0x7f );
-                    K(r)
-                        return ~0;
-                    n += r;
-                    r = E_pci_I_check_function_0( bus_i, device_i, 1 + function_i, bus_mask );
-                    K(r)
-                        return ~0;
-                    n += r;
-                }
-            }
-        }
-    }
-    return n;
-}
-N
-E_pci_I_check_buses_0( void
-){  C bus_mask[ 256 / 8 ];
-    _0( &bus_mask[0], 256 / 8 );
-    N n = 0;
-    N8 header_type = E_pci_I_read( 0, 0, 0, 0xc ) >> 16;
-    if( header_type & 0x80 )
-    {   for_n( function_i, 8 )
-        {   N r = E_pci_I_check_bus_0( function_i, bus_mask );
-            K(r)
-                return ~0;
-            n += r;
-        }
-    }else
-    {   N r = E_pci_I_check_bus_0( 0, bus_mask );
-        K(r)
-            return ~0;
-        n += r;
-    }
-    return n;
-}
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N
-E_pci_I_check_device(
-  N *memory_map_l
+E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
 , N8 bus_i
 , N8 device_i
 , N8 function_i
@@ -533,7 +384,6 @@ E_pci_I_check_device(
     N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
     N8 class = rev_prog_sub_class >> 24;
     N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
-    struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + *memory_map_l );
     switch( header_type )
     { case E_pci_Z_header_Z_header_type_S_general:
         {   if( class != E_pci_Z_header_Z_class_S_bridge )
@@ -557,14 +407,14 @@ E_pci_I_check_device(
                         size |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
                         E_pci_I_write( bus_i, device_i, function_i, offset, bar );
                     }else
-                        size |= 0xffffffff00000000ULL;
-                    address = address & ~0xfULL;
-                    size = ~( size & ~0xfULL ) + 1;
-                    memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
-                    memory_map->physical_start = address;
-                    memory_map->pages = E_simple_Z_n_I_align_up_to_v2( address % H_oux_E_mem_S_page_size + size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
-                    *memory_map_l += E_main_S_descriptor_l;
-                    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+                        size |= 0xffffffff00000000UL;
+                    address = address & ~0xf;
+                    size = ~( size & ~0xf ) + 1;
+                    *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                    { address
+                    , size
+                    , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                    };
                 }while(( offset += sizeof( N32 )) != 0x28 );
                 E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
             }
@@ -591,14 +441,14 @@ E_pci_I_check_device(
                     size |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
                     E_pci_I_write( bus_i, device_i, function_i, offset, bar );
                 }else
-                    size |= 0xffffffff00000000ULL;
-                address = address & ~0xfULL;
-                size = ~( size & ~0xfULL ) + 1;
-                memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
-                memory_map->physical_start = address;
-                memory_map->pages = E_simple_Z_n_I_align_up_to_v2( address % H_oux_E_mem_S_page_size + size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
-                *memory_map_l += E_main_S_descriptor_l;
-                memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+                    size |= 0xffffffff00000000UL;
+                address = address & ~0xf;
+                size = ~( size & ~0xf ) + 1;
+                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                { address
+                , size
+                , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                };
             }while(( offset += sizeof( N32 )) != 0x18 );
             E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
             N64 base = E_pci_I_read( bus_i, device_i, function_i, 0x20 );
@@ -611,11 +461,11 @@ E_pci_I_check_device(
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
-                memory_map->physical_start = base;
-                memory_map->pages = ( limit - base ) / H_oux_E_mem_S_page_size;
-                *memory_map_l += E_main_S_descriptor_l;
-                memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                { base
+                , limit - base
+                , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                };
             }
             base = E_pci_I_read( bus_i, device_i, function_i, 0x24 );
             limit = ( base >> 16 ) & 0xfff0;
@@ -631,11 +481,11 @@ E_pci_I_check_device(
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
-                memory_map->physical_start = base;
-                memory_map->pages = ( limit - base ) / H_oux_E_mem_S_page_size;
-                *memory_map_l += E_main_S_descriptor_l;
-                memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                { base
+                , limit - base
+                , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                };
             }
             break;
         }
@@ -656,22 +506,21 @@ E_pci_I_check_device(
             {   offset += sizeof( N32 );
                 E_main_S_ethernet_address |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
             }
-            E_main_S_ethernet_address &= ~0xfULL;
+            E_main_S_ethernet_address &= ~0xf;
             offset += sizeof( N32 );
             E_main_S_ethernet_eeprom_address = E_pci_I_read( bus_i, device_i, function_i, offset );
             if(( E_main_S_ethernet_eeprom_address & 6 ) == 4 ) //NDFN Czy jest sens sprawdzać dla tego konkretnego urządzenia?
             {   offset += sizeof( N32 );
                 E_main_S_ethernet_eeprom_address |= ( N64 )E_pci_I_read( bus_i, device_i, function_i, offset ) << 32;
             }
-            E_main_S_ethernet_eeprom_address &= ~0xfULL;
+            E_main_S_ethernet_eeprom_address &= ~0xf;
             break;
         }
     }
     return 0;
 }
 N
-E_pci_I_check_function(
-  N *memory_map_l
+E_pci_I_check_function( struct E_main_Z_memory_map_entry **memory_map
 , N8 bus_i
 , N8 device_i
 , N8 function_i
@@ -684,14 +533,13 @@ E_pci_I_check_function(
     )
     {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
         N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
-        K( E_pci_I_check_bus( memory_map_l, secondary_bus, bus_mask ))
+        K( E_pci_I_check_bus( memory_map, secondary_bus, bus_mask ))
             return ~0;
     }
     return 0;
 }
 N
-E_pci_I_check_bus(
-  N *memory_map_l
+E_pci_I_check_bus( struct E_main_Z_memory_map_entry **memory_map
 , N8 bus_i
 , Pc bus_mask
 ){  if( E_mem_Q_mask_R( bus_mask, bus_i ))
@@ -702,17 +550,17 @@ E_pci_I_check_bus(
         if( !~ids )
             continue;
         N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xc ) >> 16;
-        K( E_pci_I_check_device( memory_map_l, bus_i, device_i, 0, header_type & 0x7f, ids ))
+        K( E_pci_I_check_device( memory_map, bus_i, device_i, header_type & 0x7f, 0, ids ))
             return ~0;
-        K( E_pci_I_check_function( memory_map_l, bus_i, device_i, 0, bus_mask ))
+        K( E_pci_I_check_function( memory_map, bus_i, device_i, 0, bus_mask ))
             return ~0;
         if( header_type & 0x80 )
         {   for_n( function_i, 7 )
             {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
                 if( ~ids )
-                {   K( E_pci_I_check_device( memory_map_l, bus_i, device_i, 1 + function_i, header_type & 0x7f, ids ))
+                {   K( E_pci_I_check_device( memory_map, bus_i, device_i, 1 + function_i, header_type & 0x7f, ids ))
                         return ~0;
-                    K( E_pci_I_check_function( memory_map_l, bus_i, device_i, 1 + function_i, bus_mask ))
+                    K( E_pci_I_check_function( memory_map, bus_i, device_i, 1 + function_i, bus_mask ))
                         return ~0;
                 }
             }
@@ -721,18 +569,17 @@ E_pci_I_check_bus(
     return 0;
 }
 N
-E_pci_I_check_buses(
-  N *memory_map_l
+E_pci_I_check_buses( struct E_main_Z_memory_map_entry **memory_map
 ){  C bus_mask[ 256 / 8 ];
     _0( &bus_mask[0], 256 / 8 );
     N8 header_type = E_pci_I_read( 0, 0, 0, 0xc ) >> 16;
     if( header_type & 0x80 )
     {   for_n( function_i, 8 )
-        {   K( E_pci_I_check_bus( memory_map_l, function_i, bus_mask ))
+        {   K( E_pci_I_check_bus( memory_map, function_i, bus_mask ))
                 return ~0;
         }
     }else
-    {   K( E_pci_I_check_bus( memory_map_l, 0, bus_mask ))
+    {   K( E_pci_I_check_bus( memory_map, 0, bus_mask ))
             return ~0;
     }
     return 0;

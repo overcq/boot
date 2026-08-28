@@ -1,9 +1,8 @@
 .
 Makefile
 mbr.S
-vbr.S
-fileloader.S
+kernelloader.S
 simple.h
-fileloader.h
-fileloader.c
+kernelloader.h
+kernelloader.c
 *.c

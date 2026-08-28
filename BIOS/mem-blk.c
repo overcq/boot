@@ -2,85 +2,203 @@
 *   ___   public
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   BIOS file boot loader
-*         memory blocks manager
-* ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒5‒12 e
+*   ---   BIOS boot loader
+*         memory manager
+* ©overcq                on ‟Gentoo Linux 23.0” “x86_64”              2025‒4‒6 W
 *******************************************************************************/
 #include <stddef.h>
 #include "kernelloader.h"
 //==============================================================================
-#define E_mem_Q_blk_S_align_to_all  _Alignof(max_align_t)
+#define E_mem_Q_blk_S_align_to_all  alignof(max_align_t)
 //==============================================================================
-struct E_base_Z
-{ struct E_mem_Q_blk_Z_allocated *E_mem_Q_blk_S_allocated;
-  N E_mem_Q_blk_S_free_id, E_mem_Q_blk_S_allocated_id;
-  N *E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[2];
-  N E_mem_Q_blk_Q_table_M_from_free_S_table_id[2];
-  N E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n;
-} *E_base_S = (P)E_memory_S_start;
-struct E_mem_Q_blk_Z_free
-{ Pc p;
-  N l;
-};
-struct E_mem_Q_blk_Z_allocated
-{ Pc p;
-  N u;
-  N n;
-};
+extern B E_main_S_sse;
+extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
+_internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
 _internal N E_mem_Q_blk_Q_sys_table_R_last( N, N );
+_internal N E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N, N );
 _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
-void
-E_mem_M( struct E_main_Z_memory_table_entry *memory_table
-){  E_base_S->E_mem_Q_blk_S_free_id = 0;
-    E_base_S->E_mem_Q_blk_S_allocated_id = 1;
-    E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n = 0;
-    E_base_S->E_mem_Q_blk_S_allocated = (P)( (Pc)E_base_S + sizeof( *E_base_S ));
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p = (P)(
-      (Pc)E_base_S + sizeof( *E_base_S )
-    + ( (Pc)E_main_Z_memory_table_end - (Pc)memory_table ? 4 : 3 ) * sizeof( struct E_mem_Q_blk_Z_allocated )
-    );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = 1;
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p = (P)E_base_S->E_mem_Q_blk_S_allocated;
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = (Pc)E_main_Z_memory_table_end - (Pc)memory_table ? 4 : 3;
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].p = (P)E_base_S;
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].u = 1;
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 1 ].n = sizeof( *E_base_S );
-    struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    // Przed przetworzeniem obszarów pamięci tymczasowo przypisana wolna pamięć przyległa od dołu do tablicy obszarów pamięci.
-    free_p[0].p = (P)E_main_Z_memory_start;
-    free_p[0].l = (Pc)memory_table - (Pc)E_main_Z_memory_start;
-    if( (Pc)E_main_Z_memory_table_end - (Pc)memory_table )
-    {   E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].p = (P)memory_table;
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].u = sizeof( struct E_main_Z_memory_table_entry );
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].n = ( (Pc)E_main_Z_memory_table_end - (Pc)memory_table ) / sizeof( struct E_main_Z_memory_table_entry );
+/* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
+ * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • pamięć zarezerwowana
+ * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
+ * • ewentualny blok nie przydzielonej pamięci “mem-blk”
+ * • tablica “memory_map”
+ * • ewentualny blok nie przydzielonej pamięci “mem-blk”
+ * • ‘kernel’; wyrównany adres
+ * • stos; wyrównany adres i rozmiar
+ * • początkowe dane “mem-blk”: “allocated”, “free”
+ * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • (program ‘bootloadera’)
+ * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • (0xf000 — niezarejestrowana strona pamięci na program startowy procesorów)
+ * • nieprzenaszalna pamięć zarezerwowana
+ * W przeciwnym przypadku (“!reserved_from_end”):
+ * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • stos; wyrównany adres i rozmiar
+ * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • (program ‘bootloadera’)
+ * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • początkowe dane “mem-blk”: “free”, “allocated”
+ * • tablica “memory_map”
+ * • ewentualny blok nie przydzielonej pamięci “mem-blk” < 8 B
+ * • ‘kernel’; wyrównany adres
+ * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
+ * • (0xf000 — niezarejestrowana strona pamięci na program startowy procesorów)
+ * • pamięć zarezerwowana
+ */
+N
+E_mem_M(
+  B reserved_from_end
+, N reserved_size_from_start
+, N loader_start
+, N loader_size
+, N stack_address
+, N stack_size
+, N memory_map_address
+, N memory_map_size
+, N page_table_address
+, N page_table_size
+, N memory_size
+, N reserved_size
+){  E_main_S_kernel_args.mem_blk.memory_size = memory_size;
+    E_main_S_kernel_args.mem_blk.reserved_size = reserved_size;
+    E_main_S_kernel_args.mem_blk.reserved_from_end = reserved_from_end;
+    E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n = 0;
+    if( reserved_from_end )
+    {   E_main_S_kernel_args.mem_blk.allocated = (P)( stack_address - ( E_mem_Q_blk_S_allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ) + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free )));
+        E_main_S_kernel_args.mem_blk.allocated_id = 0;
+        E_main_S_kernel_args.mem_blk.free_id = 1;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = E_mem_Q_blk_S_allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( stack_address - E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = E_mem_Q_blk_S_free_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].p = (P)stack_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].u = H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].n = stack_size / H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 1 ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].p = (P)memory_map_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].u = sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].n = memory_map_size / sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].p = (P)page_table_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].u = 1;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].context_ip = 0;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].p = (P)kernel_address;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].u = 1;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].n = kernel_size;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].context_ip = 0;
+    }else
+    {   E_main_S_kernel_args.mem_blk.allocated = (P)( memory_map_address + memory_map_size + E_mem_Q_blk_S_free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
+        E_main_S_kernel_args.mem_blk.free_id = 3;
+        E_main_S_kernel_args.mem_blk.allocated_id = 4;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].p = (P)kernel_address;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].u = 1;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].n = kernel_size;
+        //E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].p = (P)page_table_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].u = 1;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].p = (P)memory_map_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].u = sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].n = memory_map_size / sizeof( struct H_oux_E_mem_Z_memory_map );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = E_mem_Q_blk_S_free_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( memory_map_address + memory_map_size );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = E_mem_Q_blk_S_allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].p = (P)stack_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].u = H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].n = stack_size / H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id + 1 ].context_ip = 0;
     }
-}
-void
-E_mem_M_free( struct E_main_Z_memory_table_entry *memory_table
-){  struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    // Przetwarzanie obszarów pamięci z pominięciem tymczasowo przypisanej wolnej pamięci.
-    N free_i = 0;
-    for( struct E_main_Z_memory_table_entry *entry = memory_table; entry != ( struct E_main_Z_memory_table_entry * )E_main_Z_memory_table_end; entry++ )
-    {   if( !entry->size
-        || !( entry->extended_attributes & 1 )
-        || entry->type != E_main_Z_memory_table_Z_memory_type_S_available
+    struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+    if( reserved_from_end )
+    {   free_p[0].l = loader_start - ( H_oux_E_mem_S_page_size + reserved_size_from_start + H_oux_E_mem_S_page_size );
+        free_p[0].p = free_p[0].l ? (P)( H_oux_E_mem_S_page_size + reserved_size_from_start + H_oux_E_mem_S_page_size ) : 0;
+        free_p[1].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( loader_start + loader_size );
+        free_p[1].p = free_p[1].l ? (P)( loader_start + loader_size ) : 0;
+        free_p[2].l = memory_map_address - ( stack_address + stack_size );
+        free_p[2].p = free_p[2].l ? ( Pc )stack_address + stack_size : 0;
+        //free_p[3].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+        //free_p[3].p = free_p[3].l ? ( Pc )kernel_address + kernel_size : 0;
+        if( free_p[3].l
+        && !free_p[2].l
         )
-            continue;
-        free_p[ free_i ].p = entry->address;
-        free_p[ free_i ].l = entry->size;
-        free_i++;
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(2);
+        if( free_p[2].l
+        && !free_p[1].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(1);
+        if( free_p[1].l
+        && !free_p[0].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
+    }else
+    {   //free_p[0].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+        //free_p[0].p = free_p[0].l ? ( Pc )kernel_address + kernel_size : 0;
+        free_p[1].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
+        free_p[1].p = free_p[1].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
+        free_p[2].l = stack_address - ( loader_start + loader_size );
+        free_p[2].p = free_p[2].l ? (P)( loader_start + loader_size ) : 0;
+        free_p[3].p = 0;
+        free_p[3].l = 0;
+        if( free_p[2].l
+        && !free_p[1].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(1);
+        if( free_p[1].l
+        && !free_p[0].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
     }
-    E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = free_i;
-    if( E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n == 4 )
-    {   E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id + 2 ].p = 0; // Usunięcie przydzielenia pamięci na nie używaną już tablicę obszarów.
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n--;
-    }
+    struct E_mem_Q_blk_Z_allocated allocated_p;
+    N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p, ( Pc )&allocated_p.n - ( Pc )&allocated_p, 0, 0 );
+    if( !~allocated_i )
+        return ~0;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = (P)loader_start;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u = 1;
+    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n = loader_size;
+    E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, ~0 );
+    return 0;
+}
+extern N E_main_S_framebuffer_virtual;
+N
+E_mem_M_test( N memory_start
+, N memory_size
+){  E_main_S_kernel_args.mem_blk.memory_size = memory_size;
+    E_main_S_kernel_args.mem_blk.reserved_from_end = no;
+    E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n = 0;
+    const N free_n_init = 1;
+    const N allocated_n_init = 2;
+    E_main_S_kernel_args.mem_blk.allocated = (P)( memory_start + free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
+    E_main_S_kernel_args.mem_blk.free_id = 0;
+    E_main_S_kernel_args.mem_blk.allocated_id = 1;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = free_n_init;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( Pc )memory_start;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = allocated_n_init;
+    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+    struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+    free_p[0].p = ( Pc )memory_start + free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated );
+    free_p[0].l = ( Pc )memory_size - free_p[0].p;
+    return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 B
@@ -88,7 +206,7 @@ E_mem_Q_blk_T_eq( P p_1
 , P p_2
 , N l
 ){  for_n( i, l )
-        if( *( (Pc)p_1 + i ) != *( (Pc)p_2 + i ))
+        if( *(( Pc )p_1 + i ) != *(( Pc )p_2 + i ))
             return no;
     return yes;
 }
@@ -97,39 +215,37 @@ void
 E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
-){
-        #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof(N128) );
-    N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof(N128) );
-    N l_0 = (Pc)src_x - (Pc)src;
-    if( l > l_0
-    && l - l_0 >= sizeof(N128)
-    && dst_x != src_x
-    && (Pc)dst_x - (Pc)dst == (Pc)src_x - (Pc)src
-    )
-    {   N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
-        __asm__ volatile (
-        "\n"    "rep movsb"
-        : "+D" (dst), "+S" (src), "+c" ( l_0 )
-        :
-        : "memory"
-        );
-        for_n( i, l_1 )
+){  if( E_main_S_sse )
+    {   N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof( N128 ));
+        N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof( N128 ));
+        N l_0 = ( Pc )src_x - ( Pc )src;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        && ( Pc )dst_x - ( Pc )dst == l_0
+        )
+        {   N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n"    "movaps %1,%%xmm0"
-            "\n"    "movaps %%xmm0,%0"
+            "\n" "rep movsb"
+            : "+D" (dst), "+S" (src), "+c" ( l_0 )
             :
-            : "p" ( dst_x++ ), "p" ( src_x++ )
-            : "xmm0", "memory"
+            : "memory"
             );
-        dst = dst_x;
-        src = src_x;
-        l = l_2;
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %1,%%xmm0"
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( dst_x++ ), "p" ( src_x++ )
+                : "xmm0", "memory"
+                );
+            dst = dst_x;
+            src = src_x;
+            l = l_2;
+        }
     }
-        #endif
     __asm__ volatile (
-    "\n"    "rep movsb"
+    "\n" "rep movsb"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
     : "memory"
@@ -141,59 +257,66 @@ E_mem_Q_blk_I_copy_rev( P dst
 , P src
 , N l
 ){  __asm__ volatile (
-    "\n"    "std"
+    "\n" "std"
+    :
+    :
+    : "cc"
     );
-        #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof(N128) );
-    N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof(N128) );
-    N l_0 = (Pc)src + l - (Pc)src_x;
-    if( l > l_0
-    && l - l_0 >= sizeof(N128)
-    && dst_x != src_x
-    && (Pc)dst + l - (Pc)dst_x == (Pc)src + l - (Pc)src_x
-    )
-    {   dst = (Pc)dst + l - 1;
-        src = (Pc)src + l - 1;
-        N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
-        __asm__ volatile (
-        "\n"    "rep movsb"
-        : "+D" (dst), "+S" (src), "+c" ( l_0 )
-        :
-        : "memory"
-        );
-        for_n( i, l_1 )
+    if( E_main_S_sse )
+    {   N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof( N128 ));
+        N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof( N128 ));
+        N l_0 = ( Pc )src + l - ( Pc )src_x;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        && ( Pc )dst + l - ( Pc )dst_x == l_0
+        )
+        {   dst = ( Pc )dst + l - 1;
+            src = ( Pc )src + l - 1;
+            N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n"    "movaps %1,%%xmm0"
-            "\n"    "movaps %%xmm0,%0"
+            "\n" "rep movsb"
+            : "+D" (dst), "+S" (src), "+c" ( l_0 )
             :
-            : "p" ( --dst_x ), "p" ( --src_x )
-            : "xmm0", "memory"
+            : "memory"
             );
-        dst = (P)( (Pc)dst_x - 1 );
-        src = (P)( (Pc)src_x - 1 );
-        l = l_2;
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %1,%%xmm0"
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( --dst_x ), "p" ( --src_x )
+                : "xmm0", "memory"
+                );
+            dst = (P)(( Pc )dst_x - 1 );
+            src = (P)(( Pc )src_x - 1 );
+            l = l_2;
+        }else
+        {   dst = ( Pc )dst + l - 1;
+            src = ( Pc )src + l - 1;
+        }
     }else
-        #endif
-    {   dst = (Pc)dst + l - 1;
-        src = (Pc)src + l - 1;
+    {   dst = ( Pc )dst + l - 1;
+        src = ( Pc )src + l - 1;
     }
     __asm__ volatile (
-    "\n"    "rep movsb"
-    "\n"    "cld"
+    "\n" "rep movsb"
+    "\n" "cld"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
-    : "memory"
+    : "cc", "memory"
     );
 }
 void
 E_mem_Q_blk_I_copy( P dst
 , P src
 , N l
-){  if( !l )
+){  if( !l
+    || dst == src
+    )
         return;
-    if( (Pc)dst < (Pc)src
-    || (Pc)dst >= (Pc)src + l
+    if(( Pc )dst < ( Pc )src
+    || ( Pc )dst >= ( Pc )src + l
     )
         E_mem_Q_blk_I_copy_fwd( dst, src, l );
     else
@@ -212,44 +335,43 @@ void
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
-){
-        #ifdef __SSE__
-    N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof(N128) );
-    N l_0 = (Pc)p_x - (Pc)p;
-    if( l > l_0
-    && l - l_0 >= sizeof(N128)
-    )
-    {   N l_1 = ( l - l_0 ) / sizeof(N128);
-        N l_2 = ( l - l_0 ) % sizeof(N128);
-        __asm__ volatile (
-        "\n"    "rep stosb"
-        : "+D" (p), "+c" ( l_0 )
-        : "a" (c)
-        : "memory"
-        );
-        N128 __attribute__ (( __aligned__(16) )) x;
-        p = &x;
-        N cx = sizeof(N128);
-        __asm__ volatile (
-        "\n"    "rep stosb"
-        "\n"    "movaps %2,%%xmm0"
-        : "+D" (p), "+c" (cx)
-        : "m" (x), "a" (c)
-        : "xmm0", "memory"
-        );
-        for_n( i, l_1 )
+){  if( E_main_S_sse )
+    {   N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof( N128 ));
+        N l_0 = ( Pc )p_x - ( Pc )p;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        )
+        {   N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n"    "movaps %%xmm0,%0"
-            :
-            : "p" ( p_x++ )
+            "\n" "rep stosb"
+            : "+D" (p), "+c" ( l_0 )
+            : "a" (c)
             : "memory"
             );
-        p = p_x;
-        l = l_2;
+            N128 x;
+            p = &x;
+            N cx = sizeof( N128 );
+            __asm__ volatile (
+            "\n" "rep stosb"
+            "\n" "movups    %2,%%xmm0"
+            : "+D" (p), "+c" (cx)
+            : "m" (x), "a" (c)
+            : "xmm0", "memory"
+            );
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( p_x++ )
+                : "xmm0", "memory"
+                );
+            p = p_x;
+            l = l_2;
+        }
     }
-        #endif
     __asm__ volatile (
-    "\n"    "rep stosb"
+    "\n" "rep stosb"
     : "+D" (p), "+c" (l)
     : "a" (c)
     : "memory"
@@ -266,12 +388,12 @@ memset( P p
 _internal
 void
 E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( N free_i
-){  struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-    N free_end = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p->p - (Pc)free_p ) + 1;
+){  struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+    N free_end = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p->p - ( Pc )free_p ) + 1;
     if( free_end - ( free_i + 1 ))
-        E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p + free_i * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
-        , E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p + ( free_i + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
-        , ( free_end - ( free_i + 1 )) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
+        E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p + free_i * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u
+        , E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p + ( free_i + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u
+        , ( free_end - ( free_i + 1 )) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u
         );
     free_p[ free_end - 1 ].p = 0;
     free_p[ free_end - 1 ].l = 0;
@@ -279,17 +401,17 @@ E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( N free_i
 _internal
 void
 E_mem_Q_blk_Q_sys_table_a_I_move_empty_entry( N allocated_i
-){  struct E_mem_Q_blk_Z_allocated *allocated_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p;
-    N allocated_end = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p->p - (Pc)allocated_p ) + 1;
+){  struct E_mem_Q_blk_Z_allocated *allocated_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p;
+    N allocated_end = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p->p - ( Pc )allocated_p ) + 1;
     if( allocated_end - ( allocated_i + 1 ))
-    {   E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p + allocated_i * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
-        , E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p + ( allocated_i + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
-        , ( allocated_end - ( allocated_i + 1 )) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
+    {   E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p + allocated_i * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
+        , E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p + ( allocated_i + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
+        , ( allocated_end - ( allocated_i + 1 )) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
         );
-        if( allocated_i < E_base_S->E_mem_Q_blk_S_free_id )
-            E_base_S->E_mem_Q_blk_S_free_id--;
-        if( allocated_i < E_base_S->E_mem_Q_blk_S_allocated_id )
-            E_base_S->E_mem_Q_blk_S_allocated_id--;
+        if( allocated_i < E_main_S_kernel_args.mem_blk.free_id )
+            E_main_S_kernel_args.mem_blk.free_id--;
+        if( allocated_i < E_main_S_kernel_args.mem_blk.allocated_id )
+            E_main_S_kernel_args.mem_blk.allocated_id--;
     }
     allocated_p[ allocated_end - 1 ].p = 0;
 }
@@ -297,8 +419,8 @@ _internal
 N
 E_mem_Q_blk_Q_sys_table_R_last( N table_i
 , N rel_addr_p
-){  for_n_rev( i, E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n )
-    {   Pc *p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
+){  for_n_rev( i, E_main_S_kernel_args.mem_blk.allocated[ table_i ].n )
+    {   Pc *p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
         if( *p_ )
             break;
     }
@@ -313,7 +435,7 @@ E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( N table_i
 ){  N n = E_mem_Q_blk_Q_sys_table_R_last( table_i, rel_addr_p );
     if( !n ) // Tablica zawiera tylko jeden niepusty element czyli element wstawiony.
         return n;
-    Pc tmp_p = *( Pc * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + inserted_i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
+    Pc tmp_p = *( Pc * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + inserted_i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
     N min = 0;
     N max = n;
     N middle = max / 2;
@@ -324,7 +446,7 @@ E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( N table_i
                 middle++;
             else
                 break;
-        Pc *p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
+        Pc *p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
         if( *p_ > tmp_p )
         {   if( middle == min )
                 break;
@@ -333,7 +455,7 @@ E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( N table_i
             if( middle == max
             && middle == min
             )
-            {   p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
+            {   p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
                 if( *p_ < tmp_p )
                     middle++;
                 break;
@@ -348,40 +470,40 @@ E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( N table_i
             if( middle == min
             && middle == max
             )
-            {   p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
+            {   p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
                 if( *p_ < tmp_p )
                     middle++;
                 break;
             }
         }
     }
-    N tmp_l = *( N * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + inserted_i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l );
+    N tmp_l = *( N * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + inserted_i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l );
     if( middle != inserted_i )
         if( middle < inserted_i )
-            E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + ( middle + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-            , ( inserted_i - middle ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+            E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + ( middle + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+            , ( inserted_i - middle ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
             );
         else // if( middle > inserted_i )
         {   middle--;
             if( middle - inserted_i )
-                E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + inserted_i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-                , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + ( inserted_i + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-                , ( middle - inserted_i ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+                E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + inserted_i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+                , E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + ( inserted_i + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+                , ( middle - inserted_i ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
                 );
         }
-    *( Pc * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = tmp_p;
-    *( N * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + middle * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = tmp_l;
+    *( Pc * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = tmp_p;
+    *( N * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + middle * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = tmp_l;
     return middle;
 }
 _internal
 N
 E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
 , N middle
-){  Pc tmp_p = E_base_S->E_mem_Q_blk_S_allocated[ inserted_i ].p;
+){  Pc tmp_p = E_main_S_kernel_args.mem_blk.allocated[ inserted_i ].p;
     if( !~middle )
     {   struct E_mem_Q_blk_Z_allocated allocated_p;
-        N n = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+        N n = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
         if( !n ) // Tablica zawiera tylko jeden niepusty element czyli element wstawiony.
             return n;
         N min = 0;
@@ -392,7 +514,7 @@ E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
                     middle--;
                 else
                     middle++;
-            Pc p_ = E_base_S->E_mem_Q_blk_S_allocated[middle].p;
+            Pc p_ = E_main_S_kernel_args.mem_blk.allocated[middle].p;
             if( p_ > tmp_p )
             {   if( middle == min )
                     break;
@@ -401,7 +523,7 @@ E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
                 if( middle == max
                 && middle == min
                 )
-                {   p_ = E_base_S->E_mem_Q_blk_S_allocated[middle].p;
+                {   p_ = E_main_S_kernel_args.mem_blk.allocated[middle].p;
                     if( p_ < tmp_p )
                         middle++;
                     break;
@@ -416,7 +538,7 @@ E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
                 if( middle == min
                 && middle == max
                 )
-                {   p_ = E_base_S->E_mem_Q_blk_S_allocated[middle].p;
+                {   p_ = E_main_S_kernel_args.mem_blk.allocated[middle].p;
                     if( p_ < tmp_p )
                         middle++;
                     break;
@@ -424,41 +546,41 @@ E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( N inserted_i
             }
         }
     }
-    N tmp_n = E_base_S->E_mem_Q_blk_S_allocated[ inserted_i ].n;
-    N tmp_u = E_base_S->E_mem_Q_blk_S_allocated[ inserted_i ].u;
+    N tmp_n = E_main_S_kernel_args.mem_blk.allocated[ inserted_i ].n;
+    N tmp_u = E_main_S_kernel_args.mem_blk.allocated[ inserted_i ].u;
     if( middle != inserted_i )
     {   if( middle < inserted_i )
-            E_mem_Q_blk_I_copy( &E_base_S->E_mem_Q_blk_S_allocated[ middle + 1 ]
-            , &E_base_S->E_mem_Q_blk_S_allocated[middle]
-            , ( inserted_i - middle ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
+            E_mem_Q_blk_I_copy( &E_main_S_kernel_args.mem_blk.allocated[ middle + 1 ]
+            , &E_main_S_kernel_args.mem_blk.allocated[middle]
+            , ( inserted_i - middle ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
             );
         else // if( middle > inserted_i )
         {   middle--;
             if( middle - inserted_i )
-                E_mem_Q_blk_I_copy( &E_base_S->E_mem_Q_blk_S_allocated[ inserted_i ]
-                , &E_base_S->E_mem_Q_blk_S_allocated[ inserted_i + 1 ]
-                , ( middle - inserted_i ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
+                E_mem_Q_blk_I_copy( &E_main_S_kernel_args.mem_blk.allocated[ inserted_i ]
+                , &E_main_S_kernel_args.mem_blk.allocated[ inserted_i + 1 ]
+                , ( middle - inserted_i ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
                 );
         }
-        if( inserted_i == E_base_S->E_mem_Q_blk_S_free_id )
-            E_base_S->E_mem_Q_blk_S_free_id = middle;
+        if( inserted_i == E_main_S_kernel_args.mem_blk.free_id )
+            E_main_S_kernel_args.mem_blk.free_id = middle;
         else
-        {   if( inserted_i < E_base_S->E_mem_Q_blk_S_free_id )
-                E_base_S->E_mem_Q_blk_S_free_id--;
-            if( middle <= E_base_S->E_mem_Q_blk_S_free_id )
-                E_base_S->E_mem_Q_blk_S_free_id++;
+        {   if( inserted_i < E_main_S_kernel_args.mem_blk.free_id )
+                E_main_S_kernel_args.mem_blk.free_id--;
+            if( middle <= E_main_S_kernel_args.mem_blk.free_id )
+                E_main_S_kernel_args.mem_blk.free_id++;
         }
-        if( inserted_i == E_base_S->E_mem_Q_blk_S_allocated_id )
-            E_base_S->E_mem_Q_blk_S_allocated_id = middle;
+        if( inserted_i == E_main_S_kernel_args.mem_blk.allocated_id )
+            E_main_S_kernel_args.mem_blk.allocated_id = middle;
         else
-        {   if( inserted_i < E_base_S->E_mem_Q_blk_S_allocated_id )
-                E_base_S->E_mem_Q_blk_S_allocated_id--;
-            if( middle <= E_base_S->E_mem_Q_blk_S_allocated_id )
-                E_base_S->E_mem_Q_blk_S_allocated_id++;
+        {   if( inserted_i < E_main_S_kernel_args.mem_blk.allocated_id )
+                E_main_S_kernel_args.mem_blk.allocated_id--;
+            if( middle <= E_main_S_kernel_args.mem_blk.allocated_id )
+                E_main_S_kernel_args.mem_blk.allocated_id++;
         }
-        E_base_S->E_mem_Q_blk_S_allocated[middle].p = tmp_p;
-        E_base_S->E_mem_Q_blk_S_allocated[middle].n = tmp_n;
-        E_base_S->E_mem_Q_blk_S_allocated[middle].u = tmp_u;
+        E_main_S_kernel_args.mem_blk.allocated[middle].p = tmp_p;
+        E_main_S_kernel_args.mem_blk.allocated[middle].n = tmp_n;
+        E_main_S_kernel_args.mem_blk.allocated[middle].u = tmp_u;
     }
     return middle;
 }
@@ -476,15 +598,15 @@ E_mem_Q_blk_Q_sys_table_f_I_unite( N table_i
         N min = 0;
         N max_0 = max;
         N i = max / 2;
-        O{  Pc *p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
-            N *l_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l );
+        O{  Pc *p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
+            N *l_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l );
             if( *p_ + *l_ == p )
             {   p = *p_;
                 l = *l_ += l;
                 i_found = i;
                 break;
             }
-            if( *p_ + *l_ > (Pc)p )
+            if( *p_ + *l_ > ( Pc )p )
             {   if( i == min )
                     break;
                 max = i - 1;
@@ -500,11 +622,11 @@ E_mem_Q_blk_Q_sys_table_f_I_unite( N table_i
         min = 0;
         max = max_0;
         i = max / 2;
-        O{  Pc *p_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p );
-            N *l_ = (P)( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l );
-            if( (Pc)p + l == *p_ )
+        O{  Pc *p_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p );
+            N *l_ = (P)( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l );
+            if(( Pc )p + l == *p_ )
             {   if( ~i_found ) // Był znaleziony blok przyległy od dołu.
-                {   *( Pc * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i_found * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) += *l_;
+                {   *( Pc * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i_found * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) += *l_;
                     E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(i);
                 }else
                 {   *p_ = p;
@@ -513,7 +635,7 @@ E_mem_Q_blk_Q_sys_table_f_I_unite( N table_i
                 }
                 break;
             }
-            if( *p_ > (Pc)p + l )
+            if( *p_ > ( Pc )p + l )
             {   if( i == min )
                     break;
                 max = i - 1;
@@ -536,31 +658,31 @@ E_mem_Q_blk_Q_sys_table_f_P_put( N table_i
 , P p
 , N l
 ){  if( !E_mem_Q_blk_Q_sys_table_f_I_unite( table_i, rel_addr_p, rel_addr_l, p, l ))
-    {   if( table_i == E_base_S->E_mem_Q_blk_S_free_id
-        && l >= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+    {   if( table_i == E_main_S_kernel_args.mem_blk.free_id
+        && l >= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
         )
-        {   if( (Pc)p + l == E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p ) // Nowy blok jest przyległy od dołu do tablicy bloków.
-            {   E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p -= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
-                E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
-                struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p;
-                if( l - E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u )
-                {   free_p[0].l = l - E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+        {   if(( Pc )p + l == E_main_S_kernel_args.mem_blk.allocated[ table_i ].p ) // Nowy blok jest przyległy od dołu do tablicy bloków.
+            {   E_main_S_kernel_args.mem_blk.allocated[ table_i ].p -= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
+                E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
+                struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ table_i ].p;
+                if( l - E_main_S_kernel_args.mem_blk.allocated[ table_i ].u )
+                {   free_p[0].l = l - E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
                     free_p[0].p = p;
                     E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, 0 );
                 }else
                     E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
                 return 0;
             }
-            if( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u == p ) // Nowy blok jest przyległy od góry do tablicy bloków.
+            if( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + E_main_S_kernel_args.mem_blk.allocated[ table_i ].n * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u == p ) // Nowy blok jest przyległy od góry do tablicy bloków.
             {   N i = E_mem_Q_blk_Q_sys_table_R_last( table_i, rel_addr_p ) + 1;
-                struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ].p = 0;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ].l = 0;
-                free_p[i].l = l - E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+                struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ table_i ].p;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ].p = 0;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ].l = 0;
+                free_p[i].l = l - E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
                 free_p[i].p = free_p[i].l
-                  ? (Pc)p + E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+                  ? ( Pc )p + E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
                   : 0;
-                E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
+                E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
                 if( free_p[i].l )
                     E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, i );
                 return 0;
@@ -580,22 +702,22 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
 , N rel_addr_l
 , P p // Adres do nowego wpisu.
 , N l // I rozmiar.
-){  Pc p_0 = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p;
-    N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+){  Pc p_0 = E_main_S_kernel_args.mem_blk.allocated[ table_i ].p;
+    N l_0 = E_main_S_kernel_args.mem_blk.allocated[ table_i ].n * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
     N i = E_mem_Q_blk_Q_sys_table_R_last( table_i, rel_addr_p ) + 1;
-    if( table_i == E_base_S->E_mem_Q_blk_S_free_id )
-    {   if( i != E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n )
+    if( table_i == E_main_S_kernel_args.mem_blk.free_id )
+    {   if( i != E_main_S_kernel_args.mem_blk.allocated[ table_i ].n )
         {   if(p)
-            {   *( P * )( p_0 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-                *( N * )( p_0 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
+            {   *( P * )( p_0 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+                *( N * )( p_0 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
                 i = E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, i );
             }
             return i;
         }
-        struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-        N l_ = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+        struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+        N l_ = E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
         struct E_mem_Q_blk_Z_free free_p_;
-        N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+        N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
         if( ~max )
         {   // Szukanie wolnego bloku przyległego od dołu.
             N min = 0;
@@ -606,15 +728,15 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
                     {   free_p[ free_i ].l -= l_;
                         if( !free_p[ free_i ].l )
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p -= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
-                        E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p
-                        , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-                        , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].p -= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
+                        E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p
+                        , E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+                        , E_main_S_kernel_args.mem_blk.allocated[ table_i ].n * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
                         );
-                        N i = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n;
-                        *( P * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-                        *( N * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
+                        N i = E_main_S_kernel_args.mem_blk.allocated[ table_i ].n;
+                        *( P * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+                        *( N * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
                         if(p)
                             i = E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, i );
                         return i;
@@ -638,15 +760,15 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
             max = max_0;
             free_i = max / 2;
             O{  if( p_0 + l_0 == free_p[ free_i ].p )
-                {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u )
-                    {   if( free_p[ free_i ].l -= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u )
-                            free_p[ free_i ].p += E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+                {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u )
+                    {   if( free_p[ free_i ].l -= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u )
+                            free_p[ free_i ].p += E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
                         else
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
                         *( P * )( p_0 + l_0 + rel_addr_p ) = p;
                         *( N * )( p_0 + l_0 + rel_addr_l ) = l;
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
-                        return p ? E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n - 1 ) : E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n - 1;
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
+                        return p ? E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, E_main_S_kernel_args.mem_blk.allocated[ table_i ].n - 1 ) : E_main_S_kernel_args.mem_blk.allocated[ table_i ].n - 1;
                     }
                     break;
                 }
@@ -664,18 +786,18 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
             }
         }
     }else
-    {   if( i != E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n )
+    {   if( i != E_main_S_kernel_args.mem_blk.allocated[ table_i ].n )
         {   if(p)
-            {   *( P * )( p_0 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-                *( N * )( p_0 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
+            {   *( P * )( p_0 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+                *( N * )( p_0 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
                 i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( i, ~0 );
             }
             return i;
         }
-        struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-        N l_ = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+        struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+        N l_ = E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
         struct E_mem_Q_blk_Z_free free_p_;
-        N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+        N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
         if( ~max )
         {   // Szukanie wolnego bloku przyległego od dołu.
             N min = 0;
@@ -686,16 +808,16 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
                     {   free_p[ free_i ].l -= l_;
                         if( !free_p[ free_i ].l )
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p -= l_;
-                        E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p
-                        , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + l_
-                        , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].p -= l_;
+                        E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p
+                        , E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + l_
+                        , E_main_S_kernel_args.mem_blk.allocated[ table_i ].n * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
                         );
-                        E_base_S->E_mem_Q_blk_S_allocated = (P)E_base_S->E_mem_Q_blk_S_allocated[ table_i - 1 ].p;
-                        N i = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n;
-                        *( P * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-                        *( N * )( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
+                        E_main_S_kernel_args.mem_blk.allocated = (P)E_main_S_kernel_args.mem_blk.allocated[ table_i - 1 ].p;
+                        N i = E_main_S_kernel_args.mem_blk.allocated[ table_i ].n;
+                        *( P * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+                        *( N * )( E_main_S_kernel_args.mem_blk.allocated[ table_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
                         if(p)
                             i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( i, ~0 );
                         return i;
@@ -719,16 +841,16 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
             max = max_0;
             free_i = max / 2;
             O{  if( p_0 + l_0 == free_p[ free_i ].p )
-                {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u )
-                    {   free_p[ free_i ].l -= E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+                {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u )
+                    {   free_p[ free_i ].l -= E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
                         if( free_p[ free_i ].l )
-                            free_p[ free_i ].p += E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u;
+                            free_p[ free_i ].p += E_main_S_kernel_args.mem_blk.allocated[ table_i ].u;
                         else
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
                         *( P * )( p_0 + l_0 + rel_addr_p ) = p;
                         *( N * )( p_0 + l_0 + rel_addr_l ) = l;
-                        E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
-                        return p ? E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n - 1, ~0 ) : E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n - 1;
+                        E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
+                        return p ? E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( E_main_S_kernel_args.mem_blk.allocated[ table_i ].n - 1, ~0 ) : E_main_S_kernel_args.mem_blk.allocated[ table_i ].n - 1;
                     }
                     break;
                 }
@@ -747,41 +869,41 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
         }
     }
     Pc p_1 = E_mem_Q_blk_Q_table_M_from_free( &table_i
-    , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u
-    , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n + 1
-    , E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ? p_0 : 0
+    , E_main_S_kernel_args.mem_blk.allocated[ table_i ].u
+    , E_main_S_kernel_args.mem_blk.allocated[ table_i ].n + 1
+    , E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ? p_0 : 0
     , l_0
     , 0
     , ~0
     );
     if( !p_1 )
         return ~0;
-    i = E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n - 1;
-    if( table_i == E_base_S->E_mem_Q_blk_S_free_id )
+    i = E_main_S_kernel_args.mem_blk.allocated[ table_i ].n - 1;
+    if( table_i == E_main_S_kernel_args.mem_blk.free_id )
         if(p)
-        {   E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n--;
+        {   E_main_S_kernel_args.mem_blk.allocated[ table_i ].n--;
             N i = E_mem_Q_blk_Q_sys_table_R_last( table_i, rel_addr_p ) + 1;
             if( !E_mem_Q_blk_Q_sys_table_f_I_unite( table_i, rel_addr_p, rel_addr_l, p, l ))
-            {   if( i != E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n )
-                {   *( P * )( p_1 + ( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = 0;
-                    *( N * )( p_1 + ( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = 0;
+            {   if( i != E_main_S_kernel_args.mem_blk.allocated[ table_i ].n )
+                {   *( P * )( p_1 + ( E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = 0;
+                    *( N * )( p_1 + ( E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = 0;
                 }
-                *( P * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-                *( N * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
-                E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
+                *( P * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+                *( N * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
+                E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
                 i = E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( table_i, rel_addr_p, rel_addr_l, i );
             }else
-            {   *( P * )( p_1 + ( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = 0;
-                *( N * )( p_1 + ( E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n ) * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = 0;
-                E_base_S->E_mem_Q_blk_S_allocated[ table_i ].n++;
+            {   *( P * )( p_1 + ( E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = 0;
+                *( N * )( p_1 + ( E_main_S_kernel_args.mem_blk.allocated[ table_i ].n ) * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = 0;
+                E_main_S_kernel_args.mem_blk.allocated[ table_i ].n++;
             }
         }else
-        {   *( P * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = 0;
-            *( N * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = 0;
+        {   *( P * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = 0;
+            *( N * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = 0;
         }
     else
-    {   *( P * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_p ) = p;
-        *( N * )( p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ table_i ].u + rel_addr_l ) = l;
+    {   *( P * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_p ) = p;
+        *( N * )( p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ table_i ].u + rel_addr_l ) = l;
         if(p)
             i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( i, ~0 );
     }
@@ -790,23 +912,23 @@ E_mem_Q_blk_Q_sys_table_M_new_id( N table_i
 _internal
 void
 E_mem_Q_blk_Q_table_I_put_begin( N *allocated_or_table_i
-){  E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[ E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n++ ] = allocated_or_table_i;
+){  E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id[ E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n++ ] = allocated_or_table_i;
 }
 _internal
 void
 E_mem_Q_blk_Q_table_I_put_before( N table_i
-){  E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_table_id[ E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n - 1 ] = table_i;
+){  E_main_S_kernel_args.mem_blk.M_from_free_S_table_id[ E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n - 1 ] = table_i;
 }
 _internal
 void
 E_mem_Q_blk_Q_table_I_put_after( N table_i
-){  for_n( i, E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n )
-    {   N *allocated_or_table_i = E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id[i];
-        if( E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_table_id[ E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n - 1 ] < *allocated_or_table_i
+){  for_n( i, E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n )
+    {   N *allocated_or_table_i = E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id[i];
+        if( E_main_S_kernel_args.mem_blk.M_from_free_S_table_id[ E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n - 1 ] < *allocated_or_table_i
         && table_i >= *allocated_or_table_i
         )
             (*allocated_or_table_i)--;
-        else if( E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_table_id[ E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n - 1 ] > *allocated_or_table_i
+        else if( E_main_S_kernel_args.mem_blk.M_from_free_S_table_id[ E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n - 1 ] > *allocated_or_table_i
         && table_i <= *allocated_or_table_i
         )
             (*allocated_or_table_i)++;
@@ -815,7 +937,7 @@ E_mem_Q_blk_Q_table_I_put_after( N table_i
 _internal
 void
 E_mem_Q_blk_Q_table_I_put_end( void
-){  E_base_S->E_mem_Q_blk_Q_table_M_from_free_S_allocated_id_n--;
+){  E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n--;
 }
 _internal
 N
@@ -851,31 +973,32 @@ E_mem_Q_blk_Q_table_M_from_free( N *allocated_or_table_i
     Pc p_1;
     S i = 0;
     if(n)
-    {   if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id
+    {   if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id
         && p // Uprzedni obszar tablicy staje się wolnym blokiem.
         )
         {   n++;
             l_1 += u;
         }
         N l_align;
-        if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_allocated_id
-        || *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id
+        if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.allocated_id
+        || *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id
         )
             l_align = sizeof(N);
         else if( ~align )
             l_align = align;
         else
             l_align = E_mem_Q_blk_I_default_align(u);
-        if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id ) // Obszar przed wyrównanym adresem staje się wolnym blokiem.
+        if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id ) // Obszar przed wyrównanym adresem staje się wolnym blokiem.
         {   n++;
             l_1 += u;
         }
         N l_ = ~0;
         N i_found;
-        struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
-        for_n( free_i, E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n ) // Szukanie wolnego bloku na całą tablicę.
+        struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
+        for_n( free_i, E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n ) // Szukanie wolnego bloku na całą tablicę.
         {   p_1 = E_simple_Z_p_I_align_up_to_v2( free_p[ free_i ].p, l_align );
-            if( free_p[ free_i ].l >= ( p_1 - free_p[ free_i ].p ) + l_1
+            if( !E_simple_T_add_overflow( p_1 - free_p[ free_i ].p, l_1 )
+            && free_p[ free_i ].l >= ( p_1 - free_p[ free_i ].p ) + l_1
             && free_p[ free_i ].l < l_
             )
             {   l_ = free_p[ free_i ].l;
@@ -895,132 +1018,132 @@ E_mem_Q_blk_Q_table_M_from_free( N *allocated_or_table_i
             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( i_found );
         if(p)
         {   E_mem_Q_blk_I_copy( p_1 + l_rel, p, l );
-            if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_allocated_id )
-                E_base_S->E_mem_Q_blk_S_allocated = (P)p_1;
+            if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.allocated_id )
+                E_main_S_kernel_args.mem_blk.allocated = (P)p_1;
         }
-        E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].p = p_1;
+        E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].p = p_1;
         *allocated_or_table_i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( *allocated_or_table_i, ~0 );
         E_mem_Q_blk_Q_table_I_put_begin( allocated_or_table_i );
         if( p_1 - old_free_p )
-            if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id )
+            if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id )
             {   free_p = (P)p_1;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n ].p = old_free_p;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n ].l = p_1 - old_free_p;
-                E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n++;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n ].p = old_free_p;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n ].l = p_1 - old_free_p;
+                E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n++;
                 struct E_mem_Q_blk_Z_free free_p_;
-                E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( *allocated_or_table_i, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n - 1 );
+                E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( *allocated_or_table_i, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n - 1 );
                 i++;
             }else
-            {   E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+            {   E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, old_free_p, p_1 - old_free_p ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, old_free_p, p_1 - old_free_p ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
             }
     }else
     {   N allocated_i_sorted_pos;
         if( !( p_1 = E_mem_Q_blk_M_new_0( &allocated_i_sorted_pos )))
             return 0;
-        E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].p = p_1;
+        E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].p = p_1;
         *allocated_or_table_i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( *allocated_or_table_i, allocated_i_sorted_pos );
         E_mem_Q_blk_Q_table_I_put_begin( allocated_or_table_i );
     }
     if( !p ) //NDFN Rozpoznanie niebezpośrednie, mimo że jednoznaczne w obecnej implementacji.
-        E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].u = u;
+        E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].u = u;
     if(p)
-        if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id )
+        if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id )
         {   struct E_mem_Q_blk_Z_free *free_p = (P)p_1;
             struct E_mem_Q_blk_Z_free free_p_;
-            if( !E_mem_Q_blk_Q_sys_table_f_I_unite( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, p, l ))
-            {   free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n ].p = p;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n ].l = l;
-                E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n++;
-                E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( *allocated_or_table_i, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n - 1 );
+            if( !E_mem_Q_blk_Q_sys_table_f_I_unite( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, p, l ))
+            {   free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n ].p = p;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n ].l = l;
+                E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n++;
+                E_mem_Q_blk_Q_sys_table_f_I_sort_inserted( *allocated_or_table_i, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n - 1 );
                 i++;
             }
             N start_i = i;
             for( ; i != 2; i++ )
-            {   free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n + i - start_i ].p = 0;
-                free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n + i - start_i ].l = 0;
+            {   free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n + i - start_i ].p = 0;
+                free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n + i - start_i ].l = 0;
             }
         }else
-        {   E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+        {   E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
             struct E_mem_Q_blk_Z_free free_p_;
-            if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, p, l ))
-            {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+            if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, p, l ))
+            {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                 E_mem_Q_blk_Q_table_I_put_end();
                 return 0;
             }
-            E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+            E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
         }
-    else if( *allocated_or_table_i == E_base_S->E_mem_Q_blk_S_free_id )
+    else if( *allocated_or_table_i == E_main_S_kernel_args.mem_blk.free_id )
     {   struct E_mem_Q_blk_Z_free *free_p = (P)p_1;
         N start_i = i;
         for( ; i != 2; i++ )
-        {   free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n + i - start_i ].p = 0;
-            free_p[ E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n + i - start_i ].l = 0;
+        {   free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n + i - start_i ].p = 0;
+            free_p[ E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n + i - start_i ].l = 0;
         }
     }
-    E_base_S->E_mem_Q_blk_S_allocated[ *allocated_or_table_i ].n = n;
+    E_main_S_kernel_args.mem_blk.allocated[ *allocated_or_table_i ].n = n;
     E_mem_Q_blk_Q_table_I_put_end();
     return p_1;
 }
+// Adresy puste znajdują się powyżej ostatniego adresu podstawowego bloku pamięci wirtualnej z wyjątkiem ewentualnie umieszczonej na końcu pamięci zarezerwowanej. Ewentualne dodatkowo ‘zmapowane’ powyżej tego bloku podstawowego bloki pamięci wirtualnej (np. stosy) mogą mieć ten sam adres jak adres pusty, ale z tymi adresami nie będzie przydzielanej pamięci.
 _internal
 __attribute__ ((__malloc__))
 P
 E_mem_Q_blk_M_new_0( N *allocated_i_sorted_pos
-){  Pc p_end = (P)E_memory_S_start;
-    Pc p = (P)1;
-    N allocated_i = 0;
+){  Pc p_start = E_main_S_kernel_args.mem_blk.reserved_from_end ? (P)( E_main_S_kernel_args.mem_blk.memory_size - E_main_S_kernel_args.mem_blk.reserved_size ) : (P)E_main_S_kernel_args.mem_blk.memory_size;
+    Pc p = (P)( ~5 );
     struct E_mem_Q_blk_Z_allocated allocated_p;
-    N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
+    N allocated_i = allocated_max;
     do
-    {   if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p != p )
+    {   if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p != p )
             break;
-        if( ++p == p_end )
+        if( --p == p_start - 1 )
             return 0;
-    }while( allocated_i++ != allocated_max );
-    *allocated_i_sorted_pos = allocated_i;
+    }while( allocated_i-- );
+    *allocated_i_sorted_pos = ~allocated_i ? allocated_i + 1 : 0;
     return p;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N
 E_mem_Q_sys_table_I_reduce( void
 ){  struct E_mem_Q_blk_Z_allocated allocated_p_;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p_.p - (Pc)&allocated_p_ );
-    if( max != E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n - 1 )
-    {   N n = E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n;
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].n = max + 1;
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p_.p - ( Pc )&allocated_p_ );
+    if( max != E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n - 1 )
+    {   N n = E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = max + 1;
         struct E_mem_Q_blk_Z_free free_p_;
-        if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id
-        , (Pc)&free_p_.p - (Pc)&free_p_
-        , (Pc)&free_p_.l - (Pc)&free_p_
-        , E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].p + ( max + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u
-        , ( n - 1 - max ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_allocated_id ].u ))
+        if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id
+        , ( Pc )&free_p_.p - ( Pc )&free_p_
+        , ( Pc )&free_p_.l - ( Pc )&free_p_
+        , E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p + ( max + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u
+        , ( n - 1 - max ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u ))
             return ~0;
     }
     struct E_mem_Q_blk_Z_free free_p_;
-    max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+    max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
     if( !~max )
         max++;
-    if( max != E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n - 1 )
-    {   N n = E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n;
-        E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].n = max + 1;
+    if( max != E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n - 1 )
+    {   N n = E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = max + 1;
         struct E_mem_Q_blk_Z_free free_p_;
-        if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id
-        , (Pc)&free_p_.p - (Pc)&free_p_
-        , (Pc)&free_p_.l - (Pc)&free_p_
-        , E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p + ( max + 1 ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u
-        , ( n - 1 - max ) * E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].u ))
+        if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id
+        , ( Pc )&free_p_.p - ( Pc )&free_p_
+        , ( Pc )&free_p_.l - ( Pc )&free_p_
+        , E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p + ( max + 1 ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u
+        , ( n - 1 - max ) * E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u ))
             return ~0;
     }
     return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-P E_mem_Q_blk_M_align_tab( N, N, N );
 P
 E_mem_Q_blk_M( N l
 ){  return E_mem_Q_blk_M_tab( 1, l );
@@ -1042,14 +1165,15 @@ E_mem_Q_blk_M_align_tab(
   N u
 , N n
 , N align
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
-    N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p, (Pc)&allocated_p.n - (Pc)&allocated_p, 0, 0 );
+){  if( E_simple_T_multiply_overflow( n, u ))
+        return 0;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
+    N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p, ( Pc )&allocated_p.n - ( Pc )&allocated_p, 0, 0 );
     if( !~allocated_i )
         return 0;
     if( !E_mem_Q_blk_Q_table_M_from_free( &allocated_i, u, n, 0, 0, 0, align ))
         return 0;
-    P p_ = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
-    return p_;
+    return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
 }
 P
 E_mem_Q_blk_M_replace( P p
@@ -1063,19 +1187,32 @@ E_mem_Q_blk_M_replace_tab( P p
 , N n
 ){  struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u == u
+            && E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n == n
+            )
+                return *( P * )p;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u != u
+            && !E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n
+            && !n
+            )
+            {   E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u = u;
+                return *( P * )p;
+            }
+            if( E_simple_T_multiply_overflow( n, u ))
+                return 0;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
             {   E_mem_Q_blk_Q_table_I_put_begin( &allocated_i );
-                E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+                E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u ))
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                 E_mem_Q_blk_Q_table_I_put_end();
             }
             if( !E_mem_Q_blk_Q_table_M_from_free( &allocated_i, u, n, 0, 0, 0, ~0 ))
@@ -1083,11 +1220,11 @@ E_mem_Q_blk_M_replace_tab( P p
                 *( P * )p = 0;
                 return 0;
             }
-            P p_ = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+            P p_ = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
             *( P * )p = p_;
             return p_;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1099,29 +1236,29 @@ E_mem_Q_blk_M_replace_tab( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 __attribute__ ((__malloc__))
 P
 E_mem_Q_blk_M_split( P p
 , N i
 ){  struct E_mem_Q_blk_Z_allocated allocated_p;
-    N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p, (Pc)&allocated_p.n - (Pc)&allocated_p, 0, 0 );
+    N allocated_i = E_mem_Q_blk_Q_sys_table_M_new_id( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p, ( Pc )&allocated_p.n - ( Pc )&allocated_p, 0, 0 );
     if( !~allocated_i )
         return 0;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_j = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_j ].p == p )
-        {   E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n = E_base_S->E_mem_Q_blk_S_allocated[ allocated_j ].n - i;
-            E_base_S->E_mem_Q_blk_S_allocated[ allocated_j ].n = i;
-            E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u = E_base_S->E_mem_Q_blk_S_allocated[ allocated_j ].u;
-            E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = (Pc)p + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_j ].u;
-            P p_ = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_j ].p == p )
+        {   E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n = E_main_S_kernel_args.mem_blk.allocated[ allocated_j ].n - i;
+            E_main_S_kernel_args.mem_blk.allocated[ allocated_j ].n = i;
+            E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u = E_main_S_kernel_args.mem_blk.allocated[ allocated_j ].u;
+            E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = ( Pc )p + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_j ].u;
+            P p_ = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
             E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, ~0 );
             return p_;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1133,26 +1270,26 @@ E_mem_Q_blk_M_split( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 N
 E_mem_Q_blk_W( P p
 ){  struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == p )
-        {   N n = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n;
-            N u = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == p )
+        {   N n = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n;
+            N u = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
             E_mem_Q_blk_Q_sys_table_a_I_move_empty_entry( allocated_i );
             if(n)
             {   struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, p, n * u ))
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, p, n * u ))
                     return ~0;
             }
             return 0;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > (Pc)p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > ( Pc )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1164,7 +1301,7 @@ E_mem_Q_blk_W( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return ~0;
+    return ~4;
 }
 //------------------------------------------------------------------------------
 P
@@ -1181,30 +1318,34 @@ E_mem_Q_blk_I_add( P p
     }
     struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   Pc p_0 = 0;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            N l = n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_simple_T_add_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n, n )
+            || E_simple_T_multiply_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+            )
+                return 0;
+            Pc p_0 = 0;
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            N l = n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
             {   N l_1 = 0;
-                p_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+                p_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+                N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
                 if( ~max )
-                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
+                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
                     // Szukanie wolnego bloku przyległego od dołu.
                     N min = 0;
                     N max_0 = max;
                     N free_i = max / 2;
                     O{  if( free_p[ free_i ].p + free_p[ free_i ].l == p_0 )
-                        {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                        {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
                             {   l_1 = free_p[ free_i ].l;
                                 if( l_1 > l )
                                     l_1 = l;
                                 else if( l_1 < l )
-                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u );
+                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u );
                                 l -= l_1;
                             }
                             break;
@@ -1225,13 +1366,13 @@ E_mem_Q_blk_I_add( P p
                     {   free_p[ free_i ].l -= l_1;
                         if( !free_p[ free_i ].l )
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                        *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
+                        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                        *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
                         if( n_prepended )
                             *n_prepended = n;
                         if( n_appended )
                             *n_appended = 0;
-                        return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1;
+                        return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1;
                     }
                     // Szukanie wolnego bloku przyległego od góry.
                     min = free_i;
@@ -1249,14 +1390,14 @@ E_mem_Q_blk_I_add( P p
                             {   free_p[ free_i ].l -= l_1;
                                 if( !free_p[ free_i ].l )
                                     E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                                *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
+                                *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
                             }
-                            E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
+                            E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
                             if( n_prepended )
-                                *n_prepended = l_1 / E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                                *n_prepended = l_1 / E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                             if( n_appended )
-                                *n_appended = l / E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-                            return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1;
+                                *n_appended = l / E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+                            return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1;
                         }
                         if( free_p[ free_j ].p > p_0 + l_0 )
                         {   if( free_j == min )
@@ -1274,8 +1415,8 @@ E_mem_Q_blk_I_add( P p
                 }
             }
             P p_1 = E_mem_Q_blk_Q_table_M_from_free( &allocated_i
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n + n
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n
             , p_0
             , l_0
             , 0
@@ -1290,7 +1431,7 @@ E_mem_Q_blk_I_add( P p
                 *n_appended = n;
             return p_1;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1302,38 +1443,47 @@ E_mem_Q_blk_I_add( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 P
 E_mem_Q_blk_I_prepend_append( P p
 , N n_prepend
 , N n_append
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n_prepend
+    && !n_append
+    )
+        return *( P * )p;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   Pc p_0 = 0;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
-            {   N l = ( n_prepend + n_append ) * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_simple_T_add_overflow( n_prepend, n_append )
+            || E_simple_T_add_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n, n_prepend + n_append )
+            || E_simple_T_multiply_overflow( n_prepend + E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n_append, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+            )
+                return 0;
+            Pc p_0 = 0;
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
+            {   N l = ( n_prepend + n_append ) * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                 N l_1 = 0;
-                p_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+                p_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+                N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
                 if( ~max )
-                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
+                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
                     // Szukanie wolnego bloku przyległego od dołu.
                     N min = 0;
                     N max_0 = max;
                     N free_i = max / 2;
                     O{  if( free_p[ free_i ].p + free_p[ free_i ].l == p_0 )
-                        {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                        {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
                             {   l_1 = free_p[ free_i ].l;
                                 if( l_1 > l )
                                     l_1 = l;
                                 else if( l_1 < l )
-                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u );
+                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u );
                                 l -= l_1;
                             }
                             break;
@@ -1357,21 +1507,21 @@ E_mem_Q_blk_I_prepend_append( P p
                         N free_j = max / 2;
                         O{  if( p_0 + l_0 == free_p[ free_j ].p )
                             {   if( free_p[ free_j ].l >= l )
-                                {   E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n_prepend + n_append;
+                                {   E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n_prepend + n_append;
                                     if( l_1
-                                    && free_p[ free_i ].l >= n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-                                    && free_p[ free_j ].l >= n_append * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+                                    && free_p[ free_i ].l >= n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+                                    && free_p[ free_j ].l >= n_append * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
                                     )
                                     {   if( free_p[ free_j ].l )
-                                            free_p[ free_j ].p += n_append * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                                            free_p[ free_j ].p += n_append * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                                         else
                                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_j );
-                                        free_p[ free_i ].l -= n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                                        free_p[ free_i ].l -= n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                                         if( !free_p[ free_i ].l )
                                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                                        free_p[ free_j ].l -= n_append * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-                                        *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-                                        return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                                        free_p[ free_j ].l -= n_append * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+                                        *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+                                        return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                                     }
                                     free_p[ free_j ].l -= l;
                                     if( free_p[ free_j ].l )
@@ -1381,12 +1531,12 @@ E_mem_Q_blk_I_prepend_append( P p
                                     free_p[ free_i ].l -= l_1;
                                     if( !free_p[ free_i ].l )
                                         E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                                    E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p - ( l_1 - n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
-                                    , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p
+                                    E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p - ( l_1 - n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+                                    , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p
                                     , l_0
                                     );
-                                    *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
-                                    return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1;
+                                    *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
+                                    return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1;
                                 }
                                 break;
                             }
@@ -1407,19 +1557,19 @@ E_mem_Q_blk_I_prepend_append( P p
                 }
             }
             P p_1 = E_mem_Q_blk_Q_table_M_from_free( &allocated_i
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n + n_prepend + n_append
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n_prepend + n_append
             , p_0
             , l_0
-            , n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+            , n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
             , ~0
             );
             if( !p_1 )
                 return 0;
             *( P * )p = p_1;
-            return (Pc)p_1 + n_prepend * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+            return ( Pc )p_1 + n_prepend * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1431,37 +1581,43 @@ E_mem_Q_blk_I_prepend_append( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 P
 E_mem_Q_blk_I_append( P p
 , N n
 , N align
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n )
+        return *( P * )p;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   N l = n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_simple_T_add_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n, n )
+            || E_simple_T_multiply_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+            )
+                return 0;
+            N l = n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
             Pc p_0 = 0;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
             {   N l_1 = 0;
-                p_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+                p_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+                N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
                 if( ~max )
-                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
+                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
                     // Szukanie wolnego bloku przyległego od góry.
                     N min = 0;
                     N free_i = max / 2;
                     O{  if( p_0 + l_0 == free_p[ free_i ].p )
-                        {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                        {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
                             {   l_1 = free_p[ free_i ].l;
                                 if( l_1 > l )
                                     l_1 = l;
                                 else if( l_1 < l )
-                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u );
+                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u );
                                 l -= l_1;
                             }
                             break;
@@ -1480,15 +1636,15 @@ E_mem_Q_blk_I_append( P p
                     }
                     if( !l
                     && ( !~align
-                      || E_simple_Z_p_T_aligned_to_v2( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p, align )
+                      || E_simple_Z_p_T_aligned_to_v2( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p, align )
                     ))
                     {   free_p[ free_i ].l -= l_1;
                         if( free_p[ free_i ].l )
                             free_p[ free_i ].p += l_1;
                         else
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                        return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_0;
+                        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                        return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_0;
                     }
                     // Szukanie wolnego bloku przyległego od dołu.
                     min = 0;
@@ -1513,15 +1669,15 @@ E_mem_Q_blk_I_append( P p
                                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
                                     }else if(( p_0 - p_align ) - l )
                                     {   E_mem_Q_blk_Q_table_I_put_begin( &allocated_i );
-                                        E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+                                        E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                                         struct E_mem_Q_blk_Z_free free_p_;
-                                        E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_, p_align + l_0 + l, ( p_0 - p_align ) - l );
-                                        E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                                        E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_, p_align + l_0 + l, ( p_0 - p_align ) - l );
+                                        E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                                         E_mem_Q_blk_Q_table_I_put_end();
                                     }
                                     E_mem_Q_blk_I_copy( p_align, p_0, l_0 );
-                                    E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                                    *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = p_align;
+                                    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                                    *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = p_align;
                                     return p_align + l_0;
                                 }
                                 break;
@@ -1555,8 +1711,8 @@ E_mem_Q_blk_I_append( P p
                                     }
                                     Pc p_1 = p_0 - l;
                                     E_mem_Q_blk_I_copy( p_1, p_0, l_0 );
-                                    E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                                    *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = p_1;
+                                    E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                                    *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = p_1;
                                     return p_1 + l_0;
                                 }
                                 break;
@@ -1577,8 +1733,8 @@ E_mem_Q_blk_I_append( P p
                 }
             }
             P p_1 = E_mem_Q_blk_Q_table_M_from_free( &allocated_i
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n + n
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n
             , p_0
             , l_0
             , 0
@@ -1587,9 +1743,9 @@ E_mem_Q_blk_I_append( P p
             if( !p_1 )
                 return 0;
             *( P * )p = p_1;
-            return (Pc)p_1 + l_0;
+            return ( Pc )p_1 + l_0;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1601,37 +1757,43 @@ E_mem_Q_blk_I_append( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 P
 E_mem_Q_blk_I_prepend( P p
 , N n
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n )
+        return *( P * )p;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   N l = n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_simple_T_add_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n, n )
+            || E_simple_T_multiply_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+            )
+                return 0;
+            N l = n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
             Pc p_0 = 0;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
             {   N l_1 = 0;
-                p_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+                p_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+                N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
                 if( ~max )
-                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
+                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
                     // Szukanie wolnego bloku przyległego od dołu.
                     N min = 0;
                     N max_0 = max;
                     N free_i = max / 2;
                     O{  if( free_p[ free_i ].p + free_p[ free_i ].l == p_0 )
-                        {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                        {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
                             {   l_1 = free_p[ free_i ].l;
                                 if( l_1 > l )
                                     l_1 = l;
                                 else if( l_1 < l )
-                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u );
+                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u );
                                 l -= l_1;
                             }
                             break;
@@ -1652,8 +1814,8 @@ E_mem_Q_blk_I_prepend( P p
                     {   free_p[ free_i ].l -= l_1;
                         if( !free_p[ free_i ].l )
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                        *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
+                        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                        *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
                         return p_0;
                     }
                     // Szukanie wolnego bloku przyległego od góry.
@@ -1672,9 +1834,9 @@ E_mem_Q_blk_I_prepend( P p
                                         E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
                                 }
                                 E_mem_Q_blk_I_copy( p_0 + l, p_0, l_0 );
-                                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
+                                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
                                 if( l_1 )
-                                    *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
+                                    *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
                                 return p_0 + l;
                             }
                             break;
@@ -1695,8 +1857,8 @@ E_mem_Q_blk_I_prepend( P p
                 }
             }
             P p_1 = E_mem_Q_blk_Q_table_M_from_free( &allocated_i
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n + n
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n
             , p_0
             , l_0
             , l
@@ -1705,9 +1867,9 @@ E_mem_Q_blk_I_prepend( P p
             if( !p_1 )
                 return 0;
             *( P * )p = p_1;
-            return (Pc)p_1 + l;
+            return ( Pc )p_1 + l;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1719,38 +1881,44 @@ E_mem_Q_blk_I_prepend( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 P
 E_mem_Q_blk_I_insert( P p
 , N i
 , N n
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n )
+        return *( P * )p;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   Pc p_0 = 0;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
-            {   N l = n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( E_simple_T_add_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n, n )
+            || E_simple_T_multiply_overflow( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
+            )
+                return 0;
+            Pc p_0 = 0;
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
+            {   N l = n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                 N l_1 = 0;
-                p_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+                p_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_ );
+                N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_ );
                 if( ~max )
-                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_base_S->E_mem_Q_blk_S_allocated[ E_base_S->E_mem_Q_blk_S_free_id ].p;
+                {   struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
                     // Szukanie wolnego bloku przyległego od dołu.
                     N min = 0;
                     N max_0 = max;
                     N free_i = max / 2;
                     O{  if( free_p[ free_i ].p + free_p[ free_i ].l == p_0 )
-                        {   if( free_p[ free_i ].l >= E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u )
+                        {   if( free_p[ free_i ].l >= E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u )
                             {   l_1 = free_p[ free_i ].l;
                                 if( l_1 > l )
                                     l_1 = l;
                                 else if( l_1 < l )
-                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u );
+                                    l_1 = E_simple_Z_n_I_align_down_to_v( l_1, E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u );
                                 l -= l_1;
                             }
                             break;
@@ -1771,13 +1939,13 @@ E_mem_Q_blk_I_insert( P p
                     {   free_p[ free_i ].l -= l_1;
                         if( !free_p[ free_i ].l )
                             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                        E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
-                        *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
-                        E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p
-                        , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1
-                        , i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+                        E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
+                        *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
+                        E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p
+                        , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1
+                        , i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
                         );
-                        return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                        return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                     }
                     // Szukanie wolnego bloku przyległego od góry.
                     min = free_i;
@@ -1793,19 +1961,19 @@ E_mem_Q_blk_I_insert( P p
                                 {   free_p[ free_i ].l -= l_1;
                                     if( !free_p[ free_i ].l )
                                         E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry( free_i );
-                                    *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p -= l_1;
+                                    *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p -= l_1;
                                 }
-                                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n += n;
+                                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n += n;
                                 if( l_1 )
-                                    E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p
-                                    , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1
-                                    , i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+                                    E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p
+                                    , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1
+                                    , i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
                                     );
-                                E_mem_Q_blk_I_copy( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u + l
-                                ,  E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + l_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-                                , l_0 - i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+                                E_mem_Q_blk_I_copy( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1 + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u + l
+                                ,  E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + l_1 + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+                                , l_0 - i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
                                 );
-                                return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+                                return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                             }
                             break;
                         }
@@ -1824,8 +1992,8 @@ E_mem_Q_blk_I_insert( P p
                 }
             }
             P p_1 = E_mem_Q_blk_Q_table_M_from_free( &allocated_i
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-            , E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n + n
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+            , E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n + n
             , p_0
             , l_0
             , 0
@@ -1834,15 +2002,15 @@ E_mem_Q_blk_I_insert( P p
             if( !p_1 )
                 return 0;
             //TODO Zrobić w “E_mem_Q_blk_Q_table_M_from_free” parametr przesuniecia dla ‘split’ i kopiowania tam odrazu?
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n )
-                E_mem_Q_blk_I_copy( (Pc)p_1 + ( i + n ) * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-                , (Pc)p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
-                , l_0 - i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
+                E_mem_Q_blk_I_copy(( Pc )p_1 + ( i + n ) * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+                , ( Pc )p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
+                , l_0 - i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u
                 );
             *( P * )p = p_1;
-            return (Pc)p_1 + i * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+            return ( Pc )p_1 + i * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1854,90 +2022,94 @@ E_mem_Q_blk_I_insert( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 P
 E_mem_Q_blk_I_remove( P p
 , N i
 , N n
-){  struct E_mem_Q_blk_Z_allocated allocated_p;
+){  if( !n )
+        return *( P * )p;
+    struct E_mem_Q_blk_Z_allocated allocated_p;
     N min = 0;
-    N max = E_mem_Q_blk_Q_sys_table_R_last( E_base_S->E_mem_Q_blk_S_allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
+    N max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, ( Pc )&allocated_p.p - ( Pc )&allocated_p );
     N allocated_i = max / 2;
-    O{  if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p == *( P * )p )
-        {   N l = n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
-            N l_0 = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+    O{  if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p == *( P * )p )
+        {   if( n > E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n )
+                return (P)~4;
+            N l = n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
+            N l_0 = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
             E_mem_Q_blk_Q_table_I_put_begin( &allocated_i );
-            if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n == n ) // Usuwany cały blok.
+            if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n == n ) // Usuwany cały blok.
             {   N allocated_i_sorted_pos;
                 P p_ = E_mem_Q_blk_M_new_0( &allocated_i_sorted_pos );
                 if( !p_ )
                     return 0;
-                E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+                E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_
                 , *( P * )p
                 , l
                 ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
-                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n = 0;
-                *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p = p_;
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
+                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n = 0;
+                *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p = p_;
                 allocated_i = E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, allocated_i_sorted_pos );
-            }else if( i + n == E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n ) // Usuwane na końcu bloku.
-            {   E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+            }else if( i + n == E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n ) // Usuwane na końcu bloku.
+            {   E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_
                 , *( Pc * )p + l_0 - l
                 , l
                 ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
-                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
+                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n -= n;
             }else if( !i ) // Usuwane na początku bloku.
-            {   E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+            {   E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 P p_ = *( P * )p;
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_
                 , p_
                 , l
                 ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
-                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
-                *( P * )p = E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p += l;
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
+                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n -= n;
+                *( P * )p = E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p += l;
             }else // Usuwane w środku bloku.
-            {   Pc p_0 = *( Pc * )p + ( i + n ) * E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].u;
+            {   Pc p_0 = *( Pc * )p + ( i + n ) * E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].u;
                 E_mem_Q_blk_I_copy( p_0 - l
                 , p_0
                 , *( Pc * )p + l_0 - p_0
                 );
-                E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].n -= n;
-                E_mem_Q_blk_Q_table_I_put_before( E_base_S->E_mem_Q_blk_S_free_id );
+                E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].n -= n;
+                E_mem_Q_blk_Q_table_I_put_before( E_main_S_kernel_args.mem_blk.free_id );
                 struct E_mem_Q_blk_Z_free free_p_;
-                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_base_S->E_mem_Q_blk_S_free_id, (Pc)&free_p_.p - (Pc)&free_p_, (Pc)&free_p_.l - (Pc)&free_p_
+                if( !~E_mem_Q_blk_Q_sys_table_f_P_put( E_main_S_kernel_args.mem_blk.free_id, ( Pc )&free_p_.p - ( Pc )&free_p_, ( Pc )&free_p_.l - ( Pc )&free_p_
                 , *( Pc * )p + l_0 - l
                 , l
                 ))
-                {   E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                {   E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
                     E_mem_Q_blk_Q_table_I_put_end();
                     return 0;
                 }
-                E_mem_Q_blk_Q_table_I_put_after( E_base_S->E_mem_Q_blk_S_free_id );
+                E_mem_Q_blk_Q_table_I_put_after( E_main_S_kernel_args.mem_blk.free_id );
             }
             E_mem_Q_blk_Q_table_I_put_end();
-            return E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p;
+            return E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p;
         }
-        if( E_base_S->E_mem_Q_blk_S_allocated[ allocated_i ].p > *( Pc * )p )
+        if( E_main_S_kernel_args.mem_blk.allocated[ allocated_i ].p > *( Pc * )p )
         {   if( allocated_i == min )
                 break;
             max = allocated_i - 1;
@@ -1949,6 +2121,6 @@ E_mem_Q_blk_I_remove( P p
             allocated_i = min + ( max - allocated_i ) / 2;
         }
     }
-    return (P)~0;
+    return (P)~4;
 }
 /******************************************************************************/

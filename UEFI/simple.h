@@ -26,7 +26,7 @@ E_asm_I_bsf( N n
     );
         #else
     if(n)
-        i = __builtin_ctzll(n);
+        i = __builtin_ctzl(n);
     else
         i = ~0;
         #endif
@@ -52,7 +52,7 @@ E_asm_I_bsr( N n
     );
         #else
     if(n)
-        i = sizeof(N) * 8 - 1 - __builtin_clzll(n);
+        i = sizeof(N) * 8 - 1 - __builtin_clzl(n);
     else
         i = ~0;
         #endif
@@ -71,10 +71,17 @@ B
 E_simple_T_multiply_overflow(
   N a
 , N b
-){  return a && b
-    && ( E_asm_I_bsr(a) != ~0ULL ? E_asm_I_bsr(a) : 0 )
-      + ( E_asm_I_bsr(b) != ~0ULL ? E_asm_I_bsr(b) : 0 )
-      >= sizeof(N) * 8;
+){  if( !a
+    || !b
+    )
+        return no;
+    a = E_asm_I_bsr(a);
+    if( ~a )
+        a = 0;
+    b = E_asm_I_bsr(b);
+    if( ~b )
+        b = 0;
+    return a + b >= sizeof(N) * 8;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 _inline
@@ -194,10 +201,47 @@ E_simple_Z_p_T_cross( P p_1
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define E_simple_Z_p_T_aligned_to_v2(p,v2)      E_simple_Z_n_T_aligned_to_v2( (N)p, v2 )
 //------------------------------------------------------------------------------
-#define E_simple_Z_p_I_align_down_to_i2(p,i)    (Pc)E_simple_Z_n_I_align_down_to_i2( (N)p, i )
-#define E_simple_Z_p_I_align_up_to_i2(p,i)      (Pc)E_simple_Z_n_I_align_up_to_i2( (N)p, i )
-#define E_simple_Z_p_I_align_down_to_v2(p,v2)   (Pc)E_simple_Z_n_I_align_down_to_v2( (N)p, v2 )
-#define E_simple_Z_p_I_align_up_to_v2(p,v2)     (Pc)E_simple_Z_n_I_align_up_to_v2( (N)p, v2 )
-#define E_simple_Z_p_I_align_down(p)            (Pc)E_simple_Z_n_I_align_down( (N)p )
-#define E_simple_Z_p_I_align_up(p)              (Pc)E_simple_Z_n_I_align_up( (N)p )
+#define E_simple_Z_p_I_align_down_to_i2(p,i)    ((P)E_simple_Z_n_I_align_down_to_i2( (N)p, i ))
+#define E_simple_Z_p_I_align_up_to_i2(p,i)      ((P)E_simple_Z_n_I_align_up_to_i2( (N)p, i ))
+#define E_simple_Z_p_I_align_down_to_v2(p,v2)   ((P)E_simple_Z_n_I_align_down_to_v2( (N)p, v2 ))
+#define E_simple_Z_p_I_align_up_to_v2(p,v2)     ((P)E_simple_Z_n_I_align_up_to_v2( (N)p, v2 ))
+#define E_simple_Z_p_I_align_down(p)            ((P)E_simple_Z_n_I_align_down( (N)p ))
+#define E_simple_Z_p_I_align_up(p)              ((P)E_simple_Z_n_I_align_up( (N)p ))
+//==============================================================================
+_inline
+Pc
+E_text_Z_s0_R_end( Pc s
+){  while( *s )
+        s++;
+    return s;
+}
+_inline
+N
+E_text_Z_s0_R_l( Pc s
+){  return E_text_Z_s0_R_end(s) - s;
+}
+_inline
+Pc
+E_text_Z_s0_R_end_0( Pc s
+){  return E_text_Z_s0_R_end(s) + 1;
+}
+_inline
+N
+E_text_Z_s0_R_l_0( Pc s
+){  return E_text_Z_s0_R_end_0(s) - s;
+}
+//------------------------------------------------------------------------------
+_inline
+Pc
+E_text_Z_s_P_0( Pc s
+){  *s++ = '\0';
+    return s;
+}
+Pc E_text_Z_s_R_search_last_c( Pc, Pc, C );
+_inline
+Pc
+E_text_Z_s0_R_search_last_c( Pc s
+, C c
+){  return E_text_Z_s_R_search_last_c( s, E_text_Z_s0_R_end_0(s), c );
+}
 /******************************************************************************/

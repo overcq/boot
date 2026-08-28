@@ -11,6 +11,7 @@
 //==============================================================================
 #define E_mem_Q_blk_S_align_to_all  alignof(max_align_t)
 //==============================================================================
+extern B E_main_S_sse;
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
 _internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
@@ -20,7 +21,7 @@ _internal N E_mem_Q_blk_Q_sys_table_M_new_id( N, N, N, P, N );
 _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
-//DFN Dla kodu inicjującego procesory trzeba zagwarantować, że tablica strona pamięci wirtualnej będzie zawsze poniżej 4 GiB. Obecnie jest to gwarantowane przez ustawienie “!reserved_from_end”, gdyby nie miała być poniżej przy “reserved_from_end”.
+//DFN Dla kodu inicjującego procesory trzeba zagwarantować, że tablica stron pamięci wirtualnej będzie zawsze poniżej 4 GiB. Obecnie jest to gwarantowane przez ustawienie “!reserved_from_end”, gdyby nie miała być poniżej przy “reserved_from_end”.
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
  * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • pamięć zarezerwowana
@@ -32,7 +33,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • stos; wyrównany adres i rozmiar
  * • początkowe dane “mem-blk”: “allocated”, “free”
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • (program ‘bootloadera”)
+ * • (stary i nowy program ‘boot loadera’)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • (niezarejestrowana strona pamięci na program startowy procesorów)
  * • nieprzenaszalna pamięć zarezerwowana
@@ -40,7 +41,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • stos; wyrównany adres i rozmiar
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • (program ‘bootloadera”)
+ * • (stary i nowy program ‘boot loadera’)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • początkowe dane “mem-blk”: “free”, “allocated”
  * • tablica “memory_map”
@@ -135,7 +136,7 @@ E_mem_M(
         free_p[1].p = free_p[1].l ? (P)( loader_start + loader_size ) : 0;
         free_p[2].l = memory_map_address - ( stack_address + stack_size );
         free_p[2].p = free_p[2].l ? (Pc)stack_address + stack_size : 0;
-        free_p[3].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+        free_p[3].l = kernel_size % H_oux_E_mem_S_page_size ? H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size : 0;
         free_p[3].p = free_p[3].l ? (Pc)kernel_address + kernel_size : 0;
         if( free_p[3].l
         && !free_p[2].l
@@ -150,7 +151,7 @@ E_mem_M(
         )
             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
     }else
-    {   free_p[0].l = H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size;
+    {   free_p[0].l = kernel_size % H_oux_E_mem_S_page_size ? H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size : 0;
         free_p[0].p = free_p[0].l ? (Pc)kernel_address + kernel_size : 0;
         free_p[1].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
         free_p[1].p = free_p[1].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
@@ -192,36 +193,35 @@ void
 E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
-){
-        #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof( N128 ));
-    N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof( N128 ));
-    N l_0 = (Pc)src_x - (Pc)src;
-    N l_1 = ( l - l_0 ) / sizeof( N128 );
-    if( l > l_0
-    && l_1
-    && (Pc)dst_x - (Pc)dst == l_0
-    )
-    {   N l_2 = ( l - l_0 ) % sizeof( N128 );
-        __asm__ volatile (
-        "\n" "rep movsb"
-        : "+D" (dst), "+S" (src), "+c" ( l_0 )
-        :
-        : "memory"
-        );
-        for_n( i, l_1 )
+){  if( E_main_S_sse )
+    {   N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof( N128 ));
+        N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof( N128 ));
+        N l_0 = (Pc)src_x - (Pc)src;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        && (Pc)dst_x - (Pc)dst == l_0
+        )
+        {   N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n" "movaps    %1,%%xmm0"
-            "\n" "movaps    %%xmm0,%0"
+            "\n" "rep movsb"
+            : "+D" (dst), "+S" (src), "+c" ( l_0 )
             :
-            : "p" ( dst_x++ ), "p" ( src_x++ )
-            : "xmm0", "memory"
+            : "memory"
             );
-        dst = dst_x;
-        src = src_x;
-        l = l_2;
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %1,%%xmm0"
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( dst_x++ ), "p" ( src_x++ )
+                : "xmm0", "memory"
+                );
+            dst = dst_x;
+            src = src_x;
+            l = l_2;
+        }
     }
-        #endif
     __asm__ volatile (
     "\n" "rep movsb"
     : "+D" (dst), "+S" (src), "+c" (l)
@@ -236,38 +236,44 @@ E_mem_Q_blk_I_copy_rev( P dst
 , N l
 ){  __asm__ volatile (
     "\n" "std"
+    :
+    :
+    : "cc"
     );
-        #ifdef __SSE__
-    N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof( N128 ));
-    N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof( N128 ));
-    N l_0 = (Pc)src + l - (Pc)src_x;
-    N l_1 = ( l - l_0 ) / sizeof( N128 );
-    if( l > l_0
-    && l_1
-    && (Pc)dst + l - (Pc)dst_x == l_0
-    )
-    {   dst = (Pc)dst + l - 1;
-        src = (Pc)src + l - 1;
-        N l_2 = ( l - l_0 ) % sizeof( N128 );
-        __asm__ volatile (
-        "\n" "rep movsb"
-        : "+D" (dst), "+S" (src), "+c" ( l_0 )
-        :
-        : "memory"
-        );
-        for_n( i, l_1 )
+    if( E_main_S_sse )
+    {   N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof( N128 ));
+        N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof( N128 ));
+        N l_0 = (Pc)src + l - (Pc)src_x;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        && (Pc)dst + l - (Pc)dst_x == l_0
+        )
+        {   dst = (Pc)dst + l - 1;
+            src = (Pc)src + l - 1;
+            N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n" "movaps    %1,%%xmm0"
-            "\n" "movaps    %%xmm0,%0"
+            "\n" "rep movsb"
+            : "+D" (dst), "+S" (src), "+c" ( l_0 )
             :
-            : "p" ( --dst_x ), "p" ( --src_x )
-            : "xmm0", "memory"
+            : "memory"
             );
-        dst = (P)( (Pc)dst_x - 1 );
-        src = (P)( (Pc)src_x - 1 );
-        l = l_2;
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %1,%%xmm0"
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( --dst_x ), "p" ( --src_x )
+                : "xmm0", "memory"
+                );
+            dst = (P)( (Pc)dst_x - 1 );
+            src = (P)( (Pc)src_x - 1 );
+            l = l_2;
+        }else
+        {   dst = (Pc)dst + l - 1;
+            src = (Pc)src + l - 1;
+        }
     }else
-        #endif
     {   dst = (Pc)dst + l - 1;
         src = (Pc)src + l - 1;
     }
@@ -276,7 +282,7 @@ E_mem_Q_blk_I_copy_rev( P dst
     "\n" "cld"
     : "+D" (dst), "+S" (src), "+c" (l)
     :
-    : "memory"
+    : "cc", "memory"
     );
 }
 void
@@ -307,42 +313,41 @@ void
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
-){
-        #ifdef __SSE__
-    N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof( N128 ));
-    N l_0 = (Pc)p_x - (Pc)p;
-    N l_1 = ( l - l_0 ) / sizeof( N128 );
-    if( l > l_0
-    && l_1
-    )
-    {   N l_2 = ( l - l_0 ) % sizeof( N128 );
-        __asm__ volatile (
-        "\n" "rep stosb"
-        : "+D" (p), "+c" ( l_0 )
-        : "a" (c)
-        : "memory"
-        );
-        N128 x;
-        p = &x;
-        N cx = sizeof( N128 );
-        __asm__ volatile (
-        "\n" "rep stosb"
-        "\n" "movups    %2,%%xmm0"
-        : "+D" (p), "+c" (cx)
-        : "m" (x), "a" (c)
-        : "xmm0", "memory"
-        );
-        for_n( i, l_1 )
+){  if( E_main_S_sse )
+    {   N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof( N128 ));
+        N l_0 = (Pc)p_x - (Pc)p;
+        N l_1 = ( l - l_0 ) / sizeof( N128 );
+        if( l > l_0
+        && l_1
+        )
+        {   N l_2 = ( l - l_0 ) % sizeof( N128 );
             __asm__ volatile (
-            "\n" "movaps    %%xmm0,%0"
-            :
-            : "p" ( p_x++ )
+            "\n" "rep stosb"
+            : "+D" (p), "+c" ( l_0 )
+            : "a" (c)
+            : "memory"
+            );
+            N128 x;
+            p = &x;
+            N cx = sizeof( N128 );
+            __asm__ volatile (
+            "\n" "rep stosb"
+            "\n" "movups    %2,%%xmm0"
+            : "+D" (p), "+c" (cx)
+            : "m" (x), "a" (c)
             : "xmm0", "memory"
             );
-        p = p_x;
-        l = l_2;
+            for_n( i, l_1 )
+                __asm__ volatile (
+                "\n" "movaps    %%xmm0,%0"
+                :
+                : "p" ( p_x++ )
+                : "xmm0", "memory"
+                );
+            p = p_x;
+            l = l_2;
+        }
     }
-        #endif
     __asm__ volatile (
     "\n" "rep stosb"
     : "+D" (p), "+c" (l)
@@ -1418,7 +1423,6 @@ E_mem_Q_blk_I_add( P p
     }
     return (P)~4;
 }
-_internal
 P
 E_mem_Q_blk_I_prepend_append( P p
 , N n_prepend

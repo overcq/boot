@@ -2,7 +2,7 @@
 #   ___   public
 #  ¦OUX¦  x86_64 assembly
 #  ¦/C+¦  OUX/C+ OS
-#   ---   kernel
+#   ---   UEFI boot loader
 #         multiple processors initialization
 # ©overcq                on ‟Gentoo Linux 23.0” “x86_64”             2025‒6‒17 K
 #*******************************************************************************

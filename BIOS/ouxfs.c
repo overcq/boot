@@ -2,7 +2,7 @@
 *   ___   public
 *  ¦OUX¦  C
 *  ¦/C+¦  OUX/C+ OS
-*   ---   UEFI boot loader
+*   ---   BIOS boot loader
 *         filesystem kernel reader
 * ©overcq                on ‟Gentoo Linux 23.0” “x86_64”             2025‒3‒15 V
 *******************************************************************************/
@@ -65,7 +65,7 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
 , N block_size
 ){  N pages = E_simple_Z_n_I_align_up_to_v2( block_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
     Pc sector;
-    S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_type_S_loader_data, pages, ( N64 * )&sector );
+    S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_loader_data, pages, ( N64 * )&sector );
     if( status < 0 )
         return status;
     H_oux_E_fs_S_sector_size = block_size;
@@ -106,13 +106,13 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
     ))))
         goto Error_0;
     Pc data = (P)&block_table_n_[6];
-    status = system_table->boot_services->M_pool( H_uefi_Z_memory_type_S_loader_data, block_table_n * sizeof( *H_oux_E_fs_S_block_table ), ( P * )&H_oux_E_fs_S_block_table );
+    status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_loader_data, block_table_n * sizeof( *H_oux_E_fs_S_block_table ), ( P * )&H_oux_E_fs_S_block_table );
     if( status < 0 )
         goto Error_0;
     // Odczyt tablicy bloków do pamięci operacyjnej.
     N continue_from = ~0;
     N data_i = 0;
-    N64 block_table_i = ~0ULL;
+    N64 block_table_i = ~0UL;
     do // Czyta wpisy pliku tablicy bloków znajdujące się w pierwszym sektorze.
     {   switch( continue_from )
         { case ~0:
@@ -505,7 +505,7 @@ End_loop_0:
     Pc directory_name = "system";
     N64 directory_uid;
     N64 directory_parent;
-    N64 uid_last = ~0ULL;
+    N64 uid_last = ~0UL;
     data_i = 0;
     N char_i;
     N64 directory_table_i;
@@ -725,7 +725,7 @@ End_loop_1:
     // Odczyt tablicy plików i wyszukanie pliku “/system/kernel”.
     Pc file_name = "kernel";
     N64 file_parent;
-    uid_last = ~0ULL;
+    uid_last = ~0UL;
     data_i = 0;
     N64 file_table_i;
     for( file_table_i = 0; file_table_i != block_table_file_table_n; file_table_i++ )
