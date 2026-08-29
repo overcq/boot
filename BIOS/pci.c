@@ -340,14 +340,15 @@ struct __attribute__ (( __packed__ )) E_pci_Z_header_Z_bist
   N8 capable            :1;
 };
 //==============================================================================
+extern struct E_main_Z_memory_map_entry *E_main_S_memory_map;
 extern N32 E_main_S_sata_ahci_addresses[8];
 extern N8 E_main_S_sata_ahci_n;
 extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 //==============================================================================
-extern N32 E_main_I_in_32( N16 );
-extern void E_main_I_out_32( N16, N32 );
+N32 E_main_I_in_32( N16 );
+void E_main_I_out_32( N16, N32 );
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N E_pci_I_check_bus( struct E_main_Z_memory_map_entry **, N8, Pc );
+N E_pci_I_check_bus( N8, Pc );
 //==============================================================================
 N32
 E_pci_I_read( N8 bus
@@ -367,8 +368,7 @@ E_pci_I_write( N8 bus
     E_main_I_out_32( 0xcfc, value );
 }
 N
-E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
-, N8 bus_i
+E_pci_I_check_device( N8 bus_i
 , N8 device_i
 , N8 function_i
 , N8 header_type
@@ -410,7 +410,7 @@ E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
                         size |= 0xffffffff00000000UL;
                     address = address & ~0xf;
                     size = ~( size & ~0xf ) + 1;
-                    *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
                     { address
                     , size
                     , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -444,7 +444,7 @@ E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
                     size |= 0xffffffff00000000UL;
                 address = address & ~0xf;
                 size = ~( size & ~0xf ) + 1;
-                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
                 { address
                 , size
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -461,7 +461,7 @@ E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
                 { base
                 , limit - base
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -481,7 +481,7 @@ E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                *--( *memory_map ) = ( struct E_main_Z_memory_map_entry )
+                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
                 { base
                 , limit - base
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -520,8 +520,7 @@ E_pci_I_check_device( struct E_main_Z_memory_map_entry **memory_map
     return 0;
 }
 N
-E_pci_I_check_function( struct E_main_Z_memory_map_entry **memory_map
-, N8 bus_i
+E_pci_I_check_function( N8 bus_i
 , N8 device_i
 , N8 function_i
 , Pc bus_mask
@@ -533,14 +532,13 @@ E_pci_I_check_function( struct E_main_Z_memory_map_entry **memory_map
     )
     {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
         N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
-        K( E_pci_I_check_bus( memory_map, secondary_bus, bus_mask ))
+        K( E_pci_I_check_bus( secondary_bus, bus_mask ))
             return ~0;
     }
     return 0;
 }
 N
-E_pci_I_check_bus( struct E_main_Z_memory_map_entry **memory_map
-, N8 bus_i
+E_pci_I_check_bus( N8 bus_i
 , Pc bus_mask
 ){  if( E_mem_Q_mask_R( bus_mask, bus_i ))
         return 0;
@@ -550,17 +548,17 @@ E_pci_I_check_bus( struct E_main_Z_memory_map_entry **memory_map
         if( !~ids )
             continue;
         N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xc ) >> 16;
-        K( E_pci_I_check_device( memory_map, bus_i, device_i, header_type & 0x7f, 0, ids ))
+        K( E_pci_I_check_device( bus_i, device_i, header_type & 0x7f, 0, ids ))
             return ~0;
-        K( E_pci_I_check_function( memory_map, bus_i, device_i, 0, bus_mask ))
+        K( E_pci_I_check_function( bus_i, device_i, 0, bus_mask ))
             return ~0;
         if( header_type & 0x80 )
         {   for_n( function_i, 7 )
             {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
                 if( ~ids )
-                {   K( E_pci_I_check_device( memory_map, bus_i, device_i, 1 + function_i, header_type & 0x7f, ids ))
+                {   K( E_pci_I_check_device( bus_i, device_i, 1 + function_i, header_type & 0x7f, ids ))
                         return ~0;
-                    K( E_pci_I_check_function( memory_map, bus_i, device_i, 1 + function_i, bus_mask ))
+                    K( E_pci_I_check_function( bus_i, device_i, 1 + function_i, bus_mask ))
                         return ~0;
                 }
             }
@@ -569,17 +567,17 @@ E_pci_I_check_bus( struct E_main_Z_memory_map_entry **memory_map
     return 0;
 }
 N
-E_pci_I_check_buses( struct E_main_Z_memory_map_entry **memory_map
+E_pci_I_check_buses( void
 ){  C bus_mask[ 256 / 8 ];
     _0( &bus_mask[0], 256 / 8 );
     N8 header_type = E_pci_I_read( 0, 0, 0, 0xc ) >> 16;
     if( header_type & 0x80 )
     {   for_n( function_i, 8 )
-        {   K( E_pci_I_check_bus( memory_map, function_i, bus_mask ))
+        {   K( E_pci_I_check_bus( function_i, bus_mask ))
                 return ~0;
         }
     }else
-    {   K( E_pci_I_check_bus( memory_map, 0, bus_mask ))
+    {   K( E_pci_I_check_bus( 0, bus_mask ))
             return ~0;
     }
     return 0;

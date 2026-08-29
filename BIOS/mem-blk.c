@@ -26,21 +26,23 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • pamięć zarezerwowana
  * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
- * • tablica “memory_map”
- * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
+ * • ewentualny blok nie przydzielonej pamięci “mem-blk”
+ * • tablica “memory_map”
  * • stos; wyrównany adres i rozmiar
  * • początkowe dane “mem-blk”: “allocated”, “free”
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • (program ‘bootloadera’)
+ * • (nowy program ‘boot loadera’)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
+ * • stary program ‘boot loadera’
  * • (0xf000 — niezarejestrowana strona pamięci na program startowy procesorów)
  * • nieprzenaszalna pamięć zarezerwowana
  * W przeciwnym przypadku (“!reserved_from_end”):
  * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * (• stary program ‘boot loadera’ nadpisywany przez stos )
  * • stos; wyrównany adres i rozmiar
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
- * • (program ‘bootloadera’)
+ * • (nowy program ‘boot loadera’)
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • początkowe dane “mem-blk”: “free”, “allocated”
  * • tablica “memory_map”
@@ -175,7 +177,6 @@ E_mem_M(
     E_mem_Q_blk_Q_sys_table_a_I_sort_inserted( allocated_i, ~0 );
     return 0;
 }
-extern N E_main_S_framebuffer_virtual;
 N
 E_mem_M_test( N memory_start
 , N memory_size

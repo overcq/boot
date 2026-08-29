@@ -1,9 +1,9 @@
 *.fd
-*.img
 *.o
-a.out
+*.out
 E_cplus_S_cx_sources
-env.mk
+/disk.img
+/env.mk
 /BIOS/kernelloader
 /BIOS/mbr
 /BIOS/install/*.c

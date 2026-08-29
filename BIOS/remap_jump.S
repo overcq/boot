@@ -2,7 +2,7 @@
 #   ___   public
 #  ¦OUX¦  x86_64 assembly
 #  ¦/C+¦  OUX/C+ OS
-#   ---   UEFI boot loader
+#   ---   BIOS boot loader
 #         jump procedure located in identity mapped code
 # (c)overcq              on WSL\Debian (Linux 6.18.33.2)             2026-8-28 Z
 #*******************************************************************************
@@ -12,9 +12,9 @@
 .code64
 E_remap_jump_I:
     pop     %rax
-    mov     %rdx,%cr3
-    lea     (%rax,%r8),%rax
-    mov     %rcx,%rsp
+    mov     %rdi,%cr3
+    lea     (%rax,%rsi),%rax
+    lea     (%rsp,%rsi),%rsp
     jmp     *%rax
 E_remap_jump_I_end:
 #*******************************************************************************

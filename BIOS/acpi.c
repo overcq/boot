@@ -8,9 +8,10 @@
 *******************************************************************************/
 #include "kernelloader.h"
 //==============================================================================
-P E_main_Z_p_I_to_virtual_pre( struct E_main_Z_memory_map_entry *, P );
+P E_main_Z_p_I_to_virtual_pre(P);
 //==============================================================================
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
+extern struct E_main_Z_memory_map_entry *E_main_S_memory_map;
 //==============================================================================
 B E_acpi_S_pic_mode;
 P E_acpi_S_apic_content;
@@ -29,9 +30,8 @@ E_acpi_I_checksum( P table
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 __attribute__ (( __warn_unused_result__ ))
 N
-E_acpi_I_rsdp( struct E_main_Z_memory_map_entry *memory_map
-, struct H_acpi_Z_rsdp *rsdp
-){  struct H_acpi_Z_xsdt *xsdt = E_main_Z_p_I_to_virtual_pre( memory_map, (P)rsdp->XSDT_address );
+E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
+){  struct H_acpi_Z_xsdt *xsdt = E_main_Z_p_I_to_virtual_pre( (P)rsdp->XSDT_address );
     if( !xsdt )
         return ~0;
     if( xsdt->header.length < sizeof( xsdt->header ) + sizeof( xsdt->table_address[0] )
@@ -44,7 +44,7 @@ E_acpi_I_rsdp( struct E_main_Z_memory_map_entry *memory_map
     E_main_S_kernel_args.pcie_base_address = 0;
     N table_n = ( xsdt->header.length - sizeof( xsdt->header )) / sizeof( xsdt->table_address[0] );
     for_n( table_i, table_n )
-    {   struct H_acpi_Z_table_header *header = E_main_Z_p_I_to_virtual_pre( memory_map, (P)xsdt->table_address[ table_i ] );
+    {   struct H_acpi_Z_table_header *header = E_main_Z_p_I_to_virtual_pre( (P)xsdt->table_address[ table_i ] );
         if( !header
         || header->length <= sizeof(header)
         || E_acpi_I_checksum( header, header->length )
@@ -124,7 +124,7 @@ E_acpi_I_rsdp( struct E_main_Z_memory_map_entry *memory_map
                 || !fadt->ex_dsdt
                 )
                     return ~0;
-                header = E_main_Z_p_I_to_virtual_pre( memory_map, (P)fadt->ex_dsdt );
+                header = E_main_Z_p_I_to_virtual_pre( (P)fadt->ex_dsdt );
                 facs_physical = (P)fadt->ex_facs;
             }else if( header->revision == 3
             || header->revision == 4
@@ -134,11 +134,11 @@ E_acpi_I_rsdp( struct E_main_Z_memory_map_entry *memory_map
                 || !fadt->ex_dsdt
                 )
                     return ~0;
-                header = E_main_Z_p_I_to_virtual_pre( memory_map, (P)fadt->ex_dsdt );
+                header = E_main_Z_p_I_to_virtual_pre( (P)fadt->ex_dsdt );
                 facs_physical = (P)fadt->ex_facs;
             }else
                 return ~0;
-            struct H_acpi_Z_facs *facs = E_main_Z_p_I_to_virtual_pre( memory_map, (P)facs_physical );
+            struct H_acpi_Z_facs *facs = E_main_Z_p_I_to_virtual_pre( (P)facs_physical );
             if( !header
             || !facs
             )
@@ -202,8 +202,8 @@ E_acpi_I_rsdp( struct E_main_Z_memory_map_entry *memory_map
 }
 __attribute__ (( __warn_unused_result__ ))
 N
-E_acpi_I_search( struct E_main_Z_memory_map_entry *memory_map
-){  struct H_acpi_Z_rsdp *rsdp = (P)(N)*( N16 * )E_simple_Z_p_I_align_up_to_v2( E_main_Z_p_I_to_virtual_pre( memory_map, (P)0x40e ), 16 );
+E_acpi_I_search( void
+){  struct H_acpi_Z_rsdp *rsdp = (P)(N)*( N16 * )E_simple_Z_p_I_align_up_to_v2( E_main_Z_p_I_to_virtual_pre( (P)0x40e ), 16 );
     P rsdp_end = (P)( (N)rsdp + 1024 - sizeof( *rsdp ));
     while( (N)rsdp <= (N)rsdp_end )
     {   if( E_mem_Q_blk_T_eq( &rsdp->signature[0], "RSD PTR ", 8 )
@@ -212,10 +212,10 @@ E_acpi_I_search( struct E_main_Z_memory_map_entry *memory_map
         && rsdp->length >= sizeof( *rsdp )
         && !E_acpi_I_checksum( rsdp, sizeof( *rsdp ))
         )
-            return E_acpi_I_rsdp( memory_map, rsdp );
+            return E_acpi_I_rsdp(rsdp);
         rsdp = (P)( (N)rsdp + 16 );
     }
-    rsdp = E_main_Z_p_I_to_virtual_pre( memory_map, (P)0xe0000 );
+    rsdp = E_main_Z_p_I_to_virtual_pre( (P)0xe0000 );
     rsdp_end = (P)( (N)rsdp + 0x100000 - 0xe0000 - sizeof( *rsdp ));
     while( (N)rsdp <= (N)rsdp_end )
     {   if( E_mem_Q_blk_T_eq( &rsdp->signature[0], "RSD PTR ", 8 )
@@ -224,7 +224,7 @@ E_acpi_I_search( struct E_main_Z_memory_map_entry *memory_map
         && rsdp->length >= sizeof( *rsdp )
         && !E_acpi_I_checksum( rsdp, sizeof( *rsdp ))
         )
-            return E_acpi_I_rsdp( memory_map, rsdp );
+            return E_acpi_I_rsdp(rsdp);
         rsdp = (P)( (N)rsdp + 16 );
     }
     return ~0;

@@ -3404,8 +3404,7 @@ E_font_M( void
             }
         }
         Mt_( font.bitmap[i].bitmap, font.bitmap[i].width * font.height / 4 + ( font.bitmap[i].width * font.height % 4 ? 1 : 0 ));
-        if( !font.bitmap[i].bitmap )
-            return ~2;
+        Kp_( ~2, font.bitmap[i].bitmap );
         N8 c;
         for_n( j, font.bitmap[i].width * font.height )
         {   if( j % 4 == 0 )

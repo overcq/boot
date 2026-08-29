@@ -128,7 +128,7 @@ struct __attribute__ (( __packed__ )) E_main_I_tss
   N reserved_1;
   N16 reserved_2;
   N16 io_map_base_address;
-}tss;
+}E_main_S_tss;
 B E_main_S_pic_mode = no;
 P E_main_S_apic_content;
 N E_main_S_apic_content_l;
@@ -565,7 +565,7 @@ E_main_Q_memory_map_I_align( N memory_map_n
 }
 //DFN Nie usuwa wszystkich przecinających się bloków. Liczy na to, że niektóre bezsensowne przecięcia nie wystąpią.
 __attribute__ (( __warn_unused_result__ ))
-N
+S
 E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
 ){  struct H_uefi_Z_memory_type_descriptor *entry = E_main_S_memory_map;
     while( entry != (P)(( Pc )E_main_S_memory_map + *memory_map_n * E_main_S_descriptor_l )
@@ -818,7 +818,7 @@ E_main_Q_memory_map_I_set_virtual_I_entry( struct H_uefi_Z_memory_type_descripto
     }
 }
 __attribute__ (( __warn_unused_result__ ))
-N
+S
 E_main_Q_memory_map_I_set_virtual( N memory_map_n
 , B reserved_from_end
 , N *memory_map_new_entries
@@ -1690,7 +1690,8 @@ H_uefi_I_main(
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_align( memory_map_n );
     E_main_Q_memory_map_I_sort_physical( memory_map_n );
-    if( K_error( E_main_Q_memory_map_I_remove_overlapped( &memory_map_n )))
+    status = E_main_Q_memory_map_I_remove_overlapped( &memory_map_n );
+    if( status < 0 )
         goto End;
     memory_map_n -= E_main_Q_memory_map_I_remove_bad( memory_map_n );
     memory_map_l = memory_map_n * E_main_S_descriptor_l;
@@ -1723,17 +1724,17 @@ H_uefi_I_main(
         memory_map->pages = 1;
     }
     N reserved_size = E_main_Q_memory_map_R_reserved_size( memory_map_n );
-    B reserved_from_end = loader_start < H_oux_E_mem_S_page_size + reserved_size;
-    reserved_from_end = no; //TEST
+    B reserved_from_end = yes; //CONF
     N memory_size = E_main_Q_memory_map_R_size( memory_map_n );
     N reserved_size_from_start;
     if( reserved_from_end )
     {   reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( memory_map_n );
-        if( memory_size - ( reserved_size - reserved_size_from_start ) - E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) - H_oux_E_mem_S_page_size >= 0x100000000ULL )
+        if( memory_size - ( reserved_size - reserved_size_from_start ) - E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) - H_oux_E_mem_S_page_size > 0x100000000ULL - H_oux_E_mem_S_page_size )
             reserved_from_end = no;
     }
     N memory_map_new_entries;
-    if( K_error( E_main_Q_memory_map_I_set_virtual( memory_map_n, reserved_from_end, &memory_map_new_entries )))
+    status = E_main_Q_memory_map_I_set_virtual( memory_map_n, reserved_from_end, &memory_map_new_entries );
+    if( status < 0 )
         goto End;
     memory_map_n += memory_map_new_entries;
     memory_map_l = memory_map_n * E_main_S_descriptor_l;
@@ -1766,8 +1767,8 @@ H_uefi_I_main(
     status = E_main_Q_loader_I_relocate( loader_start_new_physical, loader_start - loader_start_old );
     if( status < 0 )
         goto End;
-    E_mem_Q_blk_I_copy( (P)(N)E_main_S_kernel_args.processor_start_page, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
     E_main_Z_remap_jump remap_jump = (P)(N)E_main_S_kernel_args.processor_start_page;
+    E_mem_Q_blk_I_copy( remap_jump, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
     E_main_S_memory_map_n = memory_map_n;
     E_main_S_system_table = system_table;
     __asm__ volatile (
@@ -1779,7 +1780,7 @@ H_uefi_I_main(
         goto End;
     remap_jump( E_main_S_loader_stack, pml4, loader_start - loader_start_old );
     system_table = E_main_S_system_table;
-    _0_( &tss );
+    _0_( &E_main_S_tss );
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_data_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_data_S_write | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_local_descriptor_low( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
@@ -1788,8 +1789,8 @@ H_uefi_I_main(
     gdt[2] = E_main_J_data_descriptor( 0, ~0ULL );
     gdt[3] = E_main_J_local_descriptor_low( (N)&ldt[0], sizeof(ldt) - 1 );
     gdt[4] = (N)&ldt[0] >> 32;
-    gdt[5] = E_main_J_task_descriptor_low( 2 << 8, (N)&tss );
-    gdt[6] = (N)&tss >> 32;
+    gdt[5] = E_main_J_task_descriptor_low( 2 << 8, (N)&E_main_S_tss );
+    gdt[6] = (N)&E_main_S_tss >> 32;
     ldt[0] = 0;
     ldt[1] = 0;
     idt[0] = 0;
@@ -1912,7 +1913,9 @@ H_uefi_I_main(
     if( K_error( E_main_M_madt( E_main_S_apic_content, E_main_S_apic_content_l )))
         goto End;
     Mt_( E_main_S_kernel_args.processor_proc, E_main_S_kernel_args.processor_n - 1 );
-    if( K_error( E_main_S_kernel_args.processor_proc ))
+    if( K_error( E_main_S_kernel_args.processor_proc )
+    || !E_main_S_kernel_args.processor_proc
+    )
         goto End;
     E_mem_Q_blk_I_copy( (P)(N)E_main_S_kernel_args.processor_start_page, &E_mp_init_I, ( Pc )&E_mp_init_I_end - ( Pc )&E_mp_init_I );
     Pc p = (P)(N)E_main_S_kernel_args.processor_start_page;

@@ -43,7 +43,7 @@ init-usb:
     && $(H_ocq_S_mkfs_oux)/mkfs.oux $(H_ocq_S_usb_dev)3 512
 #-------------------------------------------------------------------------------
 run-qemu-bios:
-	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 32M,maxmem=32M \
+	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 128M,maxmem=128M \
     -drive media=disk,format=raw,file=disk.img -boot order=c,once=c
 run-qemu-uefi:
 	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 128M,maxmem=128M \

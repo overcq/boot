@@ -592,84 +592,13 @@ struct E_main_Z_kernel_args
   N8 gsi_n;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-struct E_base_Z_image_dos_header
-{ N16 magic; // Magic number
-  N16 cblp; // Bytes on last page of file
-  N16 cp; // Pages in file
-  N16 crlc; // Relocations
-  N16 cparhdr; // Size of header in paragraphs
-  N16 minalloc; // Minimum extra paragraphs needed
-  N16 maxalloc; // Maximum extra paragraphs needed
-  N16 ss; // Initial (relative) SS value
-  N16 sp; // Initial SP value
-  N16 csum; // Checksum
-  N16 ip; // Initial IP value
-  N16 cs; // Initial (relative) CS value
-  N16 lfarlc; // File address of relocation table
-  N16 ovno; // Overlay number
-  N16 res[4]; // Reserved words
-  N16 oemid; // OEM identifier (for e_oeminfo)
-  N16 e_oeminfo; // OEM information; oemid specific
-  N16 res_2[10]; // Reserved words
-  N32 lfanew; // File address of new exe header
-};
-struct E_base_Z_image_file_header
-{ N16 machine;
-  N16 number_of_sections;
-  N32 time_date_stamp;
-  N32 pointer_to_symbol_table;
-  N32 number_of_symbols;
-  N16 size_of_optional_header;
-  N16 characteristics;
-};
-struct E_base_Z_image_data_directory
-{ N32 virtual_address;
-  N32 size;
-};
-struct E_base_Z_image_optional_header64
-{ N16 magic;
-  N8 major_linker_version;
-  N8 minor_linker_version;
-  N32 size_of_code;
-  N32 size_of_initialized_data;
-  N32 size_of_uninitialized_data;
-  N32 address_of_entry_point;
-  N32 base_of_code;
-  N64 image_base;
-  N32 section_alignment;
-  N32 file_alignment;
-  N16 major_operating_system_version;
-  N16 minor_operating_system_version;
-  N16 major_image_version;
-  N16 minor_image_version;
-  N16 major_subsystem_version;
-  N16 minor_subsystem_version;
-  N32 win32_version_value;
-  N32 size_of_image;
-  N32 size_of_headers;
-  N32 checksum;
-  N16 subsystem;
-  N16 dll_characteristics;
-  N64 size_of_stack_reserve;
-  N64 size_of_stack_commit;
-  N64 size_of_heap_reserve;
-  N64 size_of_heap_commit;
-  N32 loader_flags;
-  N32 number_of_rva_and_sizes;
-  struct E_base_Z_image_data_directory data_directory[16];
-};
-struct E_base_Z_image_nt_headers64
-{ N32 signature;
-  struct E_base_Z_image_file_header file_header;
-  struct E_base_Z_image_optional_header64 optional_header;
-};
-struct E_base_Z_image_relocation
-{ N32 virtual_address;
-  N32 size_of_block;
-  N16 entries[];
+struct __attribute__ (( __packed__ )) E_base_Z_image_relocation
+{ N64 offset;
+  N64 info;
+  N64 addend;
 };
 //==============================================================================
-N E_acpi_I_search( struct E_main_Z_memory_map_entry * );
+N E_acpi_I_search(void);
 //==============================================================================
 N E_font_M(void);
 N E_font_W(void);

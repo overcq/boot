@@ -5,6 +5,8 @@ SECTIONS
   { a.out(.text)
     a.out(.data)
   }
+  .text : { *(EXCLUDE_FILE(*a.out) .text) }
+  .data : { *(EXCLUDE_FILE(*a.out) .data) }
   .rela.dyn :
   { E_main_S_relocation_data = .;
     *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
@@ -15,7 +17,6 @@ SECTIONS
     *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
     *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
     *(.rela.ifunc)
+    E_main_S_relocation_data_end = .;
   }
-  .text : { *(EXCLUDE_FILE(*a.out) .text) }
-  .data : { *(EXCLUDE_FILE(*a.out) .data) }
 }

@@ -25,11 +25,11 @@ Makefile mbr.ld
 %.o: %.c kernelloader.h \
 simple.h \
 Makefile
-	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-avx -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -static -nostdlib -c -o $@ $<
-kernelloader: kernelloader.S $(filter-out ouxfs.o,$(patsubst %.c,%.o,$(wildcard *.c))) \
+	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-avx -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
+kernelloader: kernelloader.S $(filter-out ouxfs.o,$(patsubst %.c,%.o,$(wildcard *.c))) remap_jump.S mp-init.S \
 Makefile kernelloader.ld
 	$(CC) -c -o a.out kernelloader.S \
-    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) \
+    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
     && rm a.out
 install/a.out: install/main.cx
 	$(MAKE) -C install
