@@ -3,6 +3,7 @@
 *.o
 a.out
 E_cplus_S_cx_sources
+env.mk
 /BIOS/kernelloader
 /BIOS/mbr
 /BIOS/install/*.c

@@ -6,6 +6,8 @@
 #         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
+include ../env.mk
+#===============================================================================
 CC := clang
 CFLAGS := -Oz
 #===============================================================================
@@ -21,27 +23,20 @@ clean:
 	-rm kernelloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 install-qemu:
-	ocq_mnt=/mnt/oth; \
-    mkdir -p $$ocq_mnt \
-    && loopdev=$$( losetup -LPf --show ../disk.img ) \
+	loopdev=$$( losetup -LPf --show ../disk.img ) \
     && trap 'losetup -d $$loopdev' EXIT \
-    && mount $${loopdev}p2 $$ocq_mnt \
-    && trap 'losetup -d $$loopdev && umount $$ocq_mnt' EXIT \
-    && mkdir -p $$ocq_mnt/EFI/BOOT \
-    && install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
-#-------------------------------------------------------------------------------
+    && mount $${loopdev}p2 $(H_ocq_S_mnt) \
+    && trap 'losetup -d $$loopdev && umount $(H_ocq_S_mnt)' EXIT \
+    && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
+    && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
 install-vmware:
-	ocq_mnt=/mnt/oth; \
-    mkdir -p $$ocq_mnt \
-    && vmware-mount /mnt/hgfs/OUX_C+\ OS/OUX_C+\ OS.vmdk 2 $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && mkdir -p $$ocq_mnt/EFI/BOOT \
-    && install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+	vmware-mount $(H_ocq_S_vmware_disk) 2 $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
+    && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
 install-virtualbox:
-	ocq_mnt=/mnt/oth; \
-    mkdir -p $$ocq_mnt \
-    && $(VMWARE_DIR)/bin/vmware-mount ~inc/.VirtualBox/Machines/OUX_C+\ OS/OUX_C+\ OS.vmdk 2 $$ocq_mnt \
-    && trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
-    && mkdir -p $$ocq_mnt/EFI/BOOT \
-    && install kernelloader $$ocq_mnt/EFI/BOOT/BOOTX64.EFI
+	vmware-mount $(H_ocq_S_virtualbox_disk) 2 $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
+    && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
 #*******************************************************************************

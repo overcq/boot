@@ -6,43 +6,41 @@
 #         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
+include env.mk
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+H_ocq_S_parted_cmd := mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0
+#===============================================================================
 .PHONY: init-qemu init-virtualbox init-vmware init-usb \
 run-qemu-bios run-qemu-uefi
 #===============================================================================
 init-qemu:
 	dd if=/dev/zero of=disk.img bs=1G count=1 \
-    && parted -fs disk.img -a minimal 'mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0' \
+    && parted -fs disk.img -a minimal '$(H_ocq_S_parted_cmd)' \
     && loopdev=$$( losetup -LPf --show disk.img ) \
     && trap 'losetup -d $$loopdev' EXIT \
     && mkfs.fat -F 32 $${loopdev}p2 \
-    && ../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p3 512
-#-------------------------------------------------------------------------------
-init-vmware:
-	ocq_mnt=/mnt/oth; \
-    mkdir -p $$ocq_mnt \
-    && vmware-mount -f /mnt/hgfs/OUX_C+\ OS/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && parted -fs $$ocq_mnt/flat -a minimal 'mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0' \
-    && loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
-    && mkfs.fat -F 32 $${loopdev}p2 \
-    && ../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p3 512
+    && $(H_ocq_S_mkfs_oux)/mkfs.oux $${loopdev}p3 512
 init-virtualbox:
-	ocq_mnt=/mnt/oth; \
-    mkdir -p $$ocq_mnt \
-    && $(VMWARE_DIR)/bin/vmware-mount -f ~inc/.VirtualBox/Machines/OUX_C+\ OS/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap '$(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
-    && parted -fs $$ocq_mnt/flat -a minimal 'mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0' \
-    && loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && $(VMWARE_DIR)/bin/vmware-mount -d $$ocq_mnt' EXIT \
+	vmware-mount -f $(H_ocq_S_virtualbox_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && parted -fs $(H_ocq_S_mnt)/flat -a minimal '$(H_ocq_S_parted_cmd)' \
+    && loopdev=$$( losetup -LPf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && mkfs.fat -F 32 $${loopdev}p2 \
-    && ../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${loopdev}p3 512
+    && $(H_ocq_S_mkfs_oux)/mkfs.oux $${loopdev}p3 512
+init-vmware:
+	vmware-mount -f $(H_ocq_S_vmware_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && parted -fs $(H_ocq_S_mnt)/flat -a minimal '$(H_ocq_S_parted_cmd)' \
+    && loopdev=$$( losetup -LPf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && mkfs.fat -F 32 $${loopdev}p2 \
+    && $(H_ocq_S_mkfs_oux)/mkfs.oux $${loopdev}p3 512
 #-------------------------------------------------------------------------------
 init-usb:
-	ocq_dev=/dev/sdb \
-    && parted -fs $$ocq_dev -a minimal 'mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0' \
-    && mkfs.fat -F 32 $${ocq_dev}2 \
-    && ../linux-ouxfs-tools/mkfs-oux/mkfs.oux $${ocq_dev}3 512
+	parted -fs $(H_ocq_S_usb_dev) -a minimal '$(H_ocq_S_parted_cmd)' \
+    && mkfs.fat -F 32 $(H_ocq_S_usb_dev)2 \
+    && $(H_ocq_S_mkfs_oux)/mkfs.oux $(H_ocq_S_usb_dev)3 512
 #-------------------------------------------------------------------------------
 run-qemu-bios:
 	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 32M,maxmem=32M \

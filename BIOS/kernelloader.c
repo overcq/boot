@@ -596,8 +596,7 @@ E_main_Q_memory_map_I_set_virtual_0( struct E_main_Z_memory_map_entry **memory_m
     }
     memory_map_ = memory_map_oryg;
     while( memory_map_ != (P)E_main_Z_memory_table_S_end )
-    {   
-        if( memory_map_->type != E_main_Z_memory_table_Z_memory_type_S_available
+    {   if( memory_map_->type != E_main_Z_memory_table_Z_memory_type_S_available
         && memory_map_->type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
         && memory_map_->type != E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
         && !( memory_map_->physical_start <= E_main_S_framebuffer_physical

@@ -6,7 +6,8 @@
 #         makefile
 # ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒2‒27 f
 #*******************************************************************************
-AS := as
+include ../env.mk
+#===============================================================================
 CC := clang
 CFLAGS := -Oz
 #===============================================================================
@@ -47,69 +48,57 @@ install-mbr-qemu: mbr
     && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
     && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
 install-kernelloader-qemu: kernelloader install/a.out
-	ocq_mnt=/mnt/oth \
-    && loopdev=$$( losetup -LPf --show ../disk.img ) \
+	loopdev=$$( losetup -LPf --show ../disk.img ) \
     && trap 'losetup -d $$loopdev' EXIT \
-    && [ -e $${loopdev}p1 ] \
-    && dd if=kernelloader of=$${loopdev}p1 \
-    && install/a.out $$loopdev kernelloader
-#-------------------------------------------------------------------------------
-install-vmware: install-mbr-vmware install-kernelloader-vmware
-install-mbr-vmware: mbr
-	ocq_mnt=/mnt/oth \
-    && mkdir -p $$ocq_mnt \
-    && vmware-mount -f /mnt/hgfs/OUX_C+\ OS/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && loopdev=$$( losetup -Lf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 count=218 \
-    && dd conv=notrunc if=/dev/zero of=$$loopdev bs=1 seek=224 count=$$(( 228 - 224 )) \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
-install-kernelloader-vmware: kernelloader install/a.out
-	ocq_mnt=/mnt/oth \
-    && mkdir -p $$ocq_mnt \
-    && vmware-mount -f /mnt/hgfs/OUX_C+\ OS/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
     && [ -e $${loopdev}p1 ] \
     && dd if=kernelloader of=$${loopdev}p1 \
     && install/a.out $$loopdev kernelloader
 install-virtualbox: install-mbr-vmware install-kernelloader-vmware
 install-mbr-virtualbox: mbr
-	ocq_mnt=/mnt/oth \
-    && mkdir -p $$ocq_mnt \
-    && vmware-mount -f ~/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && loopdev=$$( losetup -Lf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
+	vmware-mount -f $(H_ocq_S_virtualbox_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && loopdev=$$( losetup -Lf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && dd conv=notrunc if=$< of=$$loopdev bs=1 count=218 \
     && dd conv=notrunc if=/dev/zero of=$$loopdev bs=1 seek=224 count=$$(( 228 - 224 )) \
     && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
     && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
 install-kernelloader-virtualbox: kernelloader install/a.out
-	ocq_mnt=/mnt/oth \
-    && mkdir -p $$ocq_mnt \
-    && vmware-mount -f ~/OUX_C+\ OS.vmdk $$ocq_mnt \
-    && trap 'vmware-mount -d $$ocq_mnt' EXIT \
-    && loopdev=$$( losetup -LPf --show $$ocq_mnt/flat ) \
-    && trap 'losetup -d $$loopdev && vmware-mount -d $$ocq_mnt' EXIT \
+	vmware-mount -f $(H_ocq_S_virtualbox_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && loopdev=$$( losetup -LPf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && [ -e $${loopdev}p1 ] \
+    && dd if=kernelloader of=$${loopdev}p1 \
+    && install/a.out $$loopdev kernelloader
+install-vmware: install-mbr-vmware install-kernelloader-vmware
+install-mbr-vmware: mbr
+	vmware-mount -f $(H_ocq_S_vmware_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && loopdev=$$( losetup -Lf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 count=218 \
+    && dd conv=notrunc if=/dev/zero of=$$loopdev bs=1 seek=224 count=$$(( 228 - 224 )) \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
+install-kernelloader-vmware: kernelloader install/a.out
+	vmware-mount -f $(H_ocq_S_vmware_disk) $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && loopdev=$$( losetup -LPf --show $(H_ocq_S_mnt)/flat ) \
+    && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && [ -e $${loopdev}p1 ] \
     && dd if=kernelloader of=$${loopdev}p1 \
     && install/a.out $$loopdev kernelloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 install-usb: install-mbr-usb install-kernelloader-usb
 install-mbr-usb: mbr
-	ocq_dev=/dev/sdb \
-    && [ -e $$ocq_dev ] \
-    && dd if=$< of=$$ocq_dev bs=1 count=218 \
-    && dd if=/dev/zero of=$$ocq_dev bs=1 seek=224 count=$$(( 228 - 224 )) \
-    && dd if=$< of=$$ocq_dev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
-    && dd if=$< of=$$ocq_dev bs=1 skip=510 seek=510 count=2
+	[ -e $(H_ocq_S_usb_dev) ] \
+    && dd if=$< of=$(H_ocq_S_usb_dev) bs=1 count=218 \
+    && dd if=/dev/zero of=$(H_ocq_S_usb_dev) bs=1 seek=224 count=$$(( 228 - 224 )) \
+    && dd if=$< of=$(H_ocq_S_usb_dev) bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
+    && dd if=$< of=$(H_ocq_S_usb_dev) bs=1 skip=510 seek=510 count=2
 install-kernelloader-usb: kernelloader install/a.out
-	ocq_dev=/dev/sdb \
-    && [ -e $${ocq_dev}1 ] \
-    && dd if=kernelloader of=$${ocq_dev}1 \
-    && install/a.out $$ocq_dev kernelloader
+	[ -e $(H_ocq_S_usb_dev)1 ] \
+    && dd if=kernelloader of=$(H_ocq_S_usb_dev)1 \
+    && install/a.out $(H_ocq_S_usb_dev) kernelloader
 #*******************************************************************************
