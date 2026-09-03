@@ -1,9 +1,9 @@
 //-*-C-*-
 /*******************************************************************************
-*   ___   publicplace
+*   ___   public
 *  ¦OUX¦  C+
-*  ¦/C+¦  OUX/C+ OS
-*   ---   install file boot loader
+*  ¦/C+¦  OUX/C+ OS building
+*   ---   install boot loader file
 *         main
 * ©overcq                on ‟Gentoo Linux 17.1” “x86_64”             2021‒3‒26 W
 *******************************************************************************/
@@ -43,53 +43,21 @@ main( int argc
 , char *argv[]
 ){  E_base_M( argc, argv );
     N logical_block_size = 512;
-    Pc device = 0;
-    Pc file = 0;
-    B option = no;
-    B floppy = no;
-    for( int i = 1; i != argc; i++ )
-    {   if( option )
-        {   if( E_text_Z_s0_T_eq_s0( argv[i], "floppy" ))
-                floppy = yes;
-            else if( E_text_Z_s0_T_eq_s0( argv[i], "disk" ))
-                floppy = no;
-            else
-                goto Error;
-            option = no;
-            continue;
-        }
-        if( *argv[i] == '-' )
-        {   if( E_text_Z_s0_T_eq_s0( argv[i] + 1, "o" ))
-            {   option = yes;
-                continue;
-            }
-            goto Error;
-        }
-        if(file)
-            goto Error;
-        if(device)
-            file = argv[i];
-        else
-            device = argv[i];
-    }
-    if( !device
-    || !file
-    || option
-    )
+    if( argc != 3 )
         goto Error;
     I device_file_id;
-    if( !~( device_file_id = E_mem_Q_file_M( device, no, 0 )))
+    if( !~( device_file_id = E_mem_Q_file_M( argv[1], no, 0 )))
         goto Error;
     if( E_mem_Q_file_P_pos( device_file_id, logical_block_size ))
         goto Error_2;
     struct E_disc_Z_gpt_header gpt_header;
-    if( E_mem_Q_file_R_s( device_file_id, ( Pc )&gpt_header, sizeof( gpt_header )))
+    if( E_mem_Q_file_R_sl( device_file_id, ( Pc )&gpt_header, sizeof( gpt_header )))
         goto Error_2;
     struct E_disc_Z_gpt_partition_record gpt_partition_record;
     N i = 0;
     O{  if( E_mem_Q_file_P_pos( device_file_id, gpt_header.partition_entry_lba * logical_block_size + i * gpt_header.partition_entry_size ))
             goto Error_2;
-        if( E_mem_Q_file_R_s( device_file_id, ( Pc )&gpt_partition_record, sizeof( gpt_partition_record )))
+        if( E_mem_Q_file_R_sl( device_file_id, ( Pc )&gpt_partition_record, sizeof( gpt_partition_record )))
             goto Error_2;
         if( E_text_Z_sl_T_eq(( Pc )&gpt_partition_record.type_guid[0], "\x48\x61\x68\x21\x49\x64\x6f\x6e\x74\x4e\x65\x65\x64\x45\x46\x49", sizeof( gpt_partition_record.type_guid )))
             break;
@@ -97,30 +65,19 @@ main( int argc
             goto Error_2;
     }
     N file_pos_sectors = gpt_partition_record.start_lba * logical_block_size / 512;
-    N heads = floppy ? 2 : 16;
-    N sectors = floppy ? 18 : 63;
-    if( file_pos_sectors / ( heads * sectors ) > 1024 ) /// Za dużo cylindrów dla adresu CHS 1024/16/63 lub 1024/2/18.
+    if( file_pos_sectors > 65536 )
         goto Error_2;
     struct stat stat_;
-    V0( stat( file, &stat_ ))
+    V0( stat( argv[2], &stat_ ))
         goto Error_2;
     N file_size = stat_.st_size;
-    if( file_size > 255 * 512 ) /// Za duży rozmiar pliku dla liczby sektorów w bajcie.
+    if( file_size > 65535 * 512 ) // Za duży rozmiar pliku dla liczby sektorów w 2 bajtach.
         goto Error_2;
-    N cylinder = file_pos_sectors / ( heads * sectors );
-    file_pos_sectors %= heads * sectors;
-    N head = file_pos_sectors / sectors;
-    file_pos_sectors %= sectors;
-    N sector = (( cylinder & ( 3 << 8 )) >> 2 ) | ( file_pos_sectors + 1 );
     if( E_mem_Q_file_P_pos( device_file_id, Q_filesystem_S_file_loader_data ))
         goto Error_2;
-    if( E_mem_Q_file_P_n( device_file_id, head, 1 ))
+    if( E_mem_Q_file_P_n( device_file_id, file_pos_sectors, 2 ))
         goto Error_2;
-    if( E_mem_Q_file_P_n( device_file_id, sector, 1 ))
-        goto Error_2;
-    if( E_mem_Q_file_P_n( device_file_id, cylinder, 1 ))
-        goto Error_2;
-    if( E_mem_Q_file_P_n( device_file_id, file_size / 512 + ( file_size % 512 ? 1 : 0 ), 1 ))
+    if( E_mem_Q_file_P_n( device_file_id, file_size / 512 + ( file_size % 512 ? 1 : 0 ), 2 ))
         goto Error_2;
     E_mem_Q_file_W( device_file_id );
     E_base_W();

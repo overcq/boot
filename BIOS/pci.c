@@ -516,6 +516,29 @@ E_pci_I_check_device( N8 bus_i
             E_main_S_ethernet_eeprom_address &= ~0xf;
             break;
         }
+      case 0x1e598086:
+        {   *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            { 0xfed80000
+            , 0x10000
+            , E_main_Z_memory_table_Z_memory_type_S_reserved
+            };
+            *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            { 0xfeda0000
+            , 0x20000
+            , E_main_Z_memory_table_Z_memory_type_S_reserved
+            };
+            *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            { 0xff000000
+            , 0x1000000
+            , E_main_Z_memory_table_Z_memory_type_S_reserved
+            };
+            //*--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            //{ 0xfed40000
+            //, 0x5000
+            //, E_main_Z_memory_table_Z_memory_type_S_reserved
+            //};
+            break;
+        }
     }
     return 0;
 }
@@ -547,6 +570,24 @@ E_pci_I_check_bus( N8 bus_i
     {   N32 ids = E_pci_I_read( bus_i, device_i, 0, 0 );
         if( !~ids )
             continue;
+        if( !bus_i
+        && !device_i
+        )
+            switch(ids)
+            { case 0x1048086: // Sandy Bridge Mobile
+              case 0x1088086: // Sandy Bridge Mobile var.
+              case 0x1448086: // Ivy Bridge Mobile
+              case 0x1588086: // Ivy Bridge Mobile var.
+                {   N32 tsegmb = E_pci_I_read( bus_i, device_i, 0, 0xb8 ) & ~0xfffff;
+                    N32 tolud = E_pci_I_read( bus_i, device_i, 0, 0xbc ) & ~0xfffff;
+                    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                    { tsegmb
+                    , tolud - tsegmb
+                    , E_main_Z_memory_table_Z_memory_type_S_reserved
+                    };
+                    break;
+                }
+            }
         N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xc ) >> 16;
         K( E_pci_I_check_device( bus_i, device_i, header_type & 0x7f, 0, ids ))
             return ~0;

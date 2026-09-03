@@ -499,6 +499,10 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_generic_address
   N64 address;
 };
 //------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_rsdt
+{ struct H_acpi_Z_table_header header;
+  N32 table_address[];
+};
 struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
 { struct H_acpi_Z_table_header header;
   N64 table_address[];
@@ -601,6 +605,33 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v3
   struct H_acpi_Z_generic_address ex_PM2_control_block;
   struct H_acpi_Z_generic_address ex_PM_timer_block;
   struct H_acpi_Z_generic_address ex_GPE0_block, ex_GPE1_block;
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v1
+{ struct H_acpi_Z_table_header header;
+  N32 facs;
+  N32 dsdt;
+  N8 int_model;
+  N8 reserved_1;
+  N16 SCI_interrupt;
+  N32 SMI_command;
+  N8 SMI_ACPI_enable, SMI_ACPI_disable;
+  N8 SMI_S4BIOS_request;
+  N8 reserved_2;
+  N32 PM1a_event_block, PM1b_event_block;
+  N32 PM1a_control_block, PM1b_control_block;
+  N32 PM2_control_block;
+  N32 PM_timer_block;
+  N32 GPE0_block, GPE1_block;
+  N8 PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  N8 GPE1_base;
+  N8 reserved_3;
+  N16 PM_level2_latency, PM_level3_latency;
+  N16 memory_cache_flush_size, memory_cache_flush_stride;
+  N8 CPU_duty_offset, CPU_duty_width;
+  N8 CMOS_alarm_day, CMOS_alarm_month;
+  N8 CMOS_century;
+  N8 reserved_4[3];
+  N32 flags;
 };
 struct __attribute__ (( __packed__ )) H_acpi_Z_fadt
 { struct H_acpi_Z_table_header header;

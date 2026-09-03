@@ -147,6 +147,8 @@ typedef __int128            S128;
 #include "simple.h"
 //==============================================================================
 #define H_oux_E_mem_S_page_size             0x1000
+#define E_main_S_boot_loader_start          0x10000
+#define E_main_S_boot_loader_end            0x80000
 #define E_main_Z_memory_table_S_end         0x7e000
 //==============================================================================
 struct E_datetime_Z
@@ -158,26 +160,6 @@ struct E_datetime_Z
   N8 second;
   N32 nanosecond;
 };
-//==============================================================================
-N E_mem_M_test( N, N );
-N E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N );
-B E_mem_Q_blk_T_eq( P, P, N );
-void E_mem_Q_blk_I_copy( P, P, N );
-void E_mem_Q_blk_P_fill_c( P, N, C );
-P E_mem_Q_blk_M(N);
-P E_mem_Q_blk_M_tab( N, N );
-P E_mem_Q_blk_M_align( N, N );
-P E_mem_Q_blk_M_align_tab( N, N, N );
-P E_mem_Q_blk_M_replace_tab( P, N, N );
-P E_mem_Q_blk_M_replace( P, N );
-P E_mem_Q_blk_M_split( P, N );
-N E_mem_Q_blk_W(P);
-P E_mem_Q_blk_I_add( P, N, N *, N * );
-P E_mem_Q_blk_I_prepend_append( P, N, N );
-P E_mem_Q_blk_I_append( P, N, N );
-P E_mem_Q_blk_I_prepend( P, N );
-P E_mem_Q_blk_I_insert( P, N, N );
-P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
 enum
 { E_main_Z_memory_table_Z_memory_type_S_available = 1
@@ -305,6 +287,10 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_generic_address
   N64 address;
 };
 //------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_rsdt
+{ struct H_acpi_Z_table_header header;
+  N32 table_address[];
+};
 struct __attribute__ (( __packed__ )) H_acpi_Z_xsdt
 { struct H_acpi_Z_table_header header;
   N64 table_address[];
@@ -330,9 +316,7 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v0
   N32 firmware_waking_vector;
   N32 global_lock;
   N32 flags;
-  N8 reserved_1[8];
-  N8 version;
-  N8 reserved_2[31];
+  N8 reserved[40];
 };
 struct __attribute__ (( __packed__ )) H_acpi_Z_facs_v1
 { C signature[4];
@@ -369,6 +353,33 @@ enum H_acpi_Z_fadt_Z_preferred_pm_profile
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_appliance_pc
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_performance_server
 , H_acpi_Z_fadt_Z_preferred_pm_profile_S_tablet
+};
+struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v1
+{ struct H_acpi_Z_table_header header;
+  N32 facs;
+  N32 dsdt;
+  N8 int_model;
+  N8 reserved_1;
+  N16 SCI_interrupt;
+  N32 SMI_command;
+  N8 SMI_ACPI_enable, SMI_ACPI_disable;
+  N8 SMI_S4BIOS_request;
+  N8 reserved_2;
+  N32 PM1a_event_block, PM1b_event_block;
+  N32 PM1a_control_block, PM1b_control_block;
+  N32 PM2_control_block;
+  N32 PM_timer_block;
+  N32 GPE0_block, GPE1_block;
+  N8 PM1_event_length, PM1_control_length, PM2_control_length, PM_timer_length, GPE0_block_length, GPE1_block_length;
+  N8 GPE1_base;
+  N8 reserved_3;
+  N16 PM_level2_latency, PM_level3_latency;
+  N16 memory_cache_flush_size, memory_cache_flush_stride;
+  N8 CPU_duty_offset, CPU_duty_width;
+  N8 CMOS_alarm_day, CMOS_alarm_month;
+  N8 CMOS_century;
+  N8 reserved_4[3];
+  N32 flags;
 };
 struct __attribute__ (( __packed__ )) H_acpi_Z_fadt_v3
 { struct H_acpi_Z_table_header header;
@@ -592,9 +603,9 @@ struct E_main_Z_kernel_args
   N8 gsi_n;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-struct __attribute__ (( __packed__ )) E_base_Z_image_relocation
+struct __attribute__ (( __packed__ )) Q_elf_Z_rela_entry
 { N64 offset;
-  N64 info;
+  N32 type, sym;
   N64 addend;
 };
 //==============================================================================
@@ -607,6 +618,26 @@ void E_font_I_print_nl(void);
 void E_font_I_print_u(U);
 N E_font_I_print( Pc );
 void E_font_I_print_hex(N);
+//==============================================================================
+N E_mem_M_test( B, N, N, N );
+N E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N );
+B E_mem_Q_blk_T_eq( P, P, N );
+void E_mem_Q_blk_I_copy( P, P, N );
+void E_mem_Q_blk_P_fill_c( P, N, C );
+P E_mem_Q_blk_M(N);
+P E_mem_Q_blk_M_tab( N, N );
+P E_mem_Q_blk_M_align( N, N );
+P E_mem_Q_blk_M_align_tab( N, N, N );
+P E_mem_Q_blk_M_replace_tab( P, N, N );
+P E_mem_Q_blk_M_replace( P, N );
+P E_mem_Q_blk_M_split( P, N );
+N E_mem_Q_blk_W(P);
+P E_mem_Q_blk_I_add( P, N, N *, N * );
+P E_mem_Q_blk_I_prepend_append( P, N, N );
+P E_mem_Q_blk_I_append( P, N, N );
+P E_mem_Q_blk_I_prepend( P, N );
+P E_mem_Q_blk_I_insert( P, N, N );
+P E_mem_Q_blk_I_remove( P, N, N );
 //==============================================================================
 Pc E_mem_Q_mask_M( N );
 B E_mem_Q_mask_R( Pc, N );

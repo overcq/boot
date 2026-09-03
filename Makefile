@@ -8,7 +8,7 @@
 #*******************************************************************************
 include env.mk
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-H_ocq_S_parted_cmd := mklabel gpt mkpart primary 0 1MB set 1 bios_grub on mkpart primary fat32 1MB 100MB set 2 esp on mkpart primary 100MB -0
+H_ocq_S_parted_cmd := mklabel gpt mkpart primary 0 1023s set 1 bios_grub on mkpart primary fat32 1024s 100MB set 2 esp on mkpart primary 100MB -0
 #===============================================================================
 .PHONY: init-qemu init-virtualbox init-vmware init-usb \
 run-qemu-bios run-qemu-uefi
@@ -43,7 +43,7 @@ init-usb:
     && $(H_ocq_S_mkfs_oux)/mkfs.oux $(H_ocq_S_usb_dev)3 512
 #-------------------------------------------------------------------------------
 run-qemu-bios:
-	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 128M,maxmem=128M \
+	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 8G,maxmem=8G \
     -drive media=disk,format=raw,file=disk.img -boot order=c,once=c
 run-qemu-uefi:
 	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 128M,maxmem=128M \
@@ -51,3 +51,4 @@ run-qemu-uefi:
     -drive if=pflash,format=raw,file=OVMF_VARS_4M.fd \
     -drive media=disk,format=raw,file=disk.img -boot order=c,once=c
 #*******************************************************************************
+

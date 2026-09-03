@@ -1,0 +1,205 @@
+//-*-C-*-
+/*******************************************************************************
+*   ___   public
+*  ¦OUX¦  C+
+*  ¦/C+¦  OUX/C+ OS building
+*   ---   fix relocations
+*         main
+* (c)overcq              on WSL\Debian (Linux 6.18.33.2)             2026-8-31 c
+*******************************************************************************/
+//NDFN Moduł z OUX nie działa, więc tymczasowo procedury zastąpione.
+#define E_mem_Q_file_M( path, ro, mode )    open( path, O_RDWR )
+#define E_mem_Q_file_W(file)                close(file)
+#define E_mem_Q_file_P_pos( file, pos )     lseek( file, pos, SEEK_SET )
+#define E_mem_Q_file_R_sl( file, s, l )     read( file, s, l )
+#define E_mem_Q_file_P_sl( file, s, l )     write( file, s, l )
+//==============================================================================
+#define E_main_S_boot_loader_start          0x10000
+//==============================================================================
+struct __attribute__ (( __packed__ )) Q_elf_Z_header
+{ uint32_t magic;
+  char class, data, version_1, os_abi, abi_version;
+  char pad[7];
+  uint16_t type, machine;
+  uint32_t version_2;
+  uint64_t entry, phoff, shoff;
+  uint32_t flags;
+  uint16_t ehsize, phentsize, phnum, shentsize, shnum, shstrndx;
+};
+struct __attribute__ (( __packed__ )) Q_elf_Z_program_header_entry
+{ uint32_t type, flags;
+  uint64_t offset, vaddr, paddr, filesz, memsz, align;
+};
+struct __attribute__ (( __packed__ )) Q_elf_Z_section_header_entry
+{ uint32_t name, type;
+  uint64_t flags, addr, offset, size;
+  uint32_t link, info;
+  uint64_t addralign, entsize;
+};
+struct __attribute__ (( __packed__ )) Q_elf_Z_rela_entry
+{ uint64_t offset;
+  uint32_t type, sym;
+  uint64_t addend;
+};
+struct __attribute__ (( __packed__ )) Q_exe_Z_rela_plt_entry
+{ uint64_t offset;
+  uint32_t sym;
+};
+struct __attribute__ (( __packed__ )) Q_elf_Z_dynsym_entry
+{ uint32_t sym; // Indeks w .dynstr (nazwa symbolu).
+  char info; // Typ i binding (np. funkcja/globalny).
+  char other; // Dodatkowe flagi (zwykle 0).
+  uint16_t shndx; // Indeks sekcji (lub SHN_UNDEF).
+  uint64_t value; // Wartość symbolu (adres/offset).
+  uint64_t size; // Rozmiar symbolu (np. rozmiar funkcji).
+};
+struct __attribute__ (( __packed__ )) Q_exe_Z_export_entry
+{ uint32_t sym;
+  uint64_t offset;
+};
+//==============================================================================
+int
+main(
+  int argc
+, char *argv[]
+){  N r = 0;
+    E_base_M( argc, argv );
+    if( argc != 3 )
+    {   r = ~0;
+        goto Error_0;
+    }
+    int file = E_mem_Q_file_M( argv[1], no, 0 );
+    K(file)
+    {   r = ~0;
+        goto Error_0;
+    }
+    struct Q_elf_Z_header header;
+    K( E_mem_Q_file_R_sl( file, (P)&header, sizeof(header) ))
+    {   r = ~0;
+        goto Error_1;
+    }
+    if( header.magic != 0x464c457f )
+    {   r = ~0;
+        goto Error_1;
+    }
+    int output = E_mem_Q_file_M( argv[2], no, 0 );
+    K(output)
+    {   r = ~0;
+        goto Error_1;
+    }
+    N section_entry_pos = header.shoff;
+    for_n( section_i, header.shnum )
+    {   K( E_mem_Q_file_P_pos( file, section_entry_pos ))
+        {   r = ~0;
+            goto Error_2;
+        }
+        struct Q_elf_Z_section_header_entry section_entry;
+        K( E_mem_Q_file_R_sl( file, (P)&section_entry, sizeof( section_entry )))
+        {   r = ~0;
+            goto Error_2;
+        }
+        if( section_entry.type == 4 ) // SHT_RELA
+        {   struct Q_elf_Z_section_header_entry section_symbol;
+            K( E_mem_Q_file_P_pos( file, header.shoff + section_entry.link * header.shentsize ))
+            {   r = ~0;
+                goto Error_2;
+            }
+            K( E_mem_Q_file_R_sl( file, (P)&section_symbol, sizeof( section_symbol )))
+            {   r = ~0;
+                goto Error_2;
+            }
+            struct Q_elf_Z_dynsym_entry *Mt_( symbol, section_symbol.size / sizeof( struct Q_elf_Z_dynsym_entry ));
+            Kp(symbol)
+            {   r = ~0;
+                goto Error_2;
+            }
+            K( E_mem_Q_file_P_pos( file, section_symbol.offset ))
+            {   r = ~0;
+                goto Error_2;
+            }
+            K( E_mem_Q_file_R_sl( file, (P)symbol, section_symbol.size ))
+            {   r = ~0;
+                goto Error_2;
+            }
+            struct Q_elf_Z_section_header_entry section_ref;
+            K( E_mem_Q_file_P_pos( file, header.shoff + section_entry.info * header.shentsize ))
+            {   r = ~0;
+                goto Error_2;
+            }
+            K( E_mem_Q_file_R_sl( file, (P)&section_ref, sizeof( section_ref )))
+            {   r = ~0;
+                goto Error_2;
+            }
+            N rela_entry_pos = section_entry.offset;
+            N rela_n = section_entry.size / sizeof( struct Q_elf_Z_rela_entry );
+            for_n( rela_i, rela_n )
+            {   K( E_mem_Q_file_P_pos( file, rela_entry_pos ))
+                {   r = ~0;
+                    goto Error_2;
+                }
+                struct Q_elf_Z_rela_entry rela_entry;
+                K( E_mem_Q_file_R_sl( file, (P)&rela_entry, sizeof( rela_entry )))
+                {   r = ~0;
+                    goto Error_2;
+                }
+                switch( rela_entry.type )
+                { case 0:
+                  case 2: // R_X86_64_PC32
+                  case 4: // R_X86_64_PLT32
+                  case 12: // R_X86_64_PC64
+                        break;
+                  case 8: // R_X86_64_RELATIVE
+                    {   rela_entry.offset -= E_main_S_boot_loader_start;
+                        K( E_mem_Q_file_P_sl( output, (P)&rela_entry, sizeof( rela_entry )))
+                        {   r = ~0;
+                            goto Error_2;
+                        }
+                        break;
+                    }
+                  case 1: // R_X86_64_64
+                  case 10: // R_X86_64_32
+                  case 11: // R_X86_64_32S
+                    {   rela_entry.offset -= E_main_S_boot_loader_start;
+                        rela_entry.addend += symbol[ rela_entry.sym ].value - E_main_S_boot_loader_start;
+                        K( E_mem_Q_file_P_sl( output, (P)&rela_entry, sizeof( rela_entry )))
+                        {   r = ~0;
+                            goto Error_2;
+                        }
+                        break;
+                    }
+                  default:
+                    {   G_(); Gd( rela_entry.type );
+                        r = ~0;
+                        goto Error_2;
+                    }
+                }
+                rela_entry_pos += sizeof( rela_entry );
+            }
+            K( W(symbol) )
+            {   r = ~0;
+                goto Error_2;
+            }
+        }
+        section_entry_pos += header.shentsize;
+    }
+    struct Q_elf_Z_rela_entry rela_entry;
+    rela_entry.type = 0;
+    K( E_mem_Q_file_P_sl( output, (P)&rela_entry, sizeof( rela_entry )))
+    {   r = ~0;
+        goto Error_2;
+    }
+Error_2:
+    K( E_mem_Q_file_W(output) ){}
+Error_1:
+    K( E_mem_Q_file_W(file) ){}
+Error_0:
+    E_base_W();
+    return r;
+}
+//==============================================================================
+void
+E_flow_Q_process_call_I_func( pid_t pid
+, P data
+){
+}
+/******************************************************************************/

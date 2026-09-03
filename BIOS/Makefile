@@ -21,16 +21,25 @@ install-usb install-mbr-usb install-kernelloader-usb
 #===============================================================================
 mbr: mbr.S \
 Makefile mbr.ld
-	$(CC) -m64 -fno-pic -static -nostdlib -Wl,-T,mbr.ld -o $@ $<
+	$(CC) -fno-pic -static -nostdlib -Wl,-T,mbr.ld -o $@ $<
 %.o: %.c kernelloader.h \
 simple.h \
 Makefile
 	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-avx -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
 kernelloader: kernelloader.S $(filter-out ouxfs.o,$(patsubst %.c,%.o,$(wildcard *.c))) remap_jump.S mp-init.S \
-Makefile kernelloader.ld
+Makefile kernelloader.ld \
+reloc/a.out
 	$(CC) -c -o a.out kernelloader.S \
-    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
-    && rm a.out
+    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-q,-x,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
+    && rm a.out \
+    && touch a.out \
+    && reloc/a.out $@ a.out \
+    && strip $@ \
+    && objcopy -j .boot_text -j .text -j .data -j .rodata -O binary $@ b.out \
+    && cat b.out a.out > $@ \
+    && rm a.out b.out
+reloc/a.out: reloc/main.cx
+	$(MAKE) -C reloc
 install/a.out: install/main.cx
 	$(MAKE) -C install
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

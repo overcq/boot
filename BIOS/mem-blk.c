@@ -13,6 +13,7 @@
 //==============================================================================
 extern B E_main_S_sse;
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
+extern struct E_main_Z_memory_map_entry *E_main_S_memory_map;
 //==============================================================================
 _internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
 _internal N E_mem_Q_blk_Q_sys_table_R_last( N, N );
@@ -178,27 +179,63 @@ E_mem_M(
     return 0;
 }
 N
-E_mem_M_test( N memory_start
+E_mem_M_test( B reserved_from_end
+, N start_end_address
+, N loader_start
 , N memory_size
 ){  E_main_S_kernel_args.mem_blk.memory_size = memory_size;
     E_main_S_kernel_args.mem_blk.reserved_from_end = no;
     E_main_S_kernel_args.mem_blk.M_from_free_S_allocated_id_n = 0;
-    const N free_n_init = 1;
+    struct E_main_Z_memory_map_entry *memory_map = E_main_S_memory_map;
+    while( memory_map->type != E_main_Z_memory_table_Z_memory_type_S_boot_loader )
+        memory_map++;
+    const N free_n_init = 2;
     const N allocated_n_init = 2;
-    E_main_S_kernel_args.mem_blk.allocated = (P)( memory_start + free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
-    E_main_S_kernel_args.mem_blk.free_id = 0;
-    E_main_S_kernel_args.mem_blk.allocated_id = 1;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = free_n_init;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( Pc )memory_start;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = allocated_n_init;
-    E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+    if( reserved_from_end )
+    {   E_main_S_kernel_args.mem_blk.allocated = (P)( start_end_address - ( allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated ) + free_n_init * sizeof( struct E_mem_Q_blk_Z_free )));
+        E_main_S_kernel_args.mem_blk.allocated_id = 0;
+        E_main_S_kernel_args.mem_blk.free_id = 1;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = free_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)( start_end_address - free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
+    }else
+    {   E_main_S_kernel_args.mem_blk.allocated = (P)( start_end_address + free_n_init * sizeof( struct E_mem_Q_blk_Z_free ));
+        E_main_S_kernel_args.mem_blk.free_id = 0;
+        E_main_S_kernel_args.mem_blk.allocated_id = 1;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].u = sizeof( struct E_mem_Q_blk_Z_free );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].n = free_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p = (P)start_end_address;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].context_ip = 0;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].p = (P)E_main_S_kernel_args.mem_blk.allocated;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].u = sizeof( struct E_mem_Q_blk_Z_allocated );
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n = allocated_n_init;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].context_ip = 0;
+    }
     struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
-    free_p[0].p = ( Pc )memory_start + free_n_init * sizeof( struct E_mem_Q_blk_Z_free ) + allocated_n_init * sizeof( struct E_mem_Q_blk_Z_allocated );
-    free_p[0].l = ( Pc )memory_size - free_p[0].p;
+    if( reserved_from_end )
+    {   free_p[0].l = loader_start - memory_map->virtual_start;
+        free_p[0].p = free_p[0].l ? (P)memory_map->virtual_start : 0;
+        free_p[1].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( loader_start + E_main_S_boot_loader_end - E_main_S_boot_loader_start );
+        free_p[1].p = free_p[1].l ? (P)( loader_start + E_main_S_boot_loader_end - E_main_S_boot_loader_start ) : 0;
+        if( free_p[1].l
+        && !free_p[0].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
+    }else
+    {   free_p[0].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );
+        free_p[0].p = free_p[0].l ? (P)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n ) : 0;
+        free_p[1].l = memory_map->virtual_start + memory_map->size - ( loader_start + E_main_S_boot_loader_end - E_main_S_boot_loader_start );
+        free_p[1].p = free_p[1].l ? (P)( loader_start + E_main_S_boot_loader_end - E_main_S_boot_loader_start ) : 0;
+        if( free_p[1].l
+        && !free_p[0].l
+        )
+            E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
+    }
     return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

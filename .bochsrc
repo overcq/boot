@@ -1,2 +1,0 @@
-ata0-master: type=disk, path=disk.img, mode=flat
-boot: disk

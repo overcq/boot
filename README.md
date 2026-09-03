@@ -1,44 +1,35 @@
 # OUX/C+ OS boot loader
 
+System uruchamia się zarówno przez BIOS jak i UEFI.
+
 ## BIOS
+
+![OUX/C+ OS boot loader in qemu emulator](BIOS/OUX_C+-OS-boot-loader-qemu.png)
+
+![OUX/C+ OS boot loader in Vmware emulator](BIOS/OUX_C+-OS-boot-loader-vmware.png)
 
 ![OUX/C+ OS boot loader in bochs emulator](BIOS/OUX_C+-OS-boot-loader-bochs.png)
 
 ### Specyfikacja
 
 Dostępne są następujace moduły:
-1. program Master Boot Record (MBR)
-2. program Volume Boot Record (VBR)
-3. Kernel Boot Loader (KBL) lub File Boot Loader (FBL)
 
-Proces uruchamiania może przebiegać w jeden z następujących sposobów:
-1. MBR ➪ VBR na pierwszej uruchamialnej partycji ➪ KBL
-2. MBR ➪ FBL
+1. program Master Boot Record 〈mbr〉 (plik źródłowy: “mbr.S”)
+2. Second Boot Loader 〈sbl〉 (“kernelloader.S”)
+3. Kernel Boot Loader 〈kbl〉 (“kernelloader.c” i inne)
 
-Pierwszy ma zastosowanie, gdy na dysku jest tablica partycji w MBR, a na partycji jest VBR. Drugi wtedy, gdy na dysku nie ma tablicy partycji, lecz bezpośrednio po MBR jest system plików.
+Proces uruchamiania przebiega w następujący sposób: ‹mbr› ➪ ‹sbl› ➪ ‹kbl›.
 
-W VBR lub MBR od bajtu nr 224 znajduje się 5 B informacji, gdzie położony jest i jaki ma rozmiar plik FBL: najpierw w 3 B w formacie CHS (zgodnym z używanym w tablicy partycji MBR, ale w odpowiedniej do bieżącego dysku geometrii) jest zapisane położenie pliku FBL na dysku, a następnie w 1 B jest liczba sektorów o rozmiarze 512 B składająca się na rozmiar tego pliku.
+W ‹mbr› od bajtu nr 224 znajduje się 4 B informacji, gdzie położony jest i jaki ma rozmiar blok ‹sbl› + ‹kbl›: najpierw w 2 B w formacie LBA jest zapisane położenie bloku na dysku, a następnie w 2 B jest liczba sektorów o rozmiarze 512 B składająca się na rozmiar tego bloku.
 
-<table>
-<caption>Dane o położeniu i rozmiarze pliku FBL</caption>
-<thead>
-    <tr><th rowspan="2">224</th><th colspan="2">225</th><th rowspan="2">226</th><th rowspan="2">227</th></tr>
-    <tr><th>7–6</th><th>5–0</th></tr>
-</thead>
-<tbody>
-    <tr><td>head</td><td>9–8 bits of cylinder</td><td>sector</td><td>7–0 bits of cylinder</td><td>count of sectors</td></tr>
-</tbody>
-</table>
+Blok ‹sbl› + ‹kbl› jest typu ‘binary’ i zawiera doklejone informacje o relokacji.
 
-Liczba sektorów w MBR lub VBR równa 0 oznacza, że FBL nie ma być uruchamiany z tego modułu. Jeżeli liczba sektorów jest równa 0 w VBR, to proces uruchamiania zostanie zatrzymany.
+Powinien on znajdować się na osobnej partycji typu “bios_grub”.
 
 ### Uwagi
 
-* *mbr.S* nie zawiera skopiowanej z *vbr.S* obsługi większego pliku FBL.
-* *vbr.S* nie zawiera obsługi dwubajtowej liczby sektorów, a w specyfikacji znajduje się 1 bajt liczby sektorów rozmiaru FBL.
-
-‘Bootloader’ BIOS nie jest obecnie rozwijany ze względu na niemożliwość ‘zamontowania’ dawnego, testowego systemu plików. Ale w przyszłości system plików zostanie zmieniony na OUXFS (używany w ‘bootloaderze’ UEFI), którego obsługa jest wbudowana w zmodyfikowany przeze mnie ‘kernel’ Linuksa.
+Uruchamianie przez BIOS nie zostało jeszcze napisane. Obecnie uruchamia się tylko początkowa faza ‘boot loadera’. Potrzeba jeszcze ułożyć dane w pamięci i wczytać ‘kernel’.
 
 ## UEFI
 
-Po uruchomieniu przez UEFI ‘bootloader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i przekazuje sterowanie do ‘kernela’ z danymi.
+Po uruchomieniu przez UEFI ‘boot loader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i przekazuje sterowanie do ‘kernela’ z danymi.

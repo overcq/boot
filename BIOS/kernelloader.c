@@ -8,9 +8,6 @@
 *******************************************************************************/
 #include "kernelloader.h"
 //==============================================================================
-#define E_main_S_boot_loader_start      0x10000
-#define E_main_S_boot_loader_end        0x80000
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define E_cpu_Z_cr0_S_mp                ( 1UL << 1 )
 #define E_cpu_Z_cr0_S_em                ( 1UL << 2 )
 #define E_cpu_Z_cr0_S_ts                ( 1UL << 3 )
@@ -68,7 +65,7 @@ typedef void ( *E_main_Z_remap_jump )( N pml4, N delta );
 //==============================================================================
 extern B E_acpi_S_pic_mode;
 //------------------------------------------------------------------------------
-extern char E_main_S_relocation_data[], E_main_S_relocation_data_end[];
+extern char E_main_S_relocation_data[];
 extern P E_remap_jump_I, E_remap_jump_I_end;
 extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -148,16 +145,6 @@ E_main_Q_memory_map_I_align( void
         memory_map->physical_start = E_simple_Z_n_I_align_down_to_v2( memory_map->physical_start, H_oux_E_mem_S_page_size );
         memory_map++;
     }
-}
-N
-E_main_Q_memory_map_R_start_of_memory( N memory_table_S_end
-){  struct E_main_Z_memory_map_entry *memory_map = E_main_S_memory_map;
-    while( memory_map != (P)memory_table_S_end )
-    {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader )
-            return memory_map->virtual_start;
-        memory_map++;
-    }
-    return 0;
 }
 //DFN Nie usuwa wszystkich przecinających się bloków. Liczy na to, że niektóre bezsensowne przecięcia nie wystąpią.
 __attribute__ (( __warn_unused_result__ ))
@@ -574,7 +561,8 @@ E_main_Q_memory_map_I_set_virtual_0_I_entry( struct E_main_Z_memory_map_entry *m
 }
 void
 E_main_Q_memory_map_I_set_virtual_0( void
-){  struct E_main_Z_memory_map_entry *memory_map = E_main_S_memory_map;
+){  struct E_main_Z_memory_map_entry *memory_map_orig = E_main_S_memory_map;
+    struct E_main_Z_memory_map_entry *memory_map = memory_map_orig;
     while( memory_map != (P)E_main_Z_memory_table_S_end )
     {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
         || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
@@ -584,7 +572,7 @@ E_main_Q_memory_map_I_set_virtual_0( void
     }
     B processor_start_page_computed = no, loader_computed = no;
     N next_virtual_address = H_oux_E_mem_S_page_size;
-    memory_map = E_main_S_memory_map;
+    memory_map = memory_map_orig;
     while( memory_map != (P)E_main_Z_memory_table_S_end )
     {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_available )
             E_main_Q_memory_map_I_set_virtual_0_I_entry( memory_map
@@ -595,7 +583,7 @@ E_main_Q_memory_map_I_set_virtual_0( void
             );
         memory_map++;
     }
-    memory_map = E_main_S_memory_map;
+    memory_map = memory_map_orig;
     while( memory_map != (P)E_main_Z_memory_table_S_end )
     {   if( memory_map->type != E_main_Z_memory_table_Z_memory_type_S_available
         && memory_map->type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
@@ -607,68 +595,11 @@ E_main_Q_memory_map_I_set_virtual_0( void
 }
 void
 E_main_Q_memory_map_I_set_virtual_I_entry( struct E_main_Z_memory_map_entry *memory_map
-, N loader_start
-, N loader_end
 , N *next_virtual_address
 , B *processor_start_page_computed
-, B *loader_computed
 ){  memory_map->virtual_start = *next_virtual_address;
     *next_virtual_address += memory_map->size;
     if( !*processor_start_page_computed
-    && !*loader_computed
-    && (( E_main_S_kernel_args.processor_start_page < loader_start
-        && *next_virtual_address >= loader_start
-      )
-      || ( !( E_main_S_kernel_args.processor_start_page < loader_start )
-        && *next_virtual_address >= E_main_S_kernel_args.processor_start_page
-    )))
-    {   if( E_main_S_kernel_args.processor_start_page < loader_start )
-        {   memory_map->size = E_main_S_kernel_args.processor_start_page - memory_map->virtual_start;
-            struct E_main_Z_memory_map_entry *memory_map_new_entry_;
-            if( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size != loader_start )
-            {   memory_map_new_entry_ = --E_main_S_memory_map;
-                memory_map_new_entry_->type = memory_map->type;
-                memory_map_new_entry_->virtual_start = E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size;
-                memory_map_new_entry_->size = loader_start - memory_map_new_entry_->virtual_start;
-                memory_map_new_entry_->physical_start = memory_map->physical_start + memory_map->size;
-            }
-            if( *next_virtual_address != loader_start )
-            {   struct E_main_Z_memory_map_entry *memory_map_new_entry = --E_main_S_memory_map;
-                memory_map_new_entry->type = memory_map->type;
-                memory_map_new_entry->size = *next_virtual_address - ( memory_map->virtual_start + memory_map->size );
-                if( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size != loader_start )
-                {   memory_map_new_entry->size -= memory_map_new_entry_->size;
-                    memory_map_new_entry->physical_start = memory_map_new_entry_->physical_start + memory_map_new_entry_->size;
-                }else
-                    memory_map_new_entry->physical_start = memory_map->physical_start + memory_map->size;
-                memory_map_new_entry->virtual_start = loader_end;
-            }
-        }else
-        {   memory_map->size = loader_start - memory_map->virtual_start;
-            struct E_main_Z_memory_map_entry *memory_map_new_entry_;
-            if( loader_end != E_main_S_kernel_args.processor_start_page )
-            {   memory_map_new_entry_ = --E_main_S_memory_map;
-                memory_map_new_entry_->type = memory_map->type;
-                memory_map_new_entry_->virtual_start = loader_end;
-                memory_map_new_entry_->size = E_main_S_kernel_args.processor_start_page - memory_map_new_entry_->virtual_start;
-                memory_map_new_entry_->physical_start = memory_map->physical_start + memory_map->size;
-            }
-            if( *next_virtual_address != E_main_S_kernel_args.processor_start_page )
-            {   struct E_main_Z_memory_map_entry *memory_map_new_entry = --E_main_S_memory_map;
-                memory_map_new_entry->type = memory_map->type;
-                memory_map_new_entry->size = *next_virtual_address - ( memory_map->virtual_start + memory_map->size );
-                if( loader_end != E_main_S_kernel_args.processor_start_page )
-                {   memory_map_new_entry->size -= memory_map_new_entry_->size;
-                    memory_map_new_entry->physical_start = memory_map_new_entry_->physical_start + memory_map_new_entry_->size;
-                }else
-                    memory_map_new_entry->physical_start = memory_map->physical_start + memory_map->size;
-                memory_map_new_entry->virtual_start = E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size;
-            }
-        }
-        *next_virtual_address += H_oux_E_mem_S_page_size + loader_end - loader_start;
-        *processor_start_page_computed = yes;
-        *loader_computed = yes;
-    }else if( !*processor_start_page_computed
     && *next_virtual_address >= E_main_S_kernel_args.processor_start_page
     )
     {   if( *next_virtual_address != E_main_S_kernel_args.processor_start_page )
@@ -681,28 +612,14 @@ E_main_Q_memory_map_I_set_virtual_I_entry( struct E_main_Z_memory_map_entry *mem
         }
         *next_virtual_address += H_oux_E_mem_S_page_size;
         *processor_start_page_computed = yes;
-    }else if( !*loader_computed
-    && *next_virtual_address >= loader_start
-    )
-    {   if( *next_virtual_address != loader_start )
-        {   struct E_main_Z_memory_map_entry *memory_map_new_entry = --E_main_S_memory_map;
-            memory_map_new_entry->type = memory_map->type;
-            memory_map_new_entry->size = *next_virtual_address - loader_start;
-            memory_map->size -= memory_map_new_entry->size;
-            memory_map_new_entry->physical_start = memory_map->physical_start + memory_map->size;
-            memory_map_new_entry->virtual_start = loader_end;
-        }
-        *next_virtual_address += loader_end - loader_start;
-        *loader_computed = yes;
     }
 }
 __attribute__ (( __warn_unused_result__ ))
-S
+N
 E_main_Q_memory_map_I_set_virtual( B reserved_from_end
-, N loader_start
-, N loader_end
 ){  N startup_page_virtual_address;
-    struct E_main_Z_memory_map_entry *memory_map = E_main_S_memory_map;
+    struct E_main_Z_memory_map_entry *memory_map_orig = E_main_S_memory_map;
+    struct E_main_Z_memory_map_entry *memory_map = memory_map_orig;
     while( memory_map != (P)E_main_Z_memory_table_S_end )
     {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page )
         {   startup_page_virtual_address = memory_map->virtual_start = memory_map->physical_start;
@@ -710,61 +627,53 @@ E_main_Q_memory_map_I_set_virtual( B reserved_from_end
         }
         memory_map++;
     }
-    B processor_start_page_computed = no, loader_computed = yes;
+    B processor_start_page_computed = no;
     N next_virtual_address = H_oux_E_mem_S_page_size;
     if( reserved_from_end )
-    {   memory_map = E_main_S_memory_map;
+    {   memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_reserved )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
             memory_map++;
         }
-        memory_map = E_main_S_memory_map;
+        memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
                 break;
             }
             memory_map++;
         }
-        memory_map = E_main_S_memory_map;
+        memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_available )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
             memory_map++;
         }
-        memory_map = E_main_S_memory_map;
+        memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
             || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
             || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
             )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
             }
             memory_map++;
         }
     }else
-    {   memory_map = E_main_S_memory_map;
+    {   memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_reserved
             || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
@@ -772,35 +681,29 @@ E_main_Q_memory_map_I_set_virtual( B reserved_from_end
             || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
             )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
             }
             memory_map++;
         }
         if( next_virtual_address < startup_page_virtual_address + H_oux_E_mem_S_page_size )
             return ~0;
-        memory_map = E_main_S_memory_map;
+        memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_available )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
             memory_map++;
         }
-        memory_map = E_main_S_memory_map;
+        memory_map = memory_map_orig;
         while( memory_map != (P)E_main_Z_memory_table_S_end )
         {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , loader_start, loader_end
                 , &next_virtual_address
                 , &processor_start_page_computed
-                , &loader_computed
                 );
                 break;
             }
@@ -951,10 +854,6 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
                                     {   E_main_I_allocate_page_table_I_next_physical_address( &memory_map, &physical_size );
                                         N physical_address = memory_map->physical_start + physical_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
-                                        if( physical_address >= E_simple_Z_n_I_align_down_to_v2( E_main_S_framebuffer_physical, H_oux_E_mem_S_page_size )
-                                        && physical_address < E_simple_Z_n_I_align_up_to_v2( E_main_S_framebuffer_physical + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * E_main_S_kernel_args.framebuffer.bits_per_pixel / 8, H_oux_E_mem_S_page_size )
-                                        )
-                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pat;
                                     }
                                 }else
                                     pt[ pt_i ] = 0;
@@ -1000,10 +899,6 @@ E_main_I_allocate_page_table_0( N max_memory
                                     {   E_main_I_allocate_page_table_I_next_physical_address( &memory_map_, &physical_size );
                                         N physical_address = memory_map_->physical_start + physical_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
-                                        if( physical_address >= E_simple_Z_n_I_align_down_to_v2( E_main_S_framebuffer_physical, H_oux_E_mem_S_page_size )
-                                        && physical_address < E_simple_Z_n_I_align_up_to_v2( E_main_S_framebuffer_physical + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * E_main_S_kernel_args.framebuffer.bits_per_pixel / 8, H_oux_E_mem_S_page_size )
-                                        )
-                                            pt[ pt_i ] |= E_cpu_Z_page_entry_S_pat;
                                     }
                                 }else
                                     pt[ pt_i ] = 0;
@@ -1041,31 +936,24 @@ E_main_I_allocate_page_table_0( N max_memory
     );
 End:*start_end_address = memory_map_entry_available->virtual_start + size + H_oux_E_mem_S_page_size;
 }
-__attribute__ (( __warn_unused_result__ ))
-S
-E_main_Q_loader_I_relocate( N loader_start
-){  struct E_base_Z_image_relocation *image_relocation = (P)E_main_S_relocation_data;
-    while( image_relocation != (P)E_main_S_relocation_data_end )
-    {   
-
-    O{  __asm__ volatile (
-        "\n" "pause"
-        );
-    }
-
-        switch( image_relocation->info & 0xffffffff )
+void
+E_main_Q_loader_I_relocate( N loader_start_0
+, N loader_start
+){  struct Q_elf_Z_rela_entry *image_relocation = (P)E_main_S_relocation_data;
+    O{  switch( image_relocation->type )
         { case 0:
+                return;
+          case 1: // R_X86_64_64
+          case 8: // R_X86_64_RELATIVE
+                *( N64 * )( loader_start_0 + image_relocation->offset ) = loader_start + image_relocation->addend;
                 break;
-          case 8:
-            {   *( N64 * )( loader_start + image_relocation->offset ) = loader_start + image_relocation->addend;
+          case 10: // R_X86_64_32
+          case 11: // R_X86_64_32S
+                *( N32 * )( loader_start_0 + image_relocation->offset ) = loader_start + image_relocation->addend;
                 break;
-            }
-          default:
-                return ~0;
         }
         image_relocation++;
     }
-    return 0;
 }
 void
 E_main_I_allocate_page_table_1( N max_memory
@@ -1081,7 +969,7 @@ E_main_I_allocate_page_table_1( N max_memory
         memory_map_entry_available--;
     N size = memory_map_entry_available->size - H_oux_E_mem_S_page_size;
     N pml4_physical = memory_map_entry_available->physical_start + size;
-    volatile N *pml4 = (P)(N)( memory_size_0 -= H_oux_E_mem_S_page_size );
+    volatile N *pml4 = (P)( memory_size_0 -= H_oux_E_mem_S_page_size );
     N physical_size = -H_oux_E_mem_S_page_size;
     B end = no;
     *additional_pages = 0;
@@ -1093,21 +981,21 @@ E_main_I_allocate_page_table_1( N max_memory
         )
         {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
             N pdpt_physical = memory_map_entry_available->physical_start + size;
-            volatile N *pdpt = (P)(N)( memory_size_0 -= H_oux_E_mem_S_page_size );
+            volatile N *pdpt = (P)( memory_size_0 -= H_oux_E_mem_S_page_size );
             for_n( pdpt_i, table_n )
             {   if( !end
                 || additional_pages_
                 )
                 {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
                     N pd_physical = memory_map_entry_available->physical_start + size;
-                    volatile N *pd = (P)(N)( memory_size_0 -= H_oux_E_mem_S_page_size );
+                    volatile N *pd = (P)( memory_size_0 -= H_oux_E_mem_S_page_size );
                     for_n( pd_i, table_n )
                     {   if( !end
                         || additional_pages_
                         )
                         {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
                             N pt_physical = memory_map_entry_available->physical_start + size;
-                            volatile N *pt = (P)(N)( memory_size_0 -= H_oux_E_mem_S_page_size );
+                            volatile N *pt = (P)( memory_size_0 -= H_oux_E_mem_S_page_size );
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * H_oux_E_mem_S_page_size );
@@ -1352,7 +1240,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     , E_main_S_kernel_args.processor_start_page
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     };
-    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry ) //NDFN
+    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry ) //NDFN Potrzebne tylko dla symulatora Vmware. Powinny być realne zakresy zastrzeżone.
     { E_main_S_boot_loader_end
     , 0x200000 - E_main_S_boot_loader_end
     , E_main_Z_memory_table_Z_memory_type_S_reserved
@@ -1473,62 +1361,44 @@ main( struct E_main_Z_memory_map_entry *memory_map
         memory_map_entry_available++;
         start_end_address = memory_map_entry_available->virtual_start;
     }
-    N loader_start_physical = (N)E_main_Z_p_I_to_physical( (P)start_end_address );
-    N reserved_size = E_main_Q_memory_map_R_reserved_size();
+    N loader_start_0 = start_end_address;
+    N loader_start_physical = (N)E_main_Z_p_I_to_physical( (P)loader_start_0 );
+    //N reserved_size = E_main_Q_memory_map_R_reserved_size();
     B reserved_from_end = yes; //CONF
     N memory_size = E_main_Q_memory_map_R_size();
-    N reserved_size_from_start;
-    if( reserved_from_end )
-    {   reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start();
-        if( memory_size - ( reserved_size - reserved_size_from_start ) - H_oux_E_mem_S_page_size > 0x100000000UL - H_oux_E_mem_S_page_size )
-            reserved_from_end = no;
-    }
+    //N reserved_size_from_start;
+    //if( reserved_from_end )
+    //{   reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start();
+        //if( memory_size - ( reserved_size - reserved_size_from_start ) - H_oux_E_mem_S_page_size > 0x100000000UL - H_oux_E_mem_S_page_size )
+            //reserved_from_end = no;
+    //}
     E_main_Q_memory_map_I_sort_physical();
     E_main_Q_memory_map_I_join_physical();
-    S status = E_main_Q_memory_map_I_set_virtual( reserved_from_end, E_main_S_boot_loader_start, E_main_S_boot_loader_end );
-    if( status < 0 )
+    if( K_error( E_main_Q_memory_map_I_set_virtual( reserved_from_end )))
         goto End;
     E_main_Q_memory_map_I_sort_virtual();
-    N loader_start_old = start_end_address;
     N loader_start = (N)E_main_Z_p_I_to_virtual( (P)loader_start_physical, E_main_Z_memory_table_S_end );
     N pml4;
-    N memory_table_S_end;
-    if( !reserved_from_end
-    && memory_size > 64 * 1024 * 1024 // Umieścił poprzednie tablice w pamięci już poza obszarem ‘bootloadera’.
-    )
-    {   E_main_I_allocate_page_table_1( memory_size, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages, memory_size_0 );
-        E_main_Z_remap_jump remap_jump = (P)(N)E_main_S_kernel_args.processor_start_page;
-        E_mem_Q_blk_I_copy( remap_jump, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
-        E_mem_Q_blk_I_copy( (P)loader_start_old, (P)E_main_S_boot_loader_start, E_main_S_boot_loader_end - E_main_S_boot_loader_start );
-        S status = E_main_Q_loader_I_relocate( loader_start_old );
-        if( status < 0 )
-            goto End;
-        remap_jump( pml4, loader_start - E_main_S_boot_loader_start );
-        E_main_S_memory_map = (P)(( Pc )E_main_S_memory_map + loader_start - E_main_S_boot_loader_start );
-        memory_table_S_end = loader_start + E_main_Z_memory_table_S_end - E_main_S_boot_loader_start;
-        E_main_I_allocate_page_table( memory_size, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages );
-    }else
-    {   E_main_I_allocate_page_table_1( memory_size, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages, memory_size_0 );
-        E_main_Z_remap_jump remap_jump = (P)(N)E_main_S_kernel_args.processor_start_page;
-        E_mem_Q_blk_I_copy( remap_jump, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
-        E_mem_Q_blk_I_copy( (P)loader_start_old, (P)E_main_S_boot_loader_start, E_main_S_boot_loader_end - E_main_S_boot_loader_start );
-        S status = E_main_Q_loader_I_relocate( loader_start_old );
-        if( status < 0 )
-            goto End;
-        remap_jump( pml4, loader_start - E_main_S_boot_loader_start );
-        E_main_S_memory_map = (P)(( Pc )E_main_S_memory_map + loader_start - E_main_S_boot_loader_start );
-        memory_table_S_end = loader_start + E_main_Z_memory_table_S_end - E_main_S_boot_loader_start;
+    E_main_I_allocate_page_table_1( memory_size, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages, memory_size_0 );
+    E_main_Z_remap_jump remap_jump = (P)(N)E_main_S_kernel_args.processor_start_page;
+    E_mem_Q_blk_I_copy( remap_jump, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
+    E_mem_Q_blk_I_copy( (P)loader_start_0, (P)E_main_S_boot_loader_start, E_main_S_boot_loader_end - E_main_S_boot_loader_start );
+    E_main_Q_loader_I_relocate( loader_start_0, loader_start );
+    remap_jump( pml4, loader_start - E_main_S_boot_loader_start );
+    E_main_S_memory_map = (P)( loader_start + ( Pc )E_main_S_memory_map - E_main_S_boot_loader_start );
+    N memory_table_S_end = loader_start + E_main_Z_memory_table_S_end - E_main_S_boot_loader_start;
+    if( reserved_from_end )
         pml4 = (N)E_main_Z_p_I_to_virtual( (P)pml4, memory_table_S_end );
-    }
+    else
+        E_main_I_allocate_page_table( memory_size, &pml4, &start_end_address, &E_main_S_kernel_args.additional_pages );
     E_main_S_kernel_args.framebuffer.p = E_main_Z_p_I_to_virtual( (P)E_main_S_framebuffer_physical, memory_table_S_end );
     if( !E_main_S_kernel_args.framebuffer.p )
         goto End;
 
-    //N start_of_memory = E_main_Q_memory_map_R_start_of_memory( memory_table_S_end );
-    //if( K_error( E_mem_M_test( start_of_memory, start_of_memory + 0x100000 )))
-        //goto End;
-    //if( K_error( E_font_M() ))
-        //goto End;
+    if( K_error( E_mem_M_test( reserved_from_end, start_end_address, loader_start, memory_size )))
+        goto End;
+    if( K_error( E_font_M() ))
+        goto End;
     E_vga_I_fill_rect( 0, 0, E_main_S_kernel_args.framebuffer.width, E_main_S_kernel_args.framebuffer.height, E_vga_R_video_color( E_vga_S_background_color ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
@@ -1539,20 +1409,20 @@ main( struct E_main_Z_memory_map_entry *memory_map
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 + 4 + 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
-    //E_font_I_print( "OUX/C+ OS boot loader ©overcq <overcq@int.pl> http://github.com/overcq\n" );
-    //E_font_I_print_hex( pml4 );
-    //N n = ( struct E_main_Z_memory_map_entry * )E_main_Z_memory_table_S_end - E_main_S_memory_map;
-    //for_n( i, n )
-        //if( E_main_S_memory_map[i].type == E_main_Z_memory_table_Z_memory_type_S_available )
-        //{   E_font_I_print( ",t=" );
-            //E_font_I_print_hex( E_main_S_memory_map[i].type );
-            //E_font_I_print( ",a=" );
-            //E_font_I_print_hex( E_main_S_memory_map[i].virtual_start );
-            //E_font_I_print( "," );
-            //E_font_I_print_hex( E_main_S_memory_map[i].physical_start );
-            //E_font_I_print( ",s=" );
-            //E_font_I_print_hex( E_main_S_memory_map[i].size );
-        //}
+    E_font_I_print( "OUX/C+ OS boot loader ©overcq <overcq@int.pl> http://github.com/overcq\n" );
+    E_font_I_print_hex( pml4 );
+    N n = ( struct E_main_Z_memory_map_entry * )memory_table_S_end - E_main_S_memory_map;
+    for_n( i, n )
+        if( E_main_S_memory_map[i].type == E_main_Z_memory_table_Z_memory_type_S_available )
+        {   E_font_I_print( ",t=" );
+            E_font_I_print_hex( E_main_S_memory_map[i].type );
+            E_font_I_print( ",a=" );
+            E_font_I_print_hex( E_main_S_memory_map[i].virtual_start );
+            E_font_I_print( "," );
+            E_font_I_print_hex( E_main_S_memory_map[i].physical_start );
+            E_font_I_print( ",s=" );
+            E_font_I_print_hex( E_main_S_memory_map[i].size );
+        }
     __asm__ volatile (
     "\n" "sfence"
     );

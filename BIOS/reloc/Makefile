@@ -1,14 +1,13 @@
 ################################################################################
-#   ___   laboratory
+#   ___   publicplace
 #  ¦OUX¦  GNU “make”
-#  ¦/C+¦  ‘gui’ sample
-#   ---   install boot loader file
-#         program makefile
+#  ¦/C+¦  compile
+#   ---   C+
+#         makefile
 # ©overcq                on ‟Gentoo Linux 13.0” “x86_64”              2015‒1‒6 #
 ################################################################################
-    ifeq (Linux,$(H_make_S_os))
-S_headers := linux/fuse.h
-    else
-S_headers := fuse.h
-    endif
+H_make_S_root_path := $(shell while [ a$$PWD != a/ ]; do if [ -e oux/Makefile ]; then break; fi; cd .. && echo -n ../; done; echo -n oux )
+include $(H_make_S_root_path)/compile/1.mak
+include 0.mak
+include $(H_make_S_root_path)/compile/2.mak
 ################################################################################

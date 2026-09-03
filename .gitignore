@@ -8,4 +8,6 @@ E_cplus_S_cx_sources
 /BIOS/mbr
 /BIOS/install/*.c
 /BIOS/install/*.h
+/BIOS/reloc/*.c
+/BIOS/reloc/*.h
 /UEFI/kernelloader

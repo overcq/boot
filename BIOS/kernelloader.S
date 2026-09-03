@@ -117,8 +117,8 @@
     pop     %si
     mov     %sp,%bp
     mov     (%bp),%ax
-    xor     $( 1 << 0 ) | ( 1 << 3 ) | ( 1 << 4 ) | ( 1 << 7 ),%ax # Włączalny, kolorowy, graficzny, ma ‘framebuffer’.
-    test    $( 1 << 0 ) | ( 1 << 3 ) | ( 1 << 4 ) | ( 1 << 7 ),%ax
+    xor     $( 1 << 0 ) | ( 1 << 1 ) | ( 1 << 3 ) | ( 1 << 4 ) | ( 1 << 7 ),%ax # Włączalny, opisany, kolorowy, graficzny, ma ‘framebuffer’.
+    test    $( 1 << 0 ) | ( 1 << 1 ) | ( 1 << 3 ) | ( 1 << 4 ) | ( 1 << 7 ),%ax
     jnz     1f
     mov     0x19(%bp),%cl                   # Bits per pixel.
     cmp     $16,%cl                         # Pomija tryby nie 16 i 32-bitowe.
@@ -196,8 +196,8 @@
     mov     %eax,%cr3
     mov     $Q_offset_Z_base >> 4,%ax
     mov     %ax,%ds
-    cli
 # Przełączenie do trybu chronionego.
+    cli
     lgdtl   S_gd - Q_offset_Z_base
     mov     %cr0,%eax
     or      $Z_cr0_S_pe | Z_cr0_S_pg,%eax
