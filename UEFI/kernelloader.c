@@ -113,7 +113,6 @@ struct E_main_Z_kernel_data
 typedef void ( *E_main_Z_remap_jump )( N stack, N pml4, N delta );
 //==============================================================================
 int _fltused = 0;
-B E_main_S_sse;
 struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct H_uefi_Z_system_table *E_main_S_system_table;
 struct H_uefi_Z_memory_type_descriptor *E_main_S_memory_map;
@@ -299,13 +298,8 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                                 {   struct H_acpi_Z_madt_Z_local_apic *local_apic = (P)&table[0];
                                     if( local_apic->l != sizeof( *local_apic ))
                                         return ~0;
-                                    if( !(( local_apic->flags & 3 ) == 1
-                                      || ( local_apic->flags & 3 ) == 2
-                                    )
-                                    || ( local_apic->flags & ~3 )
-                                    )
-                                        return ~0;
-                                    E_main_S_kernel_args.processor_n++;
+                                    if(( local_apic->flags & 3 ) == 1 )
+                                        E_main_S_kernel_args.processor_n++;
                                     break;
                                 }
                               case 1: // I/O APIC
@@ -385,9 +379,9 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         status = system_table->output->output( system_table->output, L")" );
                         if( status < 0 )
                             return status;
-                        if( header->length <= sizeof( *header )
+                        if( !E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature ))
+                        || header->length <= sizeof( *header )
                         || E_main_I_acpi_I_checksum( header, header->length )
-                        || !E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature ))
                         )
                             return ~0;
                         E_main_S_kernel_args.acpi.dsdt_content = ( Pc )header + sizeof( *header );
@@ -397,7 +391,6 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                             || facs->length != sizeof( *facs )
                             )
                                 return ~0;
-                            E_main_S_kernel_args.acpi.facs = facs;
                         }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "HPET", sizeof( header->signature )))
                     {   struct H_acpi_Z_hpet *hpet = (P)header;
@@ -417,11 +410,11 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                             return ~0;
                         E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "SSDT", sizeof( header->signature )))
-                    {   if( E_main_S_kernel_args.acpi.ssdt_contents_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_contents ))
+                    {   if( E_main_S_kernel_args.acpi.ssdt_content_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_content ))
                             return ~0;
-                        E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].address = ( Pc )header + sizeof( *header );
-                        E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].l = header->length - sizeof( *header );
-                        E_main_S_kernel_args.acpi.ssdt_contents_n++;
+                        E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].address = ( Pc )header + sizeof( *header );
+                        E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].l = header->length - sizeof( *header );
+                        E_main_S_kernel_args.acpi.ssdt_content_n++;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WAET", sizeof( header->signature )))
                     {   struct H_acpi_Z_waet *waet = (P)header;
                         if( header->length != sizeof( *waet ))
@@ -593,7 +586,6 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                             || facs->length != sizeof( *facs )
                             )
                                 return ~0;
-                            E_main_S_kernel_args.acpi.facs = facs;
                         }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "HPET", sizeof( header->signature )))
                     {   struct H_acpi_Z_hpet *hpet = (P)header;
@@ -613,11 +605,11 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                             return ~0;
                         E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "SSDT", sizeof( header->signature )))
-                    {   if( E_main_S_kernel_args.acpi.ssdt_contents_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_contents ))
+                    {   if( E_main_S_kernel_args.acpi.ssdt_content_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_content ))
                             return ~0;
-                        E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].address = ( Pc )header + sizeof( *header );
-                        E_main_S_kernel_args.acpi.ssdt_contents[ E_main_S_kernel_args.acpi.ssdt_contents_n ].l = header->length - sizeof( *header );
-                        E_main_S_kernel_args.acpi.ssdt_contents_n++;
+                        E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].address = ( Pc )header + sizeof( *header );
+                        E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].l = header->length - sizeof( *header );
+                        E_main_S_kernel_args.acpi.ssdt_content_n++;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WAET", sizeof( header->signature )))
                     {   struct H_acpi_Z_waet *waet = (P)header;
                         if( header->length != sizeof( *waet ))
@@ -687,14 +679,11 @@ E_main_I_virtual_address_change( P event
     , &E_main_S_kernel_args.acpi.dsdt_content
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , &E_main_S_kernel_args.acpi.facs
-    );
-    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , &E_main_S_kernel_args.pcie_base_address
     );
-    for_n( i, E_main_S_kernel_args.acpi.ssdt_contents_n )
+    for_n( i, E_main_S_kernel_args.acpi.ssdt_content_n )
         E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-        , &E_main_S_kernel_args.acpi.ssdt_contents[i].address
+        , &E_main_S_kernel_args.acpi.ssdt_content[i].address
         );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , &E_main_S_kernel_args.io_apic_address
@@ -1038,6 +1027,8 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
                 );
             memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
         }
+        if( next_virtual_address < startup_page_virtual_address + H_oux_E_mem_S_page_size )
+            return ~0;
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
@@ -1441,7 +1432,7 @@ E_main_M_madt( Pc table
 ){  N apic_source_override_n = 0;
     struct E_main_Z_apic_source_override *apic_source_override;
     Mt_( apic_source_override, apic_source_override_n );
-    if( !apic_source_override )
+    Kp( apic_source_override )
         return ~0;
     while(l)
     {   switch( (N8)table[0] )
@@ -1488,8 +1479,8 @@ E_main_M_madt( Pc table
     if( E_main_S_kernel_args.gsi_n < 17 )
         return ~0;
     Mt_( E_main_S_kernel_args.gsi, E_main_S_kernel_args.gsi_n );
-    if( !E_main_S_kernel_args.gsi )
-    {   W( apic_source_override );
+    Kp( E_main_S_kernel_args.gsi )
+    {   K_( ~1, W( apic_source_override ));
         return ~0;
     }
     N apic_source_override_i = 0;
@@ -1502,10 +1493,11 @@ E_main_M_madt( Pc table
         }else
         {   E_main_S_kernel_args.gsi[i].source = apic_source_override[ apic_source_override_i ].source;
             E_main_S_kernel_args.gsi[i].flags = apic_source_override[ apic_source_override_i ].flags;
-            E_main_S_kernel_args.gsi[ E_main_S_kernel_args.gsi[i].source ].source = ~0;
+            if( i != E_main_S_kernel_args.gsi[i].source )
+                E_main_S_kernel_args.gsi[ E_main_S_kernel_args.gsi[i].source ].source = ~0;
             apic_source_override_i++;
         }
-    W( apic_source_override );
+    K_( ~1, W( apic_source_override ));
     return 0;
 }
 //------------------------------------------------------------------------------
@@ -1540,7 +1532,7 @@ H_uefi_I_main(
     || !( ecx & ( 1 << 21 )) // x2APIC
     )
         return ~0;
-    E_main_S_sse = edx & ( 1 << 25 );
+    E_main_S_kernel_args.sse = edx & ( 1 << 25 );
     struct H_uefi_Z_guid H_uefi_Z_guid_S_graphics_S = H_uefi_Z_guid_S_graphics;
     struct H_uefi_Z_protocol_Z_graphics *graphics;
     status = system_table->boot_services->locate_protocol( &H_uefi_Z_guid_S_graphics_S, 0, ( P * )&graphics );
@@ -2163,12 +2155,9 @@ H_uefi_I_main(
     "\n" "and   %0,%%rax"
     "\n" "or    %1,%%rax"
     "\n" "mov   %%rax,%%cr0"
-    "\n" "mov   %%cr3,%%rax"
-    "\n" "and   %2,%%rax"
-    "\n" "mov   %%rax,%%cr3"
     "\n" "mov   %%cr4,%%rax"
-    "\n" "and   %3,%%rax"
-    "\n" "or    %4,%%rax"
+    "\n" "and   %2,%%rax"
+    "\n" "or    %3,%%rax"
     "\n" "mov   %%rax,%%cr4"
     "\n" "mov   %%cr8,%%rax"
     "\n" "and   $~0xf,%%rax"
@@ -2176,9 +2165,8 @@ H_uefi_I_main(
     :
     : "i" ( ~( E_cpu_Z_cr0_S_em | E_cpu_Z_cr0_S_ts | E_cpu_Z_cr0_S_nw | E_cpu_Z_cr0_S_cd ))
     , "i" ( E_cpu_Z_cr0_S_mp | E_cpu_Z_cr0_S_ne | E_cpu_Z_cr0_S_wp )
-    , "i" ( ~( E_cpu_Z_cr3_S_pwt | E_cpu_Z_cr3_S_pcd ))
-    , "i" ( ~( E_cpu_Z_cr4_S_tsd | E_cpu_Z_cr4_S_pcide | E_cpu_Z_cr4_S_smep | E_cpu_Z_cr4_S_smap | E_cpu_Z_cr4_S_pke | E_cpu_Z_cr4_S_pks | E_cpu_Z_cr4_S_uintr | E_cpu_Z_cr4_S_lam_sup ))
-    , "i" ( E_cpu_Z_cr4_S_vme | E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_umip | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
+    , "i" ( ~( E_cpu_Z_cr4_S_pvi | E_cpu_Z_cr4_S_tsd | E_cpu_Z_cr4_S_pge | E_cpu_Z_cr4_S_pcide | E_cpu_Z_cr4_S_smep | E_cpu_Z_cr4_S_smap | E_cpu_Z_cr4_S_pke | E_cpu_Z_cr4_S_pks | E_cpu_Z_cr4_S_uintr | E_cpu_Z_cr4_S_lam_sup ))
+    , "i" ( E_cpu_Z_cr4_S_de | E_cpu_Z_cr4_S_mce | E_cpu_Z_cr4_S_pce | E_cpu_Z_cr4_S_osfxsr | E_cpu_Z_cr4_S_osxmmexcpt | E_cpu_Z_cr4_S_fsgsbase | E_cpu_Z_cr4_S_osxsave )
     : "rax"
     );
     // Przed wyrzuceniem z pamięci programu ‘boot loadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.

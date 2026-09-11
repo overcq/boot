@@ -4,12 +4,6 @@ System uruchamia się zarówno przez BIOS jak i UEFI.
 
 ## BIOS
 
-![OUX/C+ OS boot loader in qemu emulator](BIOS/OUX_C+-OS-boot-loader-qemu.png)
-
-![OUX/C+ OS boot loader in Vmware emulator](BIOS/OUX_C+-OS-boot-loader-vmware.png)
-
-![OUX/C+ OS boot loader in bochs emulator](BIOS/OUX_C+-OS-boot-loader-bochs.png)
-
 ### Specyfikacja
 
 Dostępne są następujace moduły:
@@ -24,12 +18,4 @@ W ‹mbr› od bajtu nr 224 znajduje się 4 B informacji, gdzie położony jes
 
 Blok ‹sbl› + ‹kbl› jest typu ‘binary’ i zawiera doklejone informacje o relokacji.
 
-Powinien on znajdować się na osobnej partycji typu “bios_grub”.
-
-### Uwagi
-
-Uruchamianie przez BIOS nie zostało jeszcze napisane. Obecnie uruchamia się tylko początkowa faza ‘boot loadera’. Potrzeba jeszcze ułożyć dane w pamięci i wczytać ‘kernel’.
-
-## UEFI
-
-Po uruchomieniu przez UEFI ‘boot loader’ wczytuje do pamięci operacyjnej z systemu plików OUXFS z pierwszego dostępnego dysku, na którym on się znajdzie, plik “/system/kernel”. Następnie przygotowuje dane z tablic ACPI, dokonuje reorganizacji ‘mapowania’ pamięci wirtualnej tak, by obszary zarezerwowanej pamięci były dosunięte do dołu lub góry pamięci rzeczywistej, uruchamia menedżer pamięci ‘mem-blk’ i przekazuje sterowanie do ‘kernela’ z danymi.
+Powinien znajdować się na osobnej partycji typu “bios_grub”.

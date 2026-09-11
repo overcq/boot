@@ -25,17 +25,17 @@ Makefile mbr.ld
 %.o: %.c kernelloader.h \
 simple.h \
 Makefile
-	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-avx -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
-kernelloader: kernelloader.S $(filter-out ouxfs.o,$(patsubst %.c,%.o,$(wildcard *.c))) remap_jump.S mp-init.S \
+	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
+kernelloader: kernelloader.S $(patsubst %.c,%.o,$(wildcard *.c)) interrupt.S mp-init.S remap_jump.S \
 Makefile kernelloader.ld \
 reloc/a.out
 	$(CC) -c -o a.out kernelloader.S \
-    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-q,-x,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
+    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-q,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
     && rm a.out \
     && touch a.out \
     && reloc/a.out $@ a.out \
     && strip $@ \
-    && objcopy -j .boot_text -j .text -j .data -j .rodata -O binary $@ b.out \
+    && objcopy -j .text -O binary $@ b.out \
     && cat b.out a.out > $@ \
     && rm a.out b.out
 reloc/a.out: reloc/main.cx

@@ -32,7 +32,6 @@
     ljmp    $0x7fc0,$0f
 0:  sti
     pusha
-    call    I_test
     push    %es
     pop     %ds
     mov     $Q_print_S_logo,%si
@@ -55,6 +54,7 @@ I_hlt:
     call    Q_vga_I_print
     popa
     pusha
+    push    %bp
     push    %es
     xor     %di,%di
     mov     %di,%es
@@ -62,6 +62,7 @@ I_hlt:
     int     $0x13
     jc      I_hlt
     pop     %es
+    pop     %bp
     and     $~( ~0 << 6 ),%cl
     mov     %dh,%ch
     inc     %cl
@@ -72,7 +73,11 @@ I_hlt:
     xor     %bx,%bx
     xor     %dh,%dh
     mov     $1,%cx
-0:  mov     %si,%es
+0:  cmp     $0x5000,%si
+    jae     1f
+    cmp     $0x3000,%si
+    jnb     2f
+1:  mov     %si,%es
     test    %di,%di
     jnz     2f
     pusha
@@ -115,30 +120,12 @@ I_hlt:
     pop     %cx
     mov     %ax,%ds
     mov     %ax,%es
-    ljmp    $0x1000,$0
+    jmp     0f
 #-------------------------------------------------------------------------------
 .org Q_offset_S_first_mbr_part_end
 .org Q_offset_S_second_mbr_part
 #-------------------------------------------------------------------------------
-I_test:
-    xor     %eax,%eax
-    cpuid
-    cmp     $0x756e6547,%ebx
-    jne     I_hlt
-    cmp     $0x49656e69,%edx
-    jne     I_hlt
-    cmp     $0x6c65746e,%ecx
-    jne     I_hlt
-    mov     $1,%eax
-    cpuid
-# PAT, CMOV, APIC, MSR, TSC, FPU
-    xor     $( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 ),%edx
-    test    $( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 ),%edx
-    jnz     I_hlt
-# x2APIC
-    test    $1 << 21,%ecx
-    jz      I_hlt
-    ret
+0:  ljmp    $0x1000,$0
 Q_vga_I_putchar:
     mov     $0xe,%ah
     mov     $Q_vga_color_S_light_gray,%bx

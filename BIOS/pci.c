@@ -340,15 +340,21 @@ struct __attribute__ (( __packed__ )) E_pci_Z_header_Z_bist
   N8 capable            :1;
 };
 //==============================================================================
-extern struct E_main_Z_memory_map_entry *E_main_S_memory_map;
+N32 E_main_I_in_32( N16 );
+void E_main_I_out_32( N16, N32 );
+void E_sata_I_interrupt(void);
+//==============================================================================
+extern E_interrupt_S_external_Z *E_interrupt_S_external;
+extern struct E_main_Z_kernel_args E_main_S_kernel_args;
+extern struct E_main_Z_memory_map_entry *E_main_Z_memory_table_S;
 extern N32 E_main_S_sata_ahci_addresses[8];
 extern N8 E_main_S_sata_ahci_n;
 extern N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 //==============================================================================
-N32 E_main_I_in_32( N16 );
-void E_main_I_out_32( N16, N32 );
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+B E_pci_S_kernel_found;
+//==============================================================================
 N E_pci_I_check_bus( N8, Pc );
+N E_pci_I_check_bus_1( N8, Pc );
 //==============================================================================
 N32
 E_pci_I_read( N8 bus
@@ -388,7 +394,8 @@ E_pci_I_check_device( N8 bus_i
     { case E_pci_Z_header_Z_header_type_S_general:
         {   if( class != E_pci_Z_header_Z_class_S_bridge )
             {   N32 command_status = E_pci_I_read( bus_i, device_i, function_i, 4 );
-                E_pci_I_write( bus_i, device_i, function_i, 4, command_status & ~( 1 << 1 )); // Wyłącza reakcję na dostęp do MMIO.
+                if( command_status & ( 1 << 1 ))
+                    E_pci_I_write( bus_i, device_i, function_i, 4, command_status & ~( 1 << 1 )); // Wyłącza reakcję na dostęp do MMIO.
                 N8 offset = 0x10;
                 do
                 {   N64 address = E_pci_I_read( bus_i, device_i, function_i, offset );
@@ -410,13 +417,14 @@ E_pci_I_check_device( N8 bus_i
                         size |= 0xffffffff00000000UL;
                     address = address & ~0xf;
                     size = ~( size & ~0xf ) + 1;
-                    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                    *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                     { address
                     , size
                     , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
                     };
                 }while(( offset += sizeof( N32 )) != 0x28 );
-                E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
+                if( command_status & ( 1 << 1 ))
+                    E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
             }
             break;
         }
@@ -444,7 +452,7 @@ E_pci_I_check_device( N8 bus_i
                     size |= 0xffffffff00000000UL;
                 address = address & ~0xf;
                 size = ~( size & ~0xf ) + 1;
-                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                 { address
                 , size
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -461,7 +469,7 @@ E_pci_I_check_device( N8 bus_i
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                 { base
                 , limit - base
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -481,7 +489,7 @@ E_pci_I_check_device( N8 bus_i
             {   base <<= 16;
                 limit <<= 16;
                 limit += 0x100000;
-                *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                 { base
                 , limit - base
                 , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
@@ -517,22 +525,22 @@ E_pci_I_check_device( N8 bus_i
             break;
         }
       case 0x1e598086:
-        {   *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+        {   *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
             { 0xfed80000
             , 0x10000
             , E_main_Z_memory_table_Z_memory_type_S_reserved
             };
-            *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
             { 0xfeda0000
             , 0x20000
             , E_main_Z_memory_table_Z_memory_type_S_reserved
             };
-            *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
             { 0xff000000
             , 0x1000000
             , E_main_Z_memory_table_Z_memory_type_S_reserved
             };
-            //*--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+            //*--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
             //{ 0xfed40000
             //, 0x5000
             //, E_main_Z_memory_table_Z_memory_type_S_reserved
@@ -580,7 +588,7 @@ E_pci_I_check_bus( N8 bus_i
               case 0x1588086: // Ivy Bridge Mobile var.
                 {   N32 tsegmb = E_pci_I_read( bus_i, device_i, 0, 0xb8 ) & ~0xfffff;
                     N32 tolud = E_pci_I_read( bus_i, device_i, 0, 0xbc ) & ~0xfffff;
-                    *--E_main_S_memory_map = ( struct E_main_Z_memory_map_entry )
+                    *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                     { tsegmb
                     , tolud - tsegmb
                     , E_main_Z_memory_table_Z_memory_type_S_reserved
@@ -622,5 +630,148 @@ E_pci_I_check_buses( void
             return ~0;
     }
     return 0;
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N
+E_pci_I_check_device_1( N8 bus_i
+, N8 device_i
+, N8 function_i
+, N32 ids
+){  N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
+    N8 class = rev_prog_sub_class >> 24;
+    N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
+    if( class == E_pci_Z_header_Z_class_S_mass_storage
+    && subclass == E_pci_Z_header_Z_subclass_mass_storage_S_sata
+    && !E_pci_S_kernel_found
+    )
+    {   N32 bist_24 = E_pci_I_read( bus_i, device_i, function_i, 0xc );
+        struct E_pci_Z_header_Z_bist *bist = ( struct E_pci_Z_header_Z_bist * )(( N8 * )&bist_24 + 3 );
+        if( bist->capable )
+        {   while( bist->start )
+            {   __asm__ volatile (
+                "\n" "pause"
+                );
+                bist_24 = E_pci_I_read( bus_i, device_i, function_i, 0xc );
+                bist = ( struct E_pci_Z_header_Z_bist * )(( N8 * )&bist_24 + 3 );
+            }
+            if( bist->completion_code )
+                return 0;
+        }
+        N32 command_status = E_pci_I_read( bus_i, device_i, function_i, 4 );
+        if( command_status & (( 1 << 4 ) << 16 )) // Jest wskaźnik do New Capabilities.
+        {   B interrupt_set = no;
+            N8 cap_pointer = E_pci_I_read( bus_i, device_i, function_i, 0x34 ) & 0xfc;
+            while( cap_pointer )
+            {   N32 n_0 = E_pci_I_read( bus_i, device_i, function_i, cap_pointer );
+                switch( n_0 & 0xff )
+                { case 5: // MSI
+                    {   N8 interrupt = E_interrupt_R_free_external();
+                        if( !~interrupt )
+                            return ~0;
+                        N64 address = (N)E_main_Z_p_I_to_physical( E_main_S_kernel_args.local_apic_address );
+                        E_pci_I_write( bus_i, device_i, function_i, cap_pointer, n_0 & ~((( 7 << 4 ) | ( 1 << 0 )) << 16 )); // Wyłącza MSI i ustawia 1 wektor,
+                        N8 mask_offset;
+                        if( n_0 & (( 1 << 7 ) << 16 )) // 64‐bit address
+                        {   E_pci_I_write( bus_i, device_i, function_i, cap_pointer + 4, address & 0xffffffff );
+                            E_pci_I_write( bus_i, device_i, function_i, cap_pointer + 8, address >> 32 );
+                            E_pci_I_write( bus_i, device_i, function_i, cap_pointer + 0xc, 32 + interrupt );
+                            mask_offset = 0x10;
+                        }else
+                        {   E_pci_I_write( bus_i, device_i, function_i, cap_pointer + 4, address );
+                            E_pci_I_write( bus_i, device_i, function_i, cap_pointer + 8, 32 + interrupt );
+                            mask_offset = 0xc;
+                        }
+                        if( n_0 & (( 1 << 8 ) << 16 )) // Per vector masking
+                            E_pci_I_write( bus_i, device_i, function_i, mask_offset, 0 );
+                        E_interrupt_S_external[interrupt] = &E_sata_I_interrupt;
+                        E_pci_I_write( bus_i, device_i, function_i, cap_pointer, n_0 | (( 1 << 0 ) << 16 )); // Włącza MSI.
+                        interrupt_set = yes;
+                        break;
+                    }
+                }
+                cap_pointer = ( n_0 >> 8 ) & 0xfc;
+            }
+            if( interrupt_set )
+            {   E_pci_I_write( bus_i, device_i, function_i, 4, ( command_status | ( 1 << 2 ) | ( 1 << 1 )) & ~( 1 << 10 )); // Włącza ‘bus mastering’, reakcję na dostęp do MMIO oraz przerwanie.
+                P sata_ahci_address = (P)(N)( E_pci_I_read( bus_i, device_i, function_i, 0x24 ) & ~0xf );
+                N r = E_sata_I_init( E_main_Z_p_I_to_virtual( sata_ahci_address ));
+                if( K_error(r)
+                && ~r
+                )
+                    return r;
+                E_pci_S_kernel_found = ~r;
+            }
+        }
+    }
+    return 0;
+}
+N
+E_pci_I_check_function_1( N8 bus_i
+, N8 device_i
+, N8 function_i
+, Pc bus_mask
+){  N32 rev_prog_sub_class = E_pci_I_read( bus_i, device_i, function_i, 8 );
+    N8 class = rev_prog_sub_class >> 24;
+    N8 subclass = ( rev_prog_sub_class >> 16 ) & 0xff;
+    if( class == E_pci_Z_header_Z_class_S_bridge
+    && subclass == E_pci_Z_header_Z_subclass_bridge_S_pci2pci
+    )
+    {   N32 buses_latency = E_pci_I_read( bus_i, device_i, function_i, 0x18 );
+        N8 secondary_bus = ( buses_latency >> 8 ) & 0xff;
+        K( E_pci_I_check_bus_1( secondary_bus, bus_mask ))
+            return ~0;
+    }
+    return 0;
+}
+N
+E_pci_I_check_bus_1( N8 bus_i
+, Pc bus_mask
+){  if( E_mem_Q_mask_R( bus_mask, bus_i ))
+        return 0;
+    E_mem_Q_mask_P_set( bus_mask, bus_i );
+    for_n( device_i, 32 )
+    {   N32 ids = E_pci_I_read( bus_i, device_i, 0, 0 );
+        if( !~ids )
+            continue;
+        K( E_pci_I_check_device_1( bus_i, device_i, 0, ids ))
+            return ~0;
+        K( E_pci_I_check_function_1( bus_i, device_i, 0, bus_mask ))
+            return ~0;
+        N8 header_type = E_pci_I_read( bus_i, device_i, 0, 0xe );
+        if( header_type & 0x80 )
+        {   for_n( function_i, 7 )
+            {   ids = E_pci_I_read( bus_i, device_i, 1 + function_i, 0 );
+                if( ~ids )
+                {   K( E_pci_I_check_device_1( bus_i, device_i, 1 + function_i, ids ))
+                        return ~0;
+                    K( E_pci_I_check_function_1( bus_i, device_i, 1 + function_i, bus_mask ))
+                        return ~0;
+                }
+            }
+        }
+    }
+    return 0;
+}
+N
+E_pci_I_check_buses_1( void
+){  Pc bus_mask = E_mem_Q_mask_M(256);
+    Kp( bus_mask )
+        return ~0;
+    E_pci_S_kernel_found = no;
+    N8 header_type = E_pci_I_read( 0, 0, 0, 0xe );
+    N r = 0;
+    if( header_type & 0x80 )
+    {   for_n( function_i, 8 )
+        {   K( E_pci_I_check_bus_1( function_i, bus_mask ))
+            {   r = ~0;
+                goto End;
+            }
+        }
+    }else
+    {   K( E_pci_I_check_bus_1( 0, bus_mask ))
+            r = ~0;
+    }
+End:K_( ~1, W( bus_mask ));
+    return r;
 }
 /******************************************************************************/

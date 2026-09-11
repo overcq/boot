@@ -8,31 +8,13 @@
 *******************************************************************************/
 #include "kernelloader.h"
 //==============================================================================
-#define H_oux_E_fs_Q_device_S_ident "OUXFS"
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-enum H_oux_E_Fs_Z_block_Z_location
-{ H_oux_E_fs_Z_block_Z_location_S_sectors
-, H_oux_E_fs_Z_block_Z_location_S_in_sector
-};
-struct H_oux_E_fs_Z_block
-{ N64 sector;
-  union
-  { struct
-    { N64 n;
-      N16 pre, post;
-    }sectors;
-    struct
-    { N16 start;
-      N16 size;
-    }in_sector;
-  }location;
-  enum H_oux_E_Fs_Z_block_Z_location location_type;
-}*H_oux_E_fs_S_block_table;
-N H_oux_E_fs_S_sector_size;
-N64 H_oux_E_fs_S_file_uid;
-N64 H_oux_E_fs_S_file_block_table_start, H_oux_E_fs_S_file_block_table_n;
+#define E_ouxfs_Q_device_S_ident "OUXFS"
 //==============================================================================
-#define H_oux_E_fs_Q_device_I_switch_item( type, item, end ) \
+extern struct E_disc_Z E_disc_S;
+//==============================================================================
+N64 E_ouxfs_S_file_uid;
+//==============================================================================
+#define E_ouxfs_Q_device_I_switch_item( type, item, end ) \
     if( data_i ) \
     {   do \
         {   item |= (type)*data++ << data_i++ * 8; \
@@ -58,23 +40,17 @@ N64 H_oux_E_fs_S_file_block_table_start, H_oux_E_fs_S_file_block_table_n;
     } \
     continue_from++
 //------------------------------------------------------------------------------
-S
-H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
-, struct H_uefi_Z_protocol_Z_disk_io *disk_io
-, N32 media_id
-, N block_size
-){  N pages = E_simple_Z_n_I_align_up_to_v2( block_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
-    Pc sector;
-    S status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_Z_loader_data, pages, ( N64 * )&sector );
-    if( status < 0 )
-        return status;
-    H_oux_E_fs_S_sector_size = block_size;
-    status = disk_io->read( disk_io, media_id, 0, H_oux_E_fs_S_sector_size, sector );
-    if( status < 0 )
+N
+E_ouxfs_Q_disk_M( N block_size
+){  Pc sector = M( block_size );
+    Kp(sector)
+        return ~0;
+    E_disc_S.partition.oux.sector_size = block_size;
+    if( K_error( E_disc_R( 0, 1, sector )))
         goto Error_0;
-    if( !E_mem_Q_blk_T_eq( sector, H_oux_E_fs_Q_device_S_ident, J_s0_R_l( H_oux_E_fs_Q_device_S_ident )))
+    if( !E_mem_Q_blk_T_eq( sector, E_ouxfs_Q_device_S_ident, J_s0_R_l( E_ouxfs_Q_device_S_ident )))
         goto Error_0;
-    N64 *block_table_n_ = E_simple_Z_p_I_align_up_to_v2( sector + J_s0_R_l( H_oux_E_fs_Q_device_S_ident ), sizeof( N64 ));
+    N64 *block_table_n_ = E_simple_Z_p_I_align_up_to_v2( sector + J_s0_R_l( E_ouxfs_Q_device_S_ident ), sizeof( N64 ));
     N64 block_table_n = block_table_n_[0];
     N64 block_table_block_table_n = block_table_n_[1];
     N64 block_table_directory_table_start = block_table_n_[2];
@@ -106,8 +82,10 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
     ))))
         goto Error_0;
     Pc data = (P)&block_table_n_[6];
-    status = system_table->boot_services->M_pool( H_uefi_Z_memory_Z_loader_data, block_table_n * sizeof( *H_oux_E_fs_S_block_table ), ( P * )&H_oux_E_fs_S_block_table );
-    if( status < 0 )
+    Mt_( E_disc_S.partition.oux.block_table, block_table_n );
+    if( K_error( E_disc_S.partition.oux.block_table )
+    || !E_disc_S.partition.oux.block_table
+    )
         goto Error_0;
     // Odczyt tablicy bloków do pamięci operacyjnej.
     N continue_from = ~0;
@@ -121,40 +99,40 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
                     goto End_loop_0;
                 continue_from++;
           case 0:
-                H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].sector
-                , sector + H_oux_E_fs_S_sector_size
+                E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].sector
+                , sector + E_disc_S.partition.oux.sector_size
                 );
           default:
                 if( continue_from == 1 )
-                {   H_oux_E_fs_Q_device_I_switch_item( char, H_oux_E_fs_S_block_table[ block_table_i ].location_type
-                    , sector + H_oux_E_fs_S_sector_size
+                {   E_ouxfs_Q_device_I_switch_item( char, E_disc_S.partition.oux.block_table[ block_table_i ].location_type
+                    , sector + E_disc_S.partition.oux.sector_size
                     );
-                    if( H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_sectors
-                    && H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_in_sector
+                    if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_sectors
+                    && E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_in_sector
                     )
                         goto Error_1;
                 }
-                if( H_oux_E_fs_S_block_table[ block_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+                if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
                     switch( continue_from )
                     { case 2:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 3:
-                            H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre >= H_oux_E_fs_S_sector_size )
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre >= E_disc_S.partition.oux.sector_size )
                                 goto Error_1;
                       case 4:
-                            H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post >= H_oux_E_fs_S_sector_size )
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post >= E_disc_S.partition.oux.sector_size )
                                 goto Error_1;
-                            if( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                            && ( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                || !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                            if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                            && ( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                || !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                             ))
                                 goto Error_1;
                             continue_from = ~0;
@@ -162,35 +140,33 @@ H_oux_E_fs_Q_disk_M( struct H_uefi_Z_system_table *system_table
                 else
                     switch( continue_from )
                     { case 2:
-                            H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 3:
-                            H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( !H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size )
+                            if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size )
                                 goto Error_1;
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                + H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                > H_oux_E_fs_S_sector_size
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                + E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                > E_disc_S.partition.oux.sector_size
                             )
                                 goto Error_1;
                             continue_from = ~0;
                     }
         }
-    }while( data != sector + H_oux_E_fs_S_sector_size );
+    }while( data != sector + E_disc_S.partition.oux.sector_size );
 End_loop_0:
     for( N64 block_table_i_read = 0; block_table_i_read != block_table_block_table_n; block_table_i_read++ ) // Czyta wszystkie pozostałe wpisy pliku tablicy bloków.
     {   if( block_table_i_read > block_table_i ) //NDFN Przemyśleć i zagwarantować, by zawsze starczało.
             goto Error_1;
-    if( H_oux_E_fs_S_block_table[ block_table_i_read ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
-        {   if( H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.pre )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_i_read ].sector - 1 ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+    if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
+        {   if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.pre )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector - 1, 1, sector )))
                     goto Error_1;
-                Pc data = sector + ( H_oux_E_fs_S_sector_size - H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.pre );
+                Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.pre );
                 do
                 {   switch( continue_from )
                     { case ~0:
@@ -199,40 +175,40 @@ End_loop_0:
                                 goto Error_1;
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].sector
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].sector
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       default:
                             if( continue_from == 1 )
-                            {   H_oux_E_fs_Q_device_I_switch_item( char, H_oux_E_fs_S_block_table[ block_table_i ].location_type
-                                , sector + H_oux_E_fs_S_sector_size
+                            {   E_ouxfs_Q_device_I_switch_item( char, E_disc_S.partition.oux.block_table[ block_table_i ].location_type
+                                , sector + E_disc_S.partition.oux.sector_size
                                 );
-                                if( H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_sectors
-                                && H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_in_sector
+                                if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_sectors
+                                && E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_in_sector
                                 )
                                     goto Error_1;
                             }
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
                                   case 4:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        && ( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                            || !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        && ( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                            || !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                                         ))
                                             goto Error_1;
                                         continue_from = ~0;
@@ -240,29 +216,27 @@ End_loop_0:
                             else
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size )
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size )
                                             goto Error_1;
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                            + H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                            > H_oux_E_fs_S_sector_size
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                            + E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                            > E_disc_S.partition.oux.sector_size
                                         )
                                             goto Error_1;
                                         continue_from = ~0;
                                 }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            for( N64 sector_i = 0; sector_i != H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.n; sector_i++ ) // Czyta kolejne sektory z szeregu ciągłych.
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_i_read ].sector + sector_i ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.n; sector_i++ ) // Czyta kolejne sektory z szeregu ciągłych.
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + sector_i, 1, sector )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -273,40 +247,40 @@ End_loop_0:
                                 goto Error_1;
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].sector
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].sector
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       default:
                             if( continue_from == 1 )
-                            {   H_oux_E_fs_Q_device_I_switch_item( char, H_oux_E_fs_S_block_table[ block_table_i ].location_type
-                                , sector + H_oux_E_fs_S_sector_size
+                            {   E_ouxfs_Q_device_I_switch_item( char, E_disc_S.partition.oux.block_table[ block_table_i ].location_type
+                                , sector + E_disc_S.partition.oux.sector_size
                                 );
-                                if( H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_sectors
-                                && H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_in_sector
+                                if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_sectors
+                                && E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_in_sector
                                 )
                                     goto Error_1;
                             }
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
                                   case 4:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        && ( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                            || !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        && ( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                            || !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                                         ))
                                             goto Error_1;
                                         continue_from = ~0;
@@ -314,29 +288,27 @@ End_loop_0:
                             else
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                        , sector + H_oux_E_fs_S_sector_size
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                        , sector + E_disc_S.partition.oux.sector_size
                                         );
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size )
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size )
                                             goto Error_1;
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                            + H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                            > H_oux_E_fs_S_sector_size
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                            + E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                            > E_disc_S.partition.oux.sector_size
                                         )
                                             goto Error_1;
                                         continue_from = ~0;
                                 }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            if( H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_i_read ].sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.n ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.n, 1, sector )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -347,40 +319,40 @@ End_loop_0:
                                 goto Error_1;
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].sector
-                            , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].sector
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                             );
                       default:
                             if( continue_from == 1 )
-                            {   H_oux_E_fs_Q_device_I_switch_item( char, H_oux_E_fs_S_block_table[ block_table_i ].location_type
-                                , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                            {   E_ouxfs_Q_device_I_switch_item( char, E_disc_S.partition.oux.block_table[ block_table_i ].location_type
+                                , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                 );
-                                if( H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_sectors
-                                && H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_in_sector
+                                if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_sectors
+                                && E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_in_sector
                                 )
                                     goto Error_1;
                             }
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                        , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                        , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
                                   case 4:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
-                                        , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
+                                        , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                         );
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post >= H_oux_E_fs_S_sector_size )
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post >= E_disc_S.partition.oux.sector_size )
                                             goto Error_1;
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                        && ( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                            || !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                        && ( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                            || !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                                         ))
                                             goto Error_1;
                                         continue_from = ~0;
@@ -388,31 +360,29 @@ End_loop_0:
                             else
                                 switch( continue_from )
                                 { case 2:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                        , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                        , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                         );
                                   case 3:
-                                        H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                        , sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post
+                                        E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                        , sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post
                                         );
-                                        if( !H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size )
+                                        if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size )
                                             goto Error_1;
-                                        if( H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                            + H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                            > H_oux_E_fs_S_sector_size
+                                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                            + E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                            > E_disc_S.partition.oux.sector_size
                                         )
                                             goto Error_1;
                                         continue_from = ~0;
                                 }
                     }
-                }while( data != sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.sectors.post );
+                }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post );
             }
         }else
-        {   N64 offset = H_oux_E_fs_S_block_table[ block_table_i_read ].sector * H_oux_E_fs_S_sector_size;
-            status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-            if( status < 0 )
+        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector, 1, sector )))
                 goto Error_1;
-            Pc data = sector + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start;
+            Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start;
             do // Czyta wpisy pliku tablicy bloków znajdujące się we fragmencie sektora.
             {   switch( continue_from )
                 { case ~0:
@@ -421,50 +391,50 @@ End_loop_0:
                             goto Error_1;
                         continue_from++;
                   case 0:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].sector
+                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].sector
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                         );
                   default:
                         if( continue_from == 1 )
-                        {   H_oux_E_fs_Q_device_I_switch_item( char, H_oux_E_fs_S_block_table[ block_table_i ].location_type
+                        {   E_ouxfs_Q_device_I_switch_item( char, E_disc_S.partition.oux.block_table[ block_table_i ].location_type
                             , sector
-                              + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                              + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                              + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                              + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                             );
-                            if( H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_sectors
-                            && H_oux_E_fs_S_block_table[ block_table_i ].location_type != H_oux_E_fs_Z_block_Z_location_S_in_sector
+                            if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_sectors
+                            && E_disc_S.partition.oux.block_table[ block_table_i ].location_type != E_ouxfs_Z_block_Z_location_S_in_sector
                             )
                                 goto Error_1;
                         }
-                        if( H_oux_E_fs_S_block_table[ block_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+                        if( E_disc_S.partition.oux.block_table[ block_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
                             switch( continue_from )
                             { case 2:
-                                    H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
+                                    E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
                                     , sector
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                                     );
                               case 3:
-                                    H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
+                                    E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
                                     , sector
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                                     );
-                                    if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre >= H_oux_E_fs_S_sector_size )
+                                    if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre >= E_disc_S.partition.oux.sector_size )
                                         goto Error_1;
                               case 4:
-                                    H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                                    E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                                     , sector
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                                     );
-                                    if( H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post >= H_oux_E_fs_S_sector_size )
+                                    if( E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post >= E_disc_S.partition.oux.sector_size )
                                         goto Error_1;
-                                    if( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.n
-                                    && ( !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.pre
-                                        || !H_oux_E_fs_S_block_table[ block_table_i ].location.sectors.post
+                                    if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.n
+                                    && ( !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.pre
+                                        || !E_disc_S.partition.oux.block_table[ block_table_i ].location.sectors.post
                                     ))
                                         goto Error_1;
                                     continue_from = ~0;
@@ -472,30 +442,30 @@ End_loop_0:
                         else
                             switch( continue_from )
                             { case 2:
-                                    H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
+                                    E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
                                     , sector
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                                     );
                               case 3:
-                                    H_oux_E_fs_Q_device_I_switch_item( N16, H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
+                                    E_ouxfs_Q_device_I_switch_item( N16, E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
                                     , sector
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-                                      + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+                                      + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
                                     );
-                                    if( !H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size )
+                                    if( !E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size )
                                         goto Error_1;
-                                    if( H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.start
-                                        + H_oux_E_fs_S_block_table[ block_table_i ].location.in_sector.size
-                                        > H_oux_E_fs_S_sector_size
+                                    if( E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.start
+                                        + E_disc_S.partition.oux.block_table[ block_table_i ].location.in_sector.size
+                                        > E_disc_S.partition.oux.sector_size
                                     )
                                         goto Error_1;
                                     continue_from = ~0;
                             }
                 }
             }while( data != sector
-              + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.start
-              + H_oux_E_fs_S_block_table[ block_table_i_read ].location.in_sector.size
+              + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start
+              + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.size
             );
         }
     }
@@ -510,20 +480,18 @@ End_loop_0:
     N char_i;
     N64 directory_table_i;
     for( directory_table_i = 0; directory_table_i != block_table_directory_table_n; directory_table_i++ )
-    {   if( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
-        {   if( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].sector - 1 ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+    {   if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
+        {   if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector - 1, 1, sector )))
                     goto Error_1;
-                Pc data = sector + ( H_oux_E_fs_S_sector_size - H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre );
+                Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre );
                 do
                 {   switch( continue_from )
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_uid
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_uid
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                             if( !~directory_uid )
                                 goto Error_1;
@@ -533,35 +501,33 @@ End_loop_0:
                                 goto Error_1;
                             uid_last = directory_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_parent
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_parent
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                             char_i = 0;
                       case 2:
                             if( !~directory_parent )
-                                while( data != sector + H_oux_E_fs_S_sector_size )
+                                while( data != sector + E_disc_S.partition.oux.sector_size )
                                 {   if( *data != directory_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_1;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_sector_size )
+                            while( data != sector + E_disc_S.partition.oux.sector_size )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_sector_size )
+                            if( data != sector + E_disc_S.partition.oux.sector_size )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            for( N64 sector_i = 0; sector_i != H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n; sector_i++ )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].sector + sector_i ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n; sector_i++ )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector + sector_i, 1, sector )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -569,8 +535,8 @@ End_loop_0:
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_uid
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_uid
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                             if( !~directory_uid )
                                 goto Error_1;
@@ -580,37 +546,38 @@ End_loop_0:
                                 goto Error_1;
                             uid_last = directory_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_parent
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_parent
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                             char_i = 0;
                       case 2:
                             if( !~directory_parent )
-                                while( data != sector + H_oux_E_fs_S_sector_size )
+                                while( data != sector + E_disc_S.partition.oux.sector_size )
                                 {   if( *data != directory_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_1;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_sector_size )
+                            while( data != sector + E_disc_S.partition.oux.sector_size )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_sector_size )
+                            if( data != sector + E_disc_S.partition.oux.sector_size )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            if( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].sector
-                  + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n
-                ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
+            {   if( K_error( E_disc_R(
+                  E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector
+                  + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n
+                , 1
+                , sector
+                )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -618,8 +585,8 @@ End_loop_0:
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_uid
-                            , sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_uid
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post
                             );
                             if( !~directory_uid )
                                 goto Error_1;
@@ -629,46 +596,44 @@ End_loop_0:
                                 goto Error_1;
                             uid_last = directory_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, directory_parent
-                            , sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, directory_parent
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post
                             );
                             char_i = 0;
                       case 2:
                             if( !~directory_parent )
-                                while( data != sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
+                                while( data != sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
                                 {   if( *data != directory_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_1;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
+                            while( data != sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
+                            if( data != sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post );
+                }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post );
             }
         }else
-        {   N64 offset = H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].sector * H_oux_E_fs_S_sector_size;
-            status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-            if( status < 0 )
+        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector, 1, sector )))
                 goto Error_1;
-            Pc data = sector + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start;
+            Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start;
             do
             {   switch( continue_from )
                 { case ~0:
                         continue_from++;
                   case 0:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, directory_uid
+                        E_ouxfs_Q_device_I_switch_item( N64, directory_uid
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
                         );
                         if( !~directory_uid )
                             goto Error_1;
@@ -678,17 +643,17 @@ End_loop_0:
                             goto Error_1;
                         uid_last = directory_uid;
                   case 1:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, directory_parent
+                        E_ouxfs_Q_device_I_switch_item( N64, directory_parent
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
                         );
                         char_i = 0;
                   case 2:
                         if( !~directory_parent )
                             while( data != sector
-                              + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-                              + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+                              + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+                              + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
                             )
                             {   if( *data != directory_name[ char_i++ ] )
                                     break;
@@ -697,24 +662,24 @@ End_loop_0:
                                 data++;
                             }
                         while( data != sector
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
                         )
                         {   if( !*data )
                                 break;
                             data++;
                         }
                         if( data != sector
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
                         )
                         {   data++;
                             continue_from = ~0;
                         }
                 }
             }while( data != sector
-              + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
-              + H_oux_E_fs_S_block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
+              + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start
+              + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.size
             );
         }
     }
@@ -729,72 +694,68 @@ End_loop_1:
     data_i = 0;
     N64 file_table_i;
     for( file_table_i = 0; file_table_i != block_table_file_table_n; file_table_i++ )
-    {   if( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
-        {   if( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].sector - 1 ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+    {   if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
+        {   if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector - 1, 1, sector )))
                     goto Error_1;
-                Pc data = sector + ( H_oux_E_fs_S_sector_size - H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre );
+                Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre );
                 do
                 {   switch( continue_from )
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_uid
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_ouxfs_S_file_uid
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( !~H_oux_E_fs_S_file_uid )
+                            if( !~E_ouxfs_S_file_uid )
                                 goto Error_1;
                             if( ~uid_last
-                            && uid_last >= H_oux_E_fs_S_file_uid
+                            && uid_last >= E_ouxfs_S_file_uid
                             )
                                 goto Error_1;
-                            uid_last = H_oux_E_fs_S_file_uid;
+                            uid_last = E_ouxfs_S_file_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, file_parent
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, file_parent
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 2:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_start
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.start
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 3:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_n
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.n
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( H_oux_E_fs_S_file_block_table_n
-                            && !~H_oux_E_fs_S_file_block_table_start
+                            if( E_disc_S.partition.oux.file.block_table.n
+                            && !~E_disc_S.partition.oux.file.block_table.start
                             )
                                 goto Error_1;
-                            if( !~H_oux_E_fs_S_file_block_table_n )
+                            if( !~E_disc_S.partition.oux.file.block_table.n )
                                 goto Error_1;
                             char_i = 0;
                       case 4:
                             if( file_parent == directory_uid )
-                                while( data != sector + H_oux_E_fs_S_sector_size )
+                                while( data != sector + E_disc_S.partition.oux.sector_size )
                                 {   if( *data != file_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_2;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_sector_size )
+                            while( data != sector + E_disc_S.partition.oux.sector_size )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_sector_size )
+                            if( data != sector + E_disc_S.partition.oux.sector_size )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            for( N64 sector_i = 0; sector_i != H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.n; sector_i++ )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].sector + sector_i ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.n; sector_i++ )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector + sector_i, 1, sector )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -802,62 +763,62 @@ End_loop_1:
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_uid
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_ouxfs_S_file_uid
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( !~H_oux_E_fs_S_file_uid )
+                            if( !~E_ouxfs_S_file_uid )
                                 goto Error_1;
                             if( ~uid_last
-                            && uid_last >= H_oux_E_fs_S_file_uid
+                            && uid_last >= E_ouxfs_S_file_uid
                             )
                                 goto Error_1;
-                            uid_last = H_oux_E_fs_S_file_uid;
+                            uid_last = E_ouxfs_S_file_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, file_parent
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, file_parent
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 2:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_start
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.start
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
                       case 3:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_n
-                            , sector + H_oux_E_fs_S_sector_size
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.n
+                            , sector + E_disc_S.partition.oux.sector_size
                             );
-                            if( H_oux_E_fs_S_file_block_table_n
-                            && !~H_oux_E_fs_S_file_block_table_start
+                            if( E_disc_S.partition.oux.file.block_table.n
+                            && !~E_disc_S.partition.oux.file.block_table.start
                             )
                                 goto Error_1;
-                            if( !~H_oux_E_fs_S_file_block_table_n )
+                            if( !~E_disc_S.partition.oux.file.block_table.n )
                                 goto Error_1;
                             char_i = 0;
                       case 4:
                             if( file_parent == directory_uid )
-                                while( data != sector + H_oux_E_fs_S_sector_size )
+                                while( data != sector + E_disc_S.partition.oux.sector_size )
                                 {   if( *data != file_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_2;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_sector_size )
+                            while( data != sector + E_disc_S.partition.oux.sector_size )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_sector_size )
+                            if( data != sector + E_disc_S.partition.oux.sector_size )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_sector_size );
+                }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
-            if( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
-            {   N64 offset = ( H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].sector
-                  + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.n
-                ) * H_oux_E_fs_S_sector_size;
-                status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-                if( status < 0 )
+            if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
+            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector
+                  + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.n
+                , 1
+                , sector
+                )))
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -865,107 +826,105 @@ End_loop_1:
                     { case ~0:
                             continue_from++;
                       case 0:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_uid
-                            , sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, E_ouxfs_S_file_uid
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
                             );
-                            if( !~H_oux_E_fs_S_file_uid )
+                            if( !~E_ouxfs_S_file_uid )
                                 goto Error_1;
                             if( ~uid_last
-                            && uid_last >= H_oux_E_fs_S_file_uid
+                            && uid_last >= E_ouxfs_S_file_uid
                             )
                                 goto Error_1;
-                            uid_last = H_oux_E_fs_S_file_uid;
+                            uid_last = E_ouxfs_S_file_uid;
                       case 1:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, file_parent
-                            , sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, file_parent
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
                             );
                       case 2:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_start
-                            , sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.start
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
                             );
                       case 3:
-                            H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_n
-                            , sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
+                            E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.n
+                            , sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post
                             );
-                            if( H_oux_E_fs_S_file_block_table_n
-                            && !~H_oux_E_fs_S_file_block_table_start
+                            if( E_disc_S.partition.oux.file.block_table.n
+                            && !~E_disc_S.partition.oux.file.block_table.start
                             )
                                 goto Error_1;
-                            if( !~H_oux_E_fs_S_file_block_table_n )
+                            if( !~E_disc_S.partition.oux.file.block_table.n )
                                 goto Error_1;
                             char_i = 0;
                       case 4:
                             if( file_parent == directory_uid )
-                                while( data != sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
+                                while( data != sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
                                 {   if( *data != file_name[ char_i++ ] )
                                         break;
                                     if( !*data )
                                         goto End_loop_2;
                                     data++;
                                 }
-                            while( data != sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
+                            while( data != sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
                             {   if( !*data )
                                     break;
                                 data++;
                             }
-                            if( data != sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
+                            if( data != sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
                             {   data++;
                                 continue_from = ~0;
                             }
                     }
-                }while( data != sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.sectors.post );
+                }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post );
             }
         }else
-        {   N64 offset = H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].sector * H_oux_E_fs_S_sector_size;
-            status = disk_io->read( disk_io, media_id, offset, H_oux_E_fs_S_sector_size, sector );
-            if( status < 0 )
+        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector, 1, sector )))
                 goto Error_1;
-            Pc data = sector + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start;
+            Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start;
             do
             {   switch( continue_from )
                 { case ~0:
                         continue_from++;
                   case 0:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_uid
+                        E_ouxfs_Q_device_I_switch_item( N64, E_ouxfs_S_file_uid
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         );
-                        if( !~H_oux_E_fs_S_file_uid )
+                        if( !~E_ouxfs_S_file_uid )
                             goto Error_1;
                         if( ~uid_last
-                        && uid_last >= H_oux_E_fs_S_file_uid
+                        && uid_last >= E_ouxfs_S_file_uid
                         )
                             goto Error_1;
-                        uid_last = H_oux_E_fs_S_file_uid;
+                        uid_last = E_ouxfs_S_file_uid;
                   case 1:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, file_parent
+                        E_ouxfs_Q_device_I_switch_item( N64, file_parent
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         );
                   case 2:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_start
+                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.start
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         );
                   case 3:
-                        H_oux_E_fs_Q_device_I_switch_item( N64, H_oux_E_fs_S_file_block_table_n
+                        E_ouxfs_Q_device_I_switch_item( N64, E_disc_S.partition.oux.file.block_table.n
                         , sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         );
-                        if( H_oux_E_fs_S_file_block_table_n
-                        && !~H_oux_E_fs_S_file_block_table_start
+                        if( E_disc_S.partition.oux.file.block_table.n
+                        && !~E_disc_S.partition.oux.file.block_table.start
                         )
                             goto Error_1;
                         char_i = 0;
                   case 4:
                         if( file_parent == directory_uid )
                             while( data != sector
-                              + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                              + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                              + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                              + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                             )
                             {   if( *data != file_name[ char_i++ ] )
                                     break;
@@ -974,101 +933,85 @@ End_loop_1:
                                 data++;
                             }
                         while( data != sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         )
                         {   if( !*data )
                                 break;
                             data++;
                         }
                         if( data != sector
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-                          + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+                          + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
                         )
                         {   data++;
                             continue_from = ~0;
                         }
                 }
             }while( data != sector
-              + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
-              + H_oux_E_fs_S_block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
+              + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start
+              + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.size
             );
         }
     }
 End_loop_2:
     if( file_table_i == block_table_file_table_n )
         goto Error_1;
-    status = system_table->boot_services->W_pages(( N64 )sector, 1 );
-    return status;
+    K_( ~1, W(sector) );
+    return 0;
 Error_1:
-    S status_1 = system_table->boot_services->W_pool( H_oux_E_fs_S_block_table );
+    K_( ~1, W( E_disc_S.partition.oux.block_table ));
 Error_0:
-    S status_0 = system_table->boot_services->W_pages(( N64 )sector, 1 );
-    if( !( status < 0 ))
-        status = ~0;
-    return status;
-}
-S
-H_oux_E_fs_Q_disk_W( struct H_uefi_Z_system_table *system_table
-){  return system_table->boot_services->W_pool( H_oux_E_fs_S_block_table );
+    K_( ~1, W(sector) );
+    return ~0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N64
-H_oux_E_fs_Q_kernel_R_size( void
+E_ouxfs_Q_kernel_R_size( void
 ){  N64 size = 0;
-    for( N64 block_table_i = 0; block_table_i != H_oux_E_fs_S_file_block_table_n; block_table_i++ )
-    {   struct H_oux_E_fs_Z_block *block = H_oux_E_fs_S_block_table + H_oux_E_fs_S_file_block_table_start + block_table_i;
-        if( block->location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
-            size += block->location.sectors.pre + block->location.sectors.n * H_oux_E_fs_S_sector_size + block->location.sectors.post;
+    for( N64 block_table_i = 0; block_table_i != E_disc_S.partition.oux.file.block_table.n; block_table_i++ )
+    {   struct E_ouxfs_Z_block *block = E_disc_S.partition.oux.block_table + E_disc_S.partition.oux.file.block_table.start + block_table_i;
+        if( block->location_type == E_ouxfs_Z_block_Z_location_S_sectors )
+            size += block->location.sectors.pre + block->location.sectors.n * E_disc_S.partition.oux.sector_size + block->location.sectors.post;
         else
             size += block->location.in_sector.size;
     }
     return size;
 }
-S
-H_oux_E_fs_Q_kernel_I_read( struct H_uefi_Z_protocol_Z_disk_io *disk_io
-, N32 media_id
-, Pc data
-){  for( N64 block_table_i = 0; block_table_i != H_oux_E_fs_S_file_block_table_n; block_table_i++ )
-    {   struct H_oux_E_fs_Z_block *block = H_oux_E_fs_S_block_table + H_oux_E_fs_S_file_block_table_start + block_table_i;
-        if( block->location_type == H_oux_E_fs_Z_block_Z_location_S_sectors )
+N
+E_ouxfs_Q_kernel_I_read( Pc data
+){  Pc sector = E_mem_Q_blk_Z_single_memory_M( E_disc_S.partition.oux.sector_size );
+    Kp(sector)
+        return ~0;
+    for( N64 block_table_i = 0; block_table_i != E_disc_S.partition.oux.file.block_table.n; block_table_i++ )
+    {   struct E_ouxfs_Z_block *block = E_disc_S.partition.oux.block_table + E_disc_S.partition.oux.file.block_table.start + block_table_i;
+        if( block->location_type == E_ouxfs_Z_block_Z_location_S_sectors )
         {   if( block->location.sectors.pre )
-            {   S status = disk_io->read( disk_io, media_id
-                , block->sector * H_oux_E_fs_S_sector_size - block->location.sectors.pre
-                , block->location.sectors.pre
-                , data
-                );
-                if( status < 0 )
-                    return status;
+            {   K( E_disc_R( block->sector - 1, 1, sector ))
+                    return ~0;
+                E_mem_Q_blk_I_copy( data, sector + E_disc_S.partition.oux.sector_size - block->location.sectors.pre, block->location.sectors.pre );
                 data += block->location.sectors.pre;
             }
-            if( block->location.sectors.n )
-            {   S status = disk_io->read( disk_io, media_id, block->sector * H_oux_E_fs_S_sector_size, block->location.sectors.n * H_oux_E_fs_S_sector_size, data );
-                if( status < 0 )
-                    return status;
-                data += block->location.sectors.n * H_oux_E_fs_S_sector_size;
+            for_n( i, block->location.sectors.n )
+            {   K( E_disc_R( block->sector + i, 1, sector ))
+                    return ~0;
+                E_mem_Q_blk_I_copy( data, sector, E_disc_S.partition.oux.sector_size );
+                data += E_disc_S.partition.oux.sector_size;
             }
             if( block->location.sectors.post )
-            {   S status = disk_io->read( disk_io, media_id
-                , ( block->sector + block->location.sectors.n ) * H_oux_E_fs_S_sector_size
-                , block->location.sectors.post
-                , data
-                );
-                if( status < 0 )
-                    return status;
+            {   K( E_disc_R( block->sector + block->location.sectors.n, 1, sector ))
+                    return ~0;
+                E_mem_Q_blk_I_copy( data, sector, block->location.sectors.post );
                 data += block->location.sectors.post;
             }
         }else
-        {   S status = disk_io->read( disk_io, media_id
-            , block->sector * H_oux_E_fs_S_sector_size + block->location.in_sector.start
-            , block->location.in_sector.size
-            , data
-            );
-            if( status < 0 )
-                return status;
+        {   K( E_disc_R( block->sector, 1, sector ))
+                return ~0;
+            E_mem_Q_blk_I_copy( data, sector + block->location.in_sector.start, block->location.in_sector.size );
             data += block->location.in_sector.size;
         }
     }
+    K_( ~1, W(sector) );
     return 0;
 }
 /******************************************************************************/

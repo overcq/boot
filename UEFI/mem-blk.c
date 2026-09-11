@@ -11,7 +11,6 @@
 //==============================================================================
 #define E_mem_Q_blk_S_align_to_all  alignof(max_align_t)
 //==============================================================================
-extern B E_main_S_sse;
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 //==============================================================================
 _internal void E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(N);
@@ -92,8 +91,8 @@ E_mem_M(
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].n = memory_map_size / sizeof( struct H_oux_E_mem_Z_memory_map );
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 2 ].context_ip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].p = (P)page_table_address;
-        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].u = 1;
-        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].u = H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].n = page_table_size / H_oux_E_mem_S_page_size;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 3 ].context_ip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].p = (P)kernel_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id + 4 ].u = 1;
@@ -108,8 +107,8 @@ E_mem_M(
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].n = kernel_size;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 3 ].context_ip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].p = (P)page_table_address;
-        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].u = 1;
-        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].n = page_table_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].u = H_oux_E_mem_S_page_size;
+        E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].n = page_table_size / H_oux_E_mem_S_page_size;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 2 ].context_ip = 0;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].p = (P)memory_map_address;
         E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id - 1 ].u = sizeof( struct H_oux_E_mem_Z_memory_map );
@@ -193,7 +192,7 @@ void
 E_mem_Q_blk_I_copy_fwd( P dst
 , P src
 , N l
-){  if( E_main_S_sse )
+){  if( E_main_S_kernel_args.sse )
     {   N128 *dst_x = (P)E_simple_Z_p_I_align_up_to_v2( dst, sizeof( N128 ));
         N128 *src_x = (P)E_simple_Z_p_I_align_up_to_v2( src, sizeof( N128 ));
         N l_0 = (Pc)src_x - (Pc)src;
@@ -240,7 +239,7 @@ E_mem_Q_blk_I_copy_rev( P dst
     :
     : "cc"
     );
-    if( E_main_S_sse )
+    if( E_main_S_kernel_args.sse )
     {   N128 *dst_x = (P)E_simple_Z_p_I_align_down_to_v2( dst + l, sizeof( N128 ));
         N128 *src_x = (P)E_simple_Z_p_I_align_down_to_v2( src + l, sizeof( N128 ));
         N l_0 = (Pc)src + l - (Pc)src_x;
@@ -313,7 +312,7 @@ void
 E_mem_Q_blk_P_fill_c( P p
 , N l
 , C c
-){  if( E_main_S_sse )
+){  if( E_main_S_kernel_args.sse )
     {   N128 *p_x = (P)E_simple_Z_p_I_align_up_to_v2( p, sizeof( N128 ));
         N l_0 = (Pc)p_x - (Pc)p;
         N l_1 = ( l - l_0 ) / sizeof( N128 );
@@ -1075,7 +1074,7 @@ __attribute__ ((__malloc__))
 P
 E_mem_Q_blk_M_new_0( N *allocated_i_sorted_pos
 ){  Pc p_start = E_main_S_kernel_args.mem_blk.reserved_from_end ? (P)( E_main_S_kernel_args.mem_blk.memory_size - E_main_S_kernel_args.mem_blk.reserved_size ) : (P)E_main_S_kernel_args.mem_blk.memory_size;
-    Pc p = (P)( ~5 );
+    Pc p = (P)~5;
     struct E_mem_Q_blk_Z_allocated allocated_p;
     N allocated_max = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.allocated_id, (Pc)&allocated_p.p - (Pc)&allocated_p );
     N allocated_i = allocated_max;

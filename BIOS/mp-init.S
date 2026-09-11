@@ -43,6 +43,7 @@
 .code16
 E_mp_init_I:
     cli
+    cld
 E_mp_init_I_reloc_1:
     mov     $0,%ax                      # $0 do zastąpienia selektorem segmentu “E_mp_init_I”.
     mov     %ax,%ds

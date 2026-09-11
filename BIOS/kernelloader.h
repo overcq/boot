@@ -25,6 +25,7 @@ typedef double              F;
 typedef void                *P;
 typedef C                   *Pc;
 typedef N                   *Pn;
+typedef S32                 I;
 typedef unsigned __int128   N128;
 typedef __int128            S128;
 //------------------------------------------------------------------------------
@@ -68,7 +69,6 @@ typedef __int128            S128;
 #define W_tab_(pointer_variable)            ( E_mem_Q_tab_W( pointer_variable ), pointer_variable = 0 )
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define _inline                             static __attribute__ (( __always_inline__, __unused__ ))
-#define _internal                           static
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define K_error(error) \
   ( (S)(error) < 0 \
@@ -146,38 +146,6 @@ typedef __int128            S128;
 //==============================================================================
 #include "simple.h"
 //==============================================================================
-#define H_oux_E_mem_S_page_size             0x1000
-#define E_main_S_boot_loader_start          0x10000
-#define E_main_S_boot_loader_end            0x80000
-#define E_main_Z_memory_table_S_end         0x7e000
-//==============================================================================
-struct E_datetime_Z
-{ N16 year;
-  N8 month;
-  N8 day;
-  N8 hour;
-  N8 minute;
-  N8 second;
-  N32 nanosecond;
-};
-//==============================================================================
-enum
-{ E_main_Z_memory_table_Z_memory_type_S_available = 1
-, E_main_Z_memory_table_Z_memory_type_S_reserved
-, E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
-, E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-, E_main_Z_memory_table_Z_memory_type_S_bad
-, E_main_Z_memory_table_Z_memory_type_S_boot_loader = 0xffff0000
-, E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
-, E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-};
-struct __attribute__(( __packed__ )) E_main_Z_memory_map_entry
-{ N64 physical_start;
-  N64 size;
-  N32 type;
-  N64 virtual_start;
-};
-//------------------------------------------------------------------------------
 struct H_uefi_Z_table_header
 { N64 signature;
   N32 revision;
@@ -185,21 +153,6 @@ struct H_uefi_Z_table_header
   N32 crc32;
   N32 reserved;
 };
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define H_uefi_Z_guid_S_acpi_table { 0x8868e871, 0xe4f1, 0x11d3, { 0xbc, 0x22, 0, 0x80, 0xc7, 0x3c, 0x88, 0x81 } }
-#define H_uefi_Z_guid_S_acpi1_table { 0xeb9d2d30, 0x2d88, 0x11d3, { 0x91, 0x16, 0, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }
-#define H_uefi_Z_guid_S_sal_system_table { 0xeb9d2d32, 0x2d88, 0x11d3, { 0x9a, 0x16, 0, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }
-#define H_uefi_Z_guid_S_smbios_table { 0xeb9d2d31, 0x2d88, 0x11d3, { 0x9a, 0x16, 0, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }
-#define H_uefi_Z_guid_S_smbios3_table { 0xf2fd1544, 0x9794, 0x4a2c, { 0x99, 0x2e, 0xe5, 0xbb, 0xcf, 0x20, 0xe3, 0x94 } }
-#define H_uefi_Z_guid_S_mps_table { 0xeb9d2d2f, 0x2d88, 0x11d3, { 0x9a, 0x16, 0, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }
-#define H_uefi_Z_guid_S_dtb_table { 0xb1b621d5, 0xf19c, 0x41a5, { 0x83, 0xb, 0xd9, 0x15, 0x2c, 0x69, 0xaa, 0xe0 } }
-#define H_uefi_Z_guid_S_rt_properties_table { 0xeb66918a, 0x7eef, 0x402a, { 0x84, 0x2e, 0x93, 0x1d, 0x21, 0xc3, 0x8a, 0xe9 } }
-#define H_uefi_Z_guid_S_memory_attributes_table { 0xdcfa911d, 0x26eb, 0x469f, { 0xa2, 0x20, 0x38, 0xb7, 0xdc, 0x46, 0x12, 0x20 } }
-#define H_uefi_Z_guid_S_conformance_profiles_table { 0x36122546, 0xf7e7, 0x4c8f, { 0xbd, 0x9b, 0xeb, 0x85, 0x25, 0xb5, 0xc, 0xb } }
-#define H_uefi_Z_guid_S_memory_range_capsule { 0xde9f0ec, 0x88b6, 0x428f, { 0x97, 0x7a, 0x25, 0x8f, 0x1d, 0xe, 0x5e, 0x72 } }
-#define H_uefi_Z_guid_S_debug_image_info_table { 0x49152e77, 0x1ada, 0x4764, { 0xb7, 0xa2, 0x7a, 0xfe, 0xfe, 0xd9, 0x5e, 0x8b } }
-#define H_uefi_Z_guid_S_system_resource_table { 0xb122a263, 0x3661, 0x4f68, { 0x99, 0x29, 0x78, 0xf8, 0xb0, 0xd6, 0x21, 0x80 } }
-#define H_uefi_Z_guid_S_image_security_database { 0xd719b2cb, 0x3d3a, 0x4596, { 0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f } }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct __attribute__ (( __packed__ )) H_acpi_Z_madt_Z_local_apic
 { N8 type;
@@ -507,8 +460,111 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_wsmt
   N32 flags;
 };
 //==============================================================================
-#define E_mem_Q_blk_S_free_n_init       4
-#define E_mem_Q_blk_S_allocated_n_init  6
+#define E_mem_S_page_size                       0x1000
+#define E_main_S_boot_loader_orig_start         0x10000
+#define E_main_Z_memory_table_S_orig_end        0x7e000
+#define E_main_S_boot_loader_orig_first_end     0x30000
+#define E_main_S_boot_loader_orig_second_start  0x50000
+#define E_main_S_boot_loader_orig_end           0x80000
+//==============================================================================
+struct E_datetime_Z
+{ N16 year;
+  N8 month;
+  N8 day;
+  N8 hour;
+  N8 minute;
+  N8 second;
+  N32 nanosecond;
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+struct E_ouxfs_Z_file
+{ N64 uid;
+  N64 parent;
+  struct
+  { N64 start;
+    N64 n;
+  }block_table;
+  Pc name;
+};
+struct E_ouxfs_Z_directory
+{ N64 uid;
+  N64 parent;
+  Pc name;
+};
+enum H_oux_E_Fs_Z_block_Z_location
+{ E_ouxfs_Z_block_Z_location_S_sectors
+, E_ouxfs_Z_block_Z_location_S_in_sector
+};
+struct E_ouxfs_Z_block
+{ N64 sector;
+  union
+  { struct
+    { N64 n;
+      N16 pre, post;
+    }sectors;
+    struct
+    { N16 start;
+      N16 size;
+    }in_sector;
+  }location;
+  enum H_oux_E_Fs_Z_block_Z_location location_type;
+};
+struct E_ouxfs_Z_oux
+{ N64 block_table_size;
+  struct E_ouxfs_Z_block *block_table;
+  N64 block_table_n;
+  N64 block_table_changed_from;
+  N64 block_table_block_table_n;
+  struct E_ouxfs_Z_directory directory;
+  N64 directory_n;
+  N64 directory_table_changed_from;
+  N64 block_table_directory_table_start, block_table_directory_table_n;
+  struct E_ouxfs_Z_file file;
+  N64 file_n;
+  N64 file_table_changed_from;
+  N64 block_table_file_table_start, block_table_file_table_n;
+  N16 sector_size;
+  N16 first_sector_max_size;
+};
+struct E_disc_Z_partition
+{ N pba; // physical block address
+  N count;
+  union
+  { struct E_ouxfs_Z_oux oux;
+  };
+};
+enum E_disc_Z_type
+{ E_disc_Z_type_S_unknown
+, E_disc_Z_type_S_sata_ahci
+, E_disc_Z_type_S_satapi_ahci
+};
+struct E_disc_Z
+{ enum E_disc_Z_type type;
+  union
+  { struct
+    { volatile struct E_sata_Z_memory *memory;
+      N logical_sector_n;
+      N16 logical_sector_size, physical_sector_size;
+      N16 max_sectors;
+      N8 logical_sector_shift;
+      N8 port;
+      N8 queue_n;
+    }sata_ahci;
+    struct
+    { volatile struct E_sata_Z_memory *memory;
+      N8 port;
+    }satapi_ahci;
+  };
+  struct E_disc_Z_partition partition;
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+typedef void ( *E_interrupt_S_external_Z )(void);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+struct E_interrupt_Z_gsi
+{ N8 source;
+  N8 flags;
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct H_oux_E_mem_Z_memory_map
 { N physical_start;
   N virtual_start;
@@ -534,7 +590,36 @@ struct E_mem_blk_Z
   N reserved_size;
   B reserved_from_end;
 };
-//==============================================================================
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define E_vga_S_background_color            0xdbdbdb
+#define E_vga_S_text_color                  0
+enum E_vga_Z_aa_pixel
+{ E_vga_Z_aa_pixel_S_e = 1 << 0,
+  E_vga_Z_aa_pixel_S_se = 1 << 1,
+  E_vga_Z_aa_pixel_S_s = 1 << 2,
+  E_vga_Z_aa_pixel_S_sw = 1 << 3,
+  E_vga_Z_aa_pixel_S_w = 1 << 4,
+  E_vga_Z_aa_pixel_S_nw = 1 << 5,
+  E_vga_Z_aa_pixel_S_n = 1 << 6,
+  E_vga_Z_aa_pixel_S_ne = 1 << 7
+};
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+enum
+{ E_main_Z_memory_table_Z_memory_type_S_available = 1
+, E_main_Z_memory_table_Z_memory_type_S_reserved
+, E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
+, E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
+, E_main_Z_memory_table_Z_memory_type_S_bad
+, E_main_Z_memory_table_Z_memory_type_S_boot_loader = 0xffff0000
+, E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+, E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+};
+struct __attribute__(( __packed__ )) E_main_Z_memory_map_entry
+{ N64 physical_start;
+  N64 size;
+  N32 type;
+  N64 virtual_start;
+};
 struct H_main_Z_framebuffer
 { volatile N8 *p;
   N32 width, height;
@@ -563,22 +648,19 @@ struct H_main_Z_kernel_Z_acpi
   N dmar_content_l;
   P dsdt_content;
   N dsdt_content_l;
-  P facs;
   struct H_oux_Z_hpet hpet;
   struct
   { P address;
     N l;
-  }ssdt_contents[4];
-  N ssdt_contents_n;
-  unsigned virt_guest_rtc_good                :1;
-  unsigned virt_guest_pm_good                 :1;
-  unsigned smm_validate_fixed_comm_buffers    :1;
-  unsigned smm_validate_nested_ptr            :1;
-  unsigned smm_system_resource_protection     :1;
-};
-struct E_interrupt_Z_gsi
-{ N8 source;
-  N8 flags;
+  }ssdt_content[4];
+  N ssdt_content_n;
+  N pm1a_control_block;
+  unsigned pm1a_control_block_mmio          :1;
+  unsigned virt_guest_rtc_good              :1;
+  unsigned virt_guest_pm_good               :1;
+  unsigned smm_validate_fixed_comm_buffers  :1;
+  unsigned smm_validate_nested_ptr          :1;
+  unsigned smm_system_resource_protection   :1;
 };
 struct E_main_Z_kernel_args
 { struct E_mem_blk_Z mem_blk;
@@ -601,16 +683,14 @@ struct E_main_Z_kernel_args
   N32 processor_start_page;
   N32 processor_n;
   N8 gsi_n;
-};
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-struct __attribute__ (( __packed__ )) Q_elf_Z_rela_entry
-{ N64 offset;
-  N32 type, sym;
-  N64 addend;
+  unsigned sse  :1;
 };
 //==============================================================================
 N E_acpi_I_search(void);
-//==============================================================================
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N E_disc_I_init(void);
+N E_disc_R( N, N, P );
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N E_font_M(void);
 N E_font_W(void);
 N E_font_I_draw( U, N32, N32, N32, N8, N8 );
@@ -618,9 +698,15 @@ void E_font_I_print_nl(void);
 void E_font_I_print_u(U);
 N E_font_I_print( Pc );
 void E_font_I_print_hex(N);
-//==============================================================================
-N E_mem_M_test( B, N, N, N );
-N E_mem_M( B, N, N, N, N, N, N, N, N, N, N, N );
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N32 E_interrupt_Q_io_apic_R( N8 );
+void E_interrupt_I_ipi_init( N32 );
+N8 E_interrupt_R_gsi_next(void);
+N8 E_interrupt_R_free_external(void);
+N E_interrupt_M(void);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void E_mem_M_0(N);
+N E_mem_M( B, N, N, N, N, N, N, N, N, N, N );
 B E_mem_Q_blk_T_eq( P, P, N );
 void E_mem_Q_blk_I_copy( P, P, N );
 void E_mem_Q_blk_P_fill_c( P, N, C );
@@ -628,6 +714,10 @@ P E_mem_Q_blk_M(N);
 P E_mem_Q_blk_M_tab( N, N );
 P E_mem_Q_blk_M_align( N, N );
 P E_mem_Q_blk_M_align_tab( N, N, N );
+P E_mem_Q_blk_Z_single_memory_M(N);
+P E_mem_Q_blk_Z_single_memory_M_tab( N, N );
+P E_mem_Q_blk_Z_single_memory_M_align( N, N );
+P E_mem_Q_blk_Z_single_memory_M_align_tab( N, N, N );
 P E_mem_Q_blk_M_replace_tab( P, N, N );
 P E_mem_Q_blk_M_replace( P, N );
 P E_mem_Q_blk_M_split( P, N );
@@ -638,14 +728,25 @@ P E_mem_Q_blk_I_append( P, N, N );
 P E_mem_Q_blk_I_prepend( P, N );
 P E_mem_Q_blk_I_insert( P, N, N );
 P E_mem_Q_blk_I_remove( P, N, N );
-//==============================================================================
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Pc E_mem_Q_mask_M( N );
 B E_mem_Q_mask_R( Pc, N );
 N E_mem_Q_mask_R_first_clear( Pc, N );
 void E_mem_Q_mask_P_set( Pc, N );
 void E_mem_Q_mask_P_clear( Pc, N );
 N E_mem_Q_mask_I_resize( Pc *, N, N );
-//==============================================================================
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N E_ouxfs_Q_disk_M(N);
+N64 E_ouxfs_Q_kernel_R_size(void);
+N E_ouxfs_Q_kernel_I_read( Pc );
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N E_pci_I_check_buses(void);
+N E_pci_I_check_buses_1(void);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N E_sata_I_init( volatile struct E_sata_Z_memory * );
+void E_sata_Q_sata_ahci_I_wait_on_completion( N32 );
+N E_sata_Q_sata_ahci_I_read( N, N, P, N32 * );
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 B E_text_Z_c_T_alpha(C);
 B E_text_Z_c_T_quote(C);
 C E_text_Z_c_I_lower(C);
@@ -729,19 +830,6 @@ Pc E_text_Z_su_R_u( Pc, U * );
 Pc E_text_Z_su_R_u_rev( Pc, U * );
 B E_text_Z_su_T_correct( Pc );
 N E_text_I_vsprintf( Pc *, Pc, va_list );
-//==============================================================================
-#define E_vga_S_background_color            0xdbdbdb
-#define E_vga_S_text_color                  0
-enum E_vga_Z_aa_pixel
-{ E_vga_Z_aa_pixel_S_e = 1 << 0,
-  E_vga_Z_aa_pixel_S_se = 1 << 1,
-  E_vga_Z_aa_pixel_S_s = 1 << 2,
-  E_vga_Z_aa_pixel_S_sw = 1 << 3,
-  E_vga_Z_aa_pixel_S_w = 1 << 4,
-  E_vga_Z_aa_pixel_S_nw = 1 << 5,
-  E_vga_Z_aa_pixel_S_n = 1 << 6,
-  E_vga_Z_aa_pixel_S_ne = 1 << 7
-};
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 N32 E_vga_Z_color_M( N8, N8, N8 );
 N8 E_vga_Z_color_R_red( N32 );
@@ -754,4 +842,7 @@ void E_vga_P_pixel( N32, N32, N32 );
 void E_vga_I_set_pixel_aa( N32, N32, N32, F, N );
 void E_vga_I_draw_rect( N32, N32, N32, N32, N32 );
 void E_vga_I_fill_rect( N32, N32, N32, N32, N32 );
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+P E_main_Z_p_I_to_virtual(P);
+P E_main_Z_p_I_to_physical(P);
 /******************************************************************************/

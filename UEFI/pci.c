@@ -538,7 +538,8 @@ E_pci_I_check_device(
     { case E_pci_Z_header_Z_header_type_S_general:
         {   if( class != E_pci_Z_header_Z_class_S_bridge )
             {   N32 command_status = E_pci_I_read( bus_i, device_i, function_i, 4 );
-                E_pci_I_write( bus_i, device_i, function_i, 4, command_status & ~( 1 << 1 )); // Wyłącza reakcję na dostęp do MMIO.
+                if( command_status & ( 1 << 1 ))
+                    E_pci_I_write( bus_i, device_i, function_i, 4, command_status & ~( 1 << 1 )); // Wyłącza reakcję na dostęp do MMIO.
                 N8 offset = 0x10;
                 do
                 {   N64 address = E_pci_I_read( bus_i, device_i, function_i, offset );
@@ -566,7 +567,8 @@ E_pci_I_check_device(
                     *memory_map_l += E_main_S_descriptor_l;
                     memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
                 }while(( offset += sizeof( N32 )) != 0x28 );
-                E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
+                if( command_status & ( 1 << 1 ))
+                    E_pci_I_write( bus_i, device_i, function_i, 4, command_status );
             }
             break;
         }

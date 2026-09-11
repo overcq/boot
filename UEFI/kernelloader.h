@@ -856,18 +856,19 @@ struct H_main_Z_kernel_Z_acpi
   N dmar_content_l;
   P dsdt_content;
   N dsdt_content_l;
-  P facs;
   struct H_oux_Z_hpet hpet;
   struct
   { P address;
     N l;
-  }ssdt_contents[4];
-  N ssdt_contents_n;
-  unsigned virt_guest_rtc_good                :1;
-  unsigned virt_guest_pm_good                 :1;
-  unsigned smm_validate_fixed_comm_buffers    :1;
-  unsigned smm_validate_nested_ptr            :1;
-  unsigned smm_system_resource_protection     :1;
+  }ssdt_content[4];
+  N ssdt_content_n;
+  N pm1a_control_block;
+  unsigned pm1a_control_block_mmio          :1;
+  unsigned virt_guest_rtc_good              :1;
+  unsigned virt_guest_pm_good               :1;
+  unsigned smm_validate_fixed_comm_buffers  :1;
+  unsigned smm_validate_nested_ptr          :1;
+  unsigned smm_system_resource_protection   :1;
 };
 struct E_interrupt_Z_gsi
 { N8 source;
@@ -894,6 +895,7 @@ struct E_main_Z_kernel_args
   N32 processor_start_page;
   N32 processor_n;
   N8 gsi_n;
+  unsigned sse  :1;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header

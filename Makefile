@@ -43,12 +43,16 @@ init-usb:
     && $(H_ocq_S_mkfs_oux)/mkfs.oux $(H_ocq_S_usb_dev)3 512
 #-------------------------------------------------------------------------------
 run-qemu-bios:
-	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 8G,maxmem=8G \
-    -drive media=disk,format=raw,file=disk.img -boot order=c,once=c
+	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 2G,maxmem=2G \
+    -boot order=c,once=c \
+    -drive media=disk,format=raw,file=disk.img,if=none,id=disc0 \
+    -device ahci,id=ahci0 -device ide-hd,drive=disc0,bus=ahci0.0
 run-qemu-uefi:
-	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 128M,maxmem=128M \
-    -drive if=pflash,format=raw,readonly=on,file=OVMF_CODE_4M.fd \
-    -drive if=pflash,format=raw,file=OVMF_VARS_4M.fd \
-    -drive media=disk,format=raw,file=disk.img -boot order=c,once=c
+	qemu-system-x86_64 -machine q35 -cpu max -smp 24,cores=24 -m 2G,maxmem=2G \
+    -drive if=pflash,format=raw,readonly=on,file=code.fd \
+    -drive if=pflash,format=raw,file=vars.fd \
+    -boot order=c,once=c \
+    -drive media=disk,format=raw,file=disk.img,if=none,id=disc0 \
+    -device ahci,id=ahci0 -device ide-hd,drive=disc0,bus=ahci0.0
 #*******************************************************************************
 

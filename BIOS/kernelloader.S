@@ -15,14 +15,14 @@
 .equiv Q_int_15_e820_S_magic,               0x534d4150
 .equiv Q_vga_color_S_light_gray,            7
 #-------------------------------------------------------------------------------
-.equiv Z_cr0_S_pe,                          ( 1 << 0 )
-.equiv Z_cr0_S_pg,                          ( 1 << 31 )
-#-------------------------------------------------------------------------------
 .equiv Z_msr_S_ia32_efer,                   0xc0000080
 .equiv Z_msr_Z_ia32_efer_S_lme,             ( 1 << 8 )
 #-------------------------------------------------------------------------------
+.equiv Z_cr0_S_pe,                          ( 1 << 0 )
 .equiv Z_cr0_S_mp,                          ( 1 << 1 )
 .equiv Z_cr0_S_em,                          ( 1 << 2 )
+.equiv Z_cr0_S_ts,                          ( 1 << 3 )
+.equiv Z_cr0_S_pg,                          ( 1 << 31 )
 .equiv Z_cr4_S_pae,                         ( 1 << 5 )
 .equiv Z_cr4_S_osfxsr,                      ( 1 << 9 )
 .equiv Z_cr4_S_osxmmexcpt,                  ( 1 << 10 )
@@ -41,6 +41,11 @@
 #-------------------------------------------------------------------------------
 .equiv Z_page_entry_S_p,                    ( 1 << 0 )
 .equiv Z_page_entry_S_rw,                   ( 1 << 1 )
+#===============================================================================
+.global S_gd
+.global S_id
+.global S_gdt
+.global S_ldt
 #===============================================================================
 .text
 .code16
@@ -167,40 +172,13 @@
     int     $0x10
     cmp     $0x4f,%ax
     jne     I_hlt_16
-# Inicjowanie ‘page tables’ trybu chronionego.
-    xor     %ax,%ax
-    mov     $0xa000,%di
-    mov     %ax,%ds
-    mov     %ax,%es
-    xor     %dx,%dx
-    mov     $Z_page_entry_S_p | Z_page_entry_S_rw,%ax
-    mov     $0x1000 / 4,%cx
-0:  cmp     $8,%dx
-    je      0f
-    stosw
-    mov     %dx,(%di)
-    lea     2(%di),%di
-    add     $0x1000,%ax
-    adc     $0,%dx
-    dec     %cx
-    jnz     0b
-0:  xor     %ax,%ax
-    shl     $1,%cx
-    rep stosw
-    mov     $0xa000 | Z_page_entry_S_p | Z_page_entry_S_rw,%ax
-    stosw
-    xor     %ax,%ax
-    mov     $0x1000 / 4 * 2 - 1,%cx
-    rep stosw
-    mov     $0xb000,%eax
-    mov     %eax,%cr3
     mov     $Q_offset_Z_base >> 4,%ax
     mov     %ax,%ds
 # Przełączenie do trybu chronionego.
     cli
     lgdtl   S_gd - Q_offset_Z_base
     mov     %cr0,%eax
-    or      $Z_cr0_S_pe | Z_cr0_S_pg,%eax
+    or      $Z_cr0_S_pe,%eax
     mov     %eax,%cr0
     ljmpl   $1 << 3,$0f
 I_hlt_16:
@@ -295,11 +273,8 @@ I_hlt_16:
     or      %ecx,%edx
     or      %edx,3 * 8 + 4(%ebx)
 # Przełączenie do trybu IA-32e.
-    mov     %cr0,%eax
-    and     $~Z_cr0_S_pg,%eax
-    mov     %eax,%cr0
     mov     %cr4,%eax
-    or      $Z_cr4_S_pae | Z_cr4_S_osfxsr | Z_cr4_S_osxmmexcpt /* | Z_cr4_S_osxsave */,%eax
+    or      $Z_cr4_S_pae | Z_cr4_S_osfxsr | Z_cr4_S_osxmmexcpt | Z_cr4_S_osxsave,%eax
     mov     %eax,%cr4
     mov     $0xf000,%eax
     mov     %eax,%cr3
@@ -308,8 +283,8 @@ I_hlt_16:
     or      $Z_msr_Z_ia32_efer_S_lme,%eax
     wrmsr
     mov     %cr0,%eax
-    and     $~Z_cr0_S_em,%eax #TODO Sprawdzić w dokumentacji dla włączenia SSE.
-    or      $Z_cr0_S_pg | Z_cr0_S_mp,%eax #TODO Sprawdzić w dokumentacji dla włączenia SSE.
+    and     $~( Z_cr0_S_em | Z_cr0_S_ts ),%eax
+    or      $Z_cr0_S_pg | Z_cr0_S_mp,%eax
     mov     %eax,%cr0
     lgdt    S_gd
     mov     $2 << 3,%ax
@@ -449,9 +424,9 @@ S_gdt:
     descriptor ,,Z_descriptor_Z_type_data_code_S_a | Z_descriptor_Z_type_data_S_w | Z_descriptor_S_s | Z_descriptor_S_g
     descriptor ,(8 - 1),Z_descriptor_Z_type_system_S_ldt
     .8byte  0
-S_ldt:
-    .8byte  0
 S_idt:
     .8byte  0
+    .8byte  0
+S_ldt:
     .8byte  0
 #*******************************************************************************

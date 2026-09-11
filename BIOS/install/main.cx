@@ -43,8 +43,15 @@ main( int argc
 , char *argv[]
 ){  E_base_M( argc, argv );
     N logical_block_size = 512;
-    if( argc != 3 )
+    if( argc != 3
+    && argc != 4
+    )
         goto Error;
+    if( argc == 4 )
+        if( E_text_Z_s0_T_eq_s0( argv[3], "4096" ))
+            logical_block_size = 4096;
+        else if( !E_text_Z_s0_T_eq_s0( argv[3], "512" ))
+            goto Error;
     I device_file_id;
     if( !~( device_file_id = E_mem_Q_file_M( argv[1], no, 0 )))
         goto Error;
