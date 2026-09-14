@@ -44,6 +44,7 @@ init-usb:
 #-------------------------------------------------------------------------------
 run-qemu-bios:
 	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 2G,maxmem=2G \
+    -device VGA,vgamem_mb=8 \
     -boot order=c,once=c \
     -drive media=disk,format=raw,file=disk.img,if=none,id=disc0 \
     -device ahci,id=ahci0 -device ide-hd,drive=disc0,bus=ahci0.0

@@ -1111,32 +1111,82 @@ E_mem_Q_blk_Z_single_memory_Q_table_M_from_free( N *allocated_or_table_i
         N i_found;
         struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
         struct E_mem_Q_blk_Z_free free_p_;
-        for_n( free_i, E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, (Pc)&free_p_.p - (Pc)&free_p_ ) + 1 ) // Szukanie wolnego bloku na całą tablicę.
-        {   p_1 = E_simple_Z_p_I_align_up_to_v2( free_p[ free_i ].p, l_align );
-            if( E_simple_T_add_overflow( p_1 - free_p[ free_i ].p, l_1 )
-            || free_p[ free_i ].l < ( p_1 - free_p[ free_i ].p ) + l_1
+        N free_n = E_mem_Q_blk_Q_sys_table_R_last( E_main_S_kernel_args.mem_blk.free_id, (Pc)&free_p_.p - (Pc)&free_p_ ) + 1;
+        for_n( free_i, free_n ) // Szukanie najmniejszego wolnego bloku na całą tablicę na początku lub końcu.
+        {   Pc p_ = E_simple_Z_p_I_align_up_to_v2( free_p[ free_i ].p, l_align );
+            if( E_simple_T_add_overflow( p_ - free_p[ free_i ].p, l_1 )
+            || free_p[ free_i ].l < ( p_ - free_p[ free_i ].p ) + l_1
             || free_p[ free_i ].l >= l_
             )
                 continue;
             struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
             while( memory_map != (P)E_main_Z_memory_table_S_end )
-            {   if( (N)p_1 >= memory_map->virtual_start
-                && (N)p_1 < memory_map->virtual_start + memory_map->size
+            {   if( (N)p_ >= memory_map->virtual_start
+                && (N)p_ < memory_map->virtual_start + memory_map->size
                 )
                     break;
                 memory_map++;
             }
-            if( (N)p_1 + l_1 > memory_map->virtual_start + memory_map->size )
-                continue;
+            if( (N)p_ + l_1 > memory_map->virtual_start + memory_map->size )
+            {   p_ = E_simple_Z_p_I_align_down_to_v2( free_p[ free_i ].p + free_p[ free_i ].l - l_1, l_align );
+                if( p_ < free_p[ free_i ].p )
+                    continue;
+                memory_map = E_main_Z_memory_table_S;
+                while( memory_map != (P)E_main_Z_memory_table_S_end )
+                {   if( (N)p_ >= memory_map->virtual_start
+                    && (N)p_ < memory_map->virtual_start + memory_map->size
+                    )
+                        break;
+                    memory_map++;
+                }
+                if( (N)p_ + l_1 > memory_map->virtual_start + memory_map->size )
+                    continue;
+            }
             l_ = free_p[ free_i ].l;
             i_found = free_i;
-            if( l_ == ( p_1 - free_p[ free_i ].p ) + l_1 )
+            p_1 = p_;
+            if( l_ == ( p_ - free_p[ free_i ].p ) + l_1 )
                 break;
         }
         if( !~l_ )
-            return 0;
+        {   for_n( free_i, free_n ) // Szukanie najmniejszego wolnego bloku na całą tablicę w środku.
+            {   Pc p_ = E_simple_Z_p_I_align_up_to_v2( free_p[ free_i ].p, l_align );
+                if( E_simple_T_add_overflow( p_1 - free_p[ free_i ].p, l_1 )
+                || free_p[ free_i ].l < ( p_1 - free_p[ free_i ].p ) + l_1
+                || free_p[ free_i ].l >= l_
+                )
+                    continue;
+                B b = no;
+                O{  struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
+                    while( memory_map != (P)E_main_Z_memory_table_S_end )
+                    {   if( (N)p_ >= memory_map->virtual_start
+                        && (N)p_ < memory_map->virtual_start + memory_map->size
+                        )
+                            break;
+                        memory_map++;
+                    }
+                    if( (N)p_ + l_1 <= memory_map->virtual_start + memory_map->size )
+                        break;
+                    p_ = E_simple_Z_p_I_align_up_to_v2( memory_map->virtual_start + memory_map->size, l_align );;
+                    if( E_simple_T_add_overflow( p_ - free_p[ free_i ].p, l_1 )
+                    || free_p[ free_i ].l < ( p_ - free_p[ free_i ].p ) + l_1
+                    )
+                    {   b = yes;
+                        break;
+                    }
+                }
+                if(b)
+                    continue;
+                l_ = free_p[ free_i ].l;
+                i_found = free_i;
+                p_1 = p_;
+                if( l_ == ( p_ - free_p[ free_i ].p ) + l_1 )
+                    break;
+            }
+            if( !~l_ )
+                return 0;
+        }
         Pc old_free_p = free_p[ i_found ].p;
-        p_1 = E_simple_Z_p_I_align_up_to_v2( old_free_p, l_align );
         free_p[ i_found ].l -= ( p_1 - old_free_p ) + l_1;
         if( free_p[ i_found ].l )
             free_p[ i_found ].p += ( p_1 - old_free_p ) + l_1;
