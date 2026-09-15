@@ -110,7 +110,7 @@ extern N S_gdt[], S_ldt[];
 //------------------------------------------------------------------------------
 extern char E_main_S_relocation_data[];
 extern P E_remap_jump_I, E_remap_jump_I_end;
-extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
+extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_I_reloc_7, E_mp_init_I_reloc_8, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct E_main_I_tss E_main_S_tss;
@@ -766,7 +766,7 @@ N
 E_main_I_allocate_page_table_pre( void
 ){  struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
     N table_address = E_main_S_boot_loader_orig_start; // Start na obecnej tablicy pamięci, malejąco.
-    volatile N *E_main_S_pml4 = (P)( table_address -= E_mem_S_page_size );
+    volatile N *pml4 = (P)( table_address -= E_mem_S_page_size );
     N physical_address = -E_mem_S_page_size;
     B end = no;
     const N table_n = E_mem_S_page_size / sizeof(N);
@@ -823,7 +823,7 @@ E_main_I_allocate_page_table_pre( void
                                         break;
                                 if( memory_map == (P)E_main_Z_memory_table_S_orig_end )
                                 {   end = yes;
-                                    E_main_Z_memory_table_pre_S_virtual_address = 0;
+                                    E_main_Z_memory_table_pre_S_virtual_address = ~0;
                                 }
                             }
                             pd[ pd_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pt;
@@ -832,20 +832,21 @@ E_main_I_allocate_page_table_pre( void
                     pdpt[ pdpt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pd;
                 }else
                     pdpt[ pdpt_i ] = 0;
-            E_main_S_pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pdpt;
+            pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pdpt;
         }else
-            E_main_S_pml4[ pml4_i ] = 0;
-    E_main_Q_cr3_P( (N)E_main_S_pml4 );
+            pml4[ pml4_i ] = 0;
+    E_main_Q_cr3_P( (N)pml4 );
     return 0;
 }
 __attribute__ (( __warn_unused_result__ ))
 N
 E_main_I_complete_page_table_pre( void
-){  if( !E_main_Z_memory_table_pre_S_virtual_address )
+){  if( !~E_main_Z_memory_table_pre_S_virtual_address )
         return ~0;
     N table_address = E_main_S_boot_loader_orig_start; // Start na obecnej tablicy pamięci, malejąco.
-    volatile N *E_main_S_pml4 = (P)( table_address -= E_mem_S_page_size );
-    N physical_address;
+    volatile N *pml4 = (P)( table_address -= E_mem_S_page_size );
+    N physical_address = E_main_Z_memory_table_S->physical_start - E_mem_S_page_size;
+    E_main_Z_memory_table_S->virtual_start = E_main_Z_memory_table_pre_S_virtual_address;
     B end = no;
     const N table_n = E_mem_S_page_size / sizeof(N);
     for_n( pml4_i, table_n )
@@ -859,29 +860,25 @@ E_main_I_complete_page_table_pre( void
                         {   if( pd_i )
                                 return ~0;
                             volatile N *pt = (P)( table_address -= E_mem_S_page_size );
-                            physical_address = E_main_Z_memory_table_S->physical_start - E_mem_S_page_size;
-                            E_main_Z_memory_table_S->virtual_start = E_main_Z_memory_table_pre_S_virtual_address;
-                            N pt_i = ( E_main_Z_memory_table_pre_S_virtual_address / E_mem_S_page_size ) & ~( 1 << 9 );
+                            N pt_i = ( E_main_Z_memory_table_pre_S_virtual_address / E_mem_S_page_size ) & (( 1 << 9 ) - 1 );
                             for( ; pt_i != table_n; pt_i++ )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * E_mem_S_page_size );
                                     physical_address += E_mem_S_page_size;
                                     if( physical_address == E_main_Z_memory_table_S->physical_start + E_main_Z_memory_table_S->size )
-                                    {   end = yes;
-                                        pt_i--;
-                                        E_main_Z_memory_table_pre_S_virtual_address = virtual_address;
-                                        continue;
+                                    {   E_main_Z_memory_table_pre_S_virtual_address = virtual_address;
+                                        goto End;
                                     }
                                     pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
                                 }
                             if( !end
                             && physical_address == E_main_Z_memory_table_S->physical_start + E_main_Z_memory_table_S->size - E_mem_S_page_size
                             )
-                                E_main_Z_memory_table_pre_S_virtual_address = 0;
+                                E_main_Z_memory_table_pre_S_virtual_address = ~0;
                         }
                 }
         }
-    E_main_Q_cr3_P( (N)E_main_S_pml4 );
+End:E_main_Q_cr3_P( (N)pml4 );
     return 0;
 }
 void
@@ -891,7 +888,7 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
 ){  struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
     E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
     N pml4_physical = ( *memory_map_entry_available )->physical_start + *size;
-    volatile N *E_main_S_pml4 = (P)(( *memory_map_entry_available )->virtual_start + *size );
+    volatile N *pml4 = (P)(( *memory_map_entry_available )->virtual_start + *size );
     N physical_size = -E_mem_S_page_size;
     B end = no;
     const N table_n = E_mem_S_page_size / sizeof(N);
@@ -930,9 +927,9 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
                     pdpt[ pdpt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | pd_physical;
                 }else
                     pdpt[ pdpt_i ] = 0;
-            E_main_S_pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | pdpt_physical;
+            pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | pdpt_physical;
         }else
-            E_main_S_pml4[ pml4_i ] = 0;
+            pml4[ pml4_i ] = 0;
     E_main_Q_cr3_P( pml4_physical );
 }
 void
@@ -941,7 +938,7 @@ E_main_I_allocate_page_table_0( N max_memory
     N max_memory_ = J_min( max_memory_step, max_memory );
     N table_address = (N)E_simple_Z_p_I_align_down_to_v2( E_main_Z_memory_table_S, E_mem_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
     struct E_main_Z_memory_map_entry *memory_map_ = E_main_Z_memory_table_S;
-    volatile N *E_main_S_pml4 = (P)( table_address -= E_mem_S_page_size );
+    volatile N *pml4 = (P)( table_address -= E_mem_S_page_size );
     N physical_size = -E_mem_S_page_size;
     B end = no;
     const N table_n = E_mem_S_page_size / sizeof(N);
@@ -974,10 +971,10 @@ E_main_I_allocate_page_table_0( N max_memory
                     pdpt[ pdpt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pd;
                 }else
                     pdpt[ pdpt_i ] = 0;
-            E_main_S_pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pdpt;
+            pml4[ pml4_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | (N)pdpt;
         }else
-            E_main_S_pml4[ pml4_i ] = 0;
-    E_main_Q_cr3_P( (N)E_main_S_pml4 );
+            pml4[ pml4_i ] = 0;
+    E_main_Q_cr3_P( (N)pml4 );
     struct E_main_Z_memory_map_entry *memory_map_entry_available = E_main_Z_memory_table_S;
     //DFN Jest co najmniej jeden blok pamięci typu “E_main_Z_memory_table_Z_memory_type_S_available”.
     while( memory_map_entry_available->type != E_main_Z_memory_table_Z_memory_type_S_available )
@@ -1344,14 +1341,13 @@ main( struct E_main_Z_memory_map_entry *memory_map
     "\n" "cpuid"
     : "+a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
     );
-    if((( edx
+    if(( edx
       ^ (( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 )))
       & (( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 )) // PAT, CMOV, APIC, MSR, TSC, FPU
     )
-    || !( ecx & ( 1 << 21 )) // x2APIC
-    )
         goto End;
-    E_main_S_kernel_args.sse = edx & ( 1 << 25 );
+    E_main_S_kernel_args.sse = !!( edx & ( 1 << 25 ));
+    E_main_S_kernel_args.x2apic = !!( ecx & ( 1 << 21 ));
     E_main_Z_memory_table_S = memory_map;
     E_main_S_framebuffer_physical = (N)video->p;
     E_main_S_kernel_args.framebuffer.width = video->width;
@@ -1379,9 +1375,11 @@ main( struct E_main_Z_memory_map_entry *memory_map
     v |= 0x10000;
     E_main_Q_msr_P( 0x277, v );
     // Włączenie x2APIC.
-    v = E_main_Q_msr_R( 0x1b );
-    v |= ( 1 << 11 ) | ( 1 << 10 );
-    E_main_Q_msr_P( 0x1b, v );
+    if( E_main_S_kernel_args.x2apic )
+    {   v = E_main_Q_msr_R( 0x1b );
+        v |= ( 1 << 11 ) | ( 1 << 10 );
+        E_main_Q_msr_P( 0x1b, v );
+    }
     // Przygotowanie tablicy zakresów pamięci.
     E_main_S_sata_ahci_n = 0;
     E_main_S_ethernet_address = E_main_S_ethernet_eeprom_address = 0;
@@ -1688,7 +1686,11 @@ main( struct E_main_Z_memory_map_entry *memory_map
     *( N32 * )( p + i ) = E_main_S_kernel_args.processor_start_page + ( Pc )&E_mp_init_S_gd - ( Pc )&E_mp_init_I;
     i = ( Pc )&E_mp_init_I_reloc_5 - ( Pc )&E_mp_init_I + 1;
     *( N32 * )( p + i ) = E_main_S_kernel_args.processor_start_page + i + 6;
-    i = ( Pc )&E_mp_init_I_reloc_6 - ( Pc )&E_mp_init_I + 2;
+    i = ( Pc )&E_mp_init_I_reloc_6 - ( Pc )&E_mp_init_I + 1;
+    *( N8 * )( p + i ) = E_main_S_kernel_args.x2apic;
+    i = ( Pc )&E_mp_init_I_reloc_7 - ( Pc )&E_mp_init_I + 2;
+    *( N * )( p + i ) = (N)E_main_S_kernel_args.local_apic_address;
+    i = ( Pc )&E_mp_init_I_reloc_8 - ( Pc )&E_mp_init_I + 2;
     *( N * )( p + i ) = (N)E_main_S_kernel_args.processor_proc;
     i = ( Pc )&E_mp_init_S_gd_32 - ( Pc )&E_mp_init_I + 2;
     *( N * )( p + i ) = E_main_S_kernel_args.processor_start_page + ( Pc )&E_mp_init_S_gdt_32 - ( Pc )&E_mp_init_I;

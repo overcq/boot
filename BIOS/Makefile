@@ -48,21 +48,7 @@ mostlyclean:
 clean: mostlyclean
 	-rm mbr kernelloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-install-qemu: install-mbr-qemu install-kernelloader-qemu
-install-mbr-qemu: mbr
-	loopdev=$$( losetup -Lf --show ../disk.img ) \
-    && trap 'losetup -d $$loopdev' EXIT \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 count=218 \
-    && dd conv=notrunc if=/dev/zero of=$$loopdev bs=1 seek=224 count=$$(( 228 - 224 )) \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
-    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
-install-kernelloader-qemu: kernelloader install/a.out
-	loopdev=$$( losetup -LPf --show ../disk.img ) \
-    && trap 'losetup -d $$loopdev' EXIT \
-    && [ -e $${loopdev}p1 ] \
-    && dd if=kernelloader of=$${loopdev}p1 \
-    && install/a.out $$loopdev kernelloader
-install-virtualbox: install-mbr-vmware install-kernelloader-vmware
+install-virtualbox: install-mbr-virtualbox install-kernelloader-virtualbox
 install-mbr-virtualbox: mbr
 	vmware-mount -f $(H_ocq_S_virtualbox_disk) $(H_ocq_S_mnt) \
     && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
@@ -95,6 +81,20 @@ install-kernelloader-vmware: kernelloader install/a.out
     && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && loopdev=$$( losetup -LPf --show $(H_ocq_S_mnt)/flat ) \
     && trap 'losetup -d $$loopdev && vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+    && [ -e $${loopdev}p1 ] \
+    && dd if=kernelloader of=$${loopdev}p1 \
+    && install/a.out $$loopdev kernelloader
+install-qemu: install-mbr-qemu install-kernelloader-qemu
+install-mbr-qemu: mbr
+	loopdev=$$( losetup -Lf --show ../disk.img ) \
+    && trap 'losetup -d $$loopdev' EXIT \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 count=218 \
+    && dd conv=notrunc if=/dev/zero of=$$loopdev bs=1 seek=224 count=$$(( 228 - 224 )) \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=228 seek=228 count=$$(( 440 - 228 )) \
+    && dd conv=notrunc if=$< of=$$loopdev bs=1 skip=510 seek=510 count=2
+install-kernelloader-qemu: kernelloader install/a.out
+	loopdev=$$( losetup -LPf --show ../disk.img ) \
+    && trap 'losetup -d $$loopdev' EXIT \
     && [ -e $${loopdev}p1 ] \
     && dd if=kernelloader of=$${loopdev}p1 \
     && install/a.out $$loopdev kernelloader

@@ -14,6 +14,8 @@
 .global E_mp_init_I_reloc_4
 .global E_mp_init_I_reloc_5
 .global E_mp_init_I_reloc_6
+.global E_mp_init_I_reloc_7
+.global E_mp_init_I_reloc_8
 .global E_mp_init_S_gdt_32
 .global E_mp_init_S_gdt
 .global E_mp_init_S_gd_32
@@ -77,15 +79,23 @@ E_mp_init_I_reloc_5:
     ljmp    $1 << 3,$0                  # $0 do zastąpienia adresem 0f.
 .code64
 0:  fninit
+E_mp_init_I_reloc_6:
+    mov     $0,%al                      # Do zastąpienia wartością “E_main_S_kernel_args.x2apic”.
+    test    %al,%al
+    je      0f
     mov     $0x1b,%ecx
     rdmsr
     or      $( 1 << 11 ) | ( 1 << 10 ),%eax
     wrmsr
     mov     $0x802,%ecx
     rdmsr
-    dec     %eax
+    jmp     1f
+E_mp_init_I_reloc_7:
+0:  mov     $0x1234567812345678,%rbp    # Do zastąpienia wartością “E_main_S_kernel_args.local_apic_address”.
+    mov     0x20(%rbp),%eax
+1:  dec     %eax
     mov     %eax,%ebx
-E_mp_init_I_reloc_6:
+E_mp_init_I_reloc_8:
     mov     $0x1234567812345678,%rbp    # Do zastąpienia wartością “E_main_S_kernel_args.processor_proc”.
     incq    (%rbp,%rbx,8)
 0:  pause

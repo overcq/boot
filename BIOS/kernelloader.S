@@ -352,7 +352,7 @@ Q_vga_I_print:
     mov     $Q_vga_color_S_light_gray,%bx
     push    %si
     push    %es
-    push     %ds
+    push    %ds
     int     $0x10
     pop     %ds
     pop     %es

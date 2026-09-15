@@ -269,7 +269,12 @@ E_interrupt_Q_io_apic_P_gsi( N8 i
 //------------------------------------------------------------------------------
 void
 E_interrupt_I_ipi_init( N32 processor
-){  E_main_Q_msr_P( 0x830, (( N64 )processor << 32 ) | ( 5 << 8 ));
+){  if( E_main_S_kernel_args.x2apic )
+        E_main_Q_msr_P( 0x830, (( N64 )processor << 32 ) | ( 5 << 8 ));
+    else
+    {   *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0x310 ) = processor << 24;
+        *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0x300 ) = 5 << 8;
+    }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define E_interrupt_Q_io_apic_J_gsi_v( vector, delivery_mode, polarity, trigger_mode, destination ) \
@@ -1032,7 +1037,10 @@ E_interrupt_M( void
     :
     : "g" ( S_id )
     );
-    E_main_Q_msr_P( 0x80f, ( E_main_Q_msr_R( 0x80f ) & ~0xff ) | 0x100 | ( 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n )); // Ustaw numer przerwania nieoczekiwanego i włącz APIC.
+    if( E_main_S_kernel_args.x2apic )
+        E_main_Q_msr_P( 0x80f, ( E_main_Q_msr_R( 0x80f ) & ~0xff ) | 0x100 | ( 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n )); // Ustaw numer przerwania nieoczekiwanego i włącz APIC.
+    else
+        *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0xf0 ) = ( *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0xf0 ) & ~0xff ) | 0x100 | ( 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n );
     for_n( i, E_main_S_kernel_args.gsi_n )
         if( ~(S8)E_main_S_kernel_args.gsi[i].source )
             E_interrupt_Q_io_apic_I_enable(i);

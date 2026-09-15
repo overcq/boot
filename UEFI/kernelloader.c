@@ -136,7 +136,7 @@ N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N8 E_main_S_sata_ahci_n;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 extern P E_remap_jump_I, E_remap_jump_I_end;
-extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
+extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_I_reloc_7, E_mp_init_I_reloc_8, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
 //==============================================================================
 void
 E_main_I_out_8( N16 port
@@ -195,7 +195,12 @@ E_main_Q_msr_P( N32 i
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void
 E_interrupt_I_ipi_init( N32 processor
-){  E_main_Q_msr_P( 0x830, (( N64 )processor << 32 ) | ( 5 << 8 ));
+){  if( E_main_S_kernel_args.x2apic )
+        E_main_Q_msr_P( 0x830, (( N64 )processor << 32 ) | ( 5 << 8 ));
+    else
+    {   *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0x310 ) = processor << 24;
+        *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0x300 ) = 5 << 8;
+    }
 }
 //==============================================================================
 __attribute__ (( __warn_unused_result__ ))
@@ -477,13 +482,8 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                                 {   struct H_acpi_Z_madt_Z_local_apic *local_apic = (P)&table[0];
                                     if( local_apic->l != sizeof( *local_apic ))
                                         return ~0;
-                                    if( !(( local_apic->flags & 3 ) == 1
-                                      || ( local_apic->flags & 3 ) == 2
-                                    )
-                                    || ( local_apic->flags & ~3 )
-                                    )
-                                        return ~0;
-                                    E_main_S_kernel_args.processor_n++;
+                                    if(( local_apic->flags & 3 ) == 1 )
+                                        E_main_S_kernel_args.processor_n++;
                                     break;
                                 }
                               case 1: // I/O APIC
@@ -1503,8 +1503,7 @@ E_main_M_madt( Pc table
 //------------------------------------------------------------------------------
 S
 H_uefi_Z_api
-H_uefi_I_main(
-  P image_handle
+H_uefi_I_main( P image_handle
 , struct H_uefi_Z_system_table *system_table
 ){  S status = system_table->output->output( system_table->output, L"OUX/C+ OS boot loader ©overcq <overcq@int.pl> http://github.com/overcq\r\n" );
     if( status < 0 )
@@ -1528,11 +1527,10 @@ H_uefi_I_main(
     "\n" "cpuid"
     : "+a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
     );
-    if( !( edx & (( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 ))) // PAT, CMOV, APIC, MSR, TSC, FPU
-    || !( ecx & ( 1 << 21 )) // x2APIC
-    )
+    if( !( edx & (( 1 << 16 ) | ( 1 << 15 ) | ( 1 << 9 ) | ( 1 << 5 ) | ( 1 << 4 ) | ( 1 << 0 )))) // PAT, CMOV, APIC, MSR, TSC, FPU
         return ~0;
-    E_main_S_kernel_args.sse = edx & ( 1 << 25 );
+    E_main_S_kernel_args.sse = !!( edx & ( 1 << 25 ));
+    E_main_S_kernel_args.x2apic = !!( ecx & ( 1 << 21 ));
     struct H_uefi_Z_guid H_uefi_Z_guid_S_graphics_S = H_uefi_Z_guid_S_graphics;
     struct H_uefi_Z_protocol_Z_graphics *graphics;
     status = system_table->boot_services->locate_protocol( &H_uefi_Z_guid_S_graphics_S, 0, ( P * )&graphics );
@@ -1859,9 +1857,11 @@ H_uefi_I_main(
     v |= 0x10000;
     E_main_Q_msr_P( 0x277, v );
     // Włączenie x2APIC.
-    v = E_main_Q_msr_R( 0x1b );
-    v |= ( 1 << 11 ) | ( 1 << 10 );
-    E_main_Q_msr_P( 0x1b, v );
+    if( E_main_S_kernel_args.x2apic )
+    {   v = E_main_Q_msr_R( 0x1b );
+        v |= ( 1 << 11 ) | ( 1 << 10 );
+        E_main_Q_msr_P( 0x1b, v );
+    }
     E_main_S_sata_ahci_n = 0;
     if( K_error( E_pci_I_check_buses( &memory_map_l )))
         goto End;
@@ -2127,7 +2127,11 @@ H_uefi_I_main(
     *( N32 * )( p + i ) = E_main_S_kernel_args.processor_start_page + ( Pc )&E_mp_init_S_gd - ( Pc )&E_mp_init_I;
     i = ( Pc )&E_mp_init_I_reloc_5 - ( Pc )&E_mp_init_I + 1;
     *( N32 * )( p + i ) = E_main_S_kernel_args.processor_start_page + i + 6;
-    i = ( Pc )&E_mp_init_I_reloc_6 - ( Pc )&E_mp_init_I + 2;
+    i = ( Pc )&E_mp_init_I_reloc_6 - ( Pc )&E_mp_init_I + 1;
+    *( N8 * )( p + i ) = E_main_S_kernel_args.x2apic;
+    i = ( Pc )&E_mp_init_I_reloc_7 - ( Pc )&E_mp_init_I + 2;
+    *( N * )( p + i ) = (N)E_main_S_kernel_args.local_apic_address;
+    i = ( Pc )&E_mp_init_I_reloc_8 - ( Pc )&E_mp_init_I + 2;
     *( N * )( p + i ) = (N)E_main_S_kernel_args.processor_proc;
     i = ( Pc )&E_mp_init_S_gd_32 - ( Pc )&E_mp_init_I + 2;
     *( N * )( p + i ) = E_main_S_kernel_args.processor_start_page + ( Pc )&E_mp_init_S_gdt_32 - ( Pc )&E_mp_init_I;

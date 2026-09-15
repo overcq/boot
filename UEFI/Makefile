@@ -22,11 +22,9 @@ kernelloader: simple.h kernelloader.h $(wildcard *.c) remap_jump.S mp-init.S Mak
 clean:
 	-rm kernelloader
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-install-qemu:
-	loopdev=$$( losetup -LPf --show ../disk.img ) \
-    && trap 'losetup -d $$loopdev' EXIT \
-    && mount $${loopdev}p2 $(H_ocq_S_mnt) \
-    && trap 'losetup -d $$loopdev && umount $(H_ocq_S_mnt)' EXIT \
+install-virtualbox:
+	vmware-mount $(H_ocq_S_virtualbox_disk) 2 $(H_ocq_S_mnt) \
+    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
     && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
 install-vmware:
@@ -34,9 +32,11 @@ install-vmware:
     && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
     && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
     && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
-install-virtualbox:
-	vmware-mount $(H_ocq_S_virtualbox_disk) 2 $(H_ocq_S_mnt) \
-    && trap 'vmware-mount -d $(H_ocq_S_mnt)' EXIT \
+install-qemu:
+	loopdev=$$( losetup -LPf --show ../disk.img ) \
+    && trap 'losetup -d $$loopdev' EXIT \
+    && mount $${loopdev}p2 $(H_ocq_S_mnt) \
+    && trap 'losetup -d $$loopdev && umount $(H_ocq_S_mnt)' EXIT \
     && mkdir -p $(H_ocq_S_mnt)/EFI/BOOT \
     && install kernelloader $(H_ocq_S_mnt)/EFI/BOOT/BOOTX64.EFI
 #*******************************************************************************

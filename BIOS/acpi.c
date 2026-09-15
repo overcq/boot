@@ -256,7 +256,7 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "SSDT", sizeof( header->signature )))
             {   if( E_main_S_kernel_args.acpi.ssdt_content_n == J_a_R_n( E_main_S_kernel_args.acpi.ssdt_content ))
                     return ~0;
-                E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].address = ( Pc )rsdt->table_address[ table_i ] + sizeof( *header );
+                E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].address = ( Pc )(N)rsdt->table_address[ table_i ] + sizeof( *header );
                 E_main_S_kernel_args.acpi.ssdt_content[ E_main_S_kernel_args.acpi.ssdt_content_n ].l = header->length - sizeof( *header );
                 E_main_S_kernel_args.acpi.ssdt_content_n++;
                 if( rsdt->table_address[ table_i ] % E_mem_S_page_size + header->length > E_mem_S_page_size + first_block_add )

@@ -895,7 +895,8 @@ struct E_main_Z_kernel_args
   N32 processor_start_page;
   N32 processor_n;
   N8 gsi_n;
-  unsigned sse  :1;
+  B sse;
+  B x2apic;
 };
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 struct E_base_Z_image_dos_header
