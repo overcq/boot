@@ -81,7 +81,7 @@ E_mp_init_I_reloc_5:
 E_mp_init_I_reloc_6:
     mov     $0,%al                      # Do zastąpienia wartością “E_main_S_kernel_args.x2apic”.
     test    %al,%al
-    je      0f
+    jz      0f
     mov     $0x1b,%ecx
     rdmsr
     or      $( 1 << 11 ) | ( 1 << 10 ),%eax
@@ -92,6 +92,7 @@ E_mp_init_I_reloc_6:
 E_mp_init_I_reloc_7:
 0:  mov     $0x1234567812345678,%rbp    # Do zastąpienia wartością “E_main_S_kernel_args.local_apic_address”.
     mov     0x20(%rbp),%eax
+    shr     $24,%eax
 1:  dec     %eax
     mov     %eax,%ebx
 E_mp_init_I_reloc_8:
