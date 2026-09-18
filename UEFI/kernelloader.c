@@ -754,7 +754,6 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
         entry = (P)(( Pc )entry + E_main_S_descriptor_l );
     if( entry == (P)(( Pc )E_main_S_memory_map + *memory_map_n * E_main_S_descriptor_l ))
         return 0;
-    return 0;
     struct H_uefi_Z_memory_type_descriptor *next_entry = entry;
     O{  do
             next_entry = (P)(( Pc )next_entry + E_main_S_descriptor_l );
@@ -768,8 +767,10 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
         N32 entry_type = entry->type;
         N64 next_entry_physical_start = next_entry->physical_start;
         N64 next_entry_size = next_entry->pages * H_oux_E_mem_S_page_size;
+        N32 next_entry_type = next_entry->type;
         if( entry_physical_start + entry_size >= next_entry_physical_start
-        && entry_type == next_entry->type
+        && entry_type == next_entry_type
+        && next_entry_physical_start != (N)E_main_S_kernel_args.kernel
         ) // Bloki są scalane w jeden.
         {   if( entry_physical_start + entry_size < next_entry_physical_start + next_entry_size )
                 entry->pages = ( next_entry_physical_start + next_entry_size - entry_physical_start ) / H_oux_E_mem_S_page_size;
@@ -777,43 +778,37 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
             ( *memory_map_n )--;
             next_entry = (P)(( Pc )next_entry - E_main_S_descriptor_l );
         }else if( entry_physical_start + entry_size > next_entry_physical_start )
-            if(( entry_type != H_uefi_Z_memory_type_S_loader_code
-              && entry_type != H_uefi_Z_memory_type_S_loader_data
-              && entry_type != H_uefi_Z_memory_type_S_runtime_services_code
-              && entry_type != H_uefi_Z_memory_type_S_runtime_services_data
-              && entry_type != H_uefi_Z_memory_type_S_kernel
-              && ( next_entry->type == H_uefi_Z_memory_type_S_unusable
-                || next_entry->type == H_uefi_Z_memory_type_S_unaccepted
-            ))
+            if( entry_type == H_uefi_Z_memory_type_S_conventional
+            || next_entry_type == H_uefi_Z_memory_type_S_unusable
+            || next_entry_type == H_uefi_Z_memory_type_S_unaccepted
             || ( entry_type == H_uefi_Z_memory_type_S_reserved
-              && ( next_entry->type == H_uefi_Z_memory_type_S_acpi_reclaim
-                || next_entry->type == H_uefi_Z_memory_type_S_acpi_nvs
-                || next_entry->type == H_uefi_Z_memory_type_S_memory_mapped_io
-                || next_entry->type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
+              && ( next_entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+                || next_entry_type == H_uefi_Z_memory_type_S_acpi_nvs
+                || next_entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
+                || next_entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
             ))
-            || (( entry_type == H_uefi_Z_memory_type_S_runtime_services_data
+            || (( entry_type == H_uefi_Z_memory_type_S_boot_services_code
+                || entry_type == H_uefi_Z_memory_type_S_boot_services_data
+                || entry_type == H_uefi_Z_memory_type_S_runtime_services_code
+                || entry_type == H_uefi_Z_memory_type_S_runtime_services_data
                 || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
               )
-              && next_entry->type == H_uefi_Z_memory_type_S_memory_mapped_io
+              && ( next_entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+                || next_entry_type == H_uefi_Z_memory_type_S_acpi_nvs
+                || next_entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
+            ))
+            || ( entry_type == H_uefi_Z_memory_type_S_boot_services_data
+              && next_entry_type == H_uefi_Z_memory_type_S_reserved
             )
-            || ( entry_type == H_uefi_Z_memory_type_S_conventional
-              && ( next_entry->type == H_uefi_Z_memory_type_S_reserved
-                || next_entry->type == H_uefi_Z_memory_type_S_loader_code
-                || next_entry->type == H_uefi_Z_memory_type_S_acpi_reclaim
-                || next_entry->type == H_uefi_Z_memory_type_S_acpi_nvs
-                || next_entry->type == H_uefi_Z_memory_type_S_memory_mapped_io
-                || next_entry->type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
-                || next_entry->type == H_uefi_Z_memory_type_S_pal_code
-                || next_entry->type == H_uefi_Z_memory_type_S_persistent
-            ))) // Pierwszy blok ustępuje drugiemu.
+            || next_entry_physical_start == (N)E_main_S_kernel_args.kernel
+            ) // Pierwszy blok ustępuje drugiemu.
             {   if( entry_physical_start + entry_size > next_entry_physical_start + next_entry_size )
                 {   struct H_uefi_Z_memory_type_descriptor *new_entry = (P)(( Pc )next_entry + E_main_S_descriptor_l );
                     while( new_entry != (P)(( Pc )E_main_S_memory_map + *memory_map_n * E_main_S_descriptor_l )
                     && new_entry->physical_start < next_entry_physical_start + next_entry_size
                     )
                         new_entry = (P)(( Pc )new_entry + E_main_S_descriptor_l );
-                    new_entry = (P)(( Pc )new_entry - E_main_S_descriptor_l );
-                    E_mem_Q_blk_I_copy( ( Pc )new_entry + E_main_S_descriptor_l, new_entry, ( *memory_map_n - (( (N)new_entry - (N)E_main_S_memory_map ) / E_main_S_descriptor_l + 1 )) * E_main_S_descriptor_l );
+                    E_mem_Q_blk_I_copy( ( Pc )new_entry + E_main_S_descriptor_l, new_entry, ( *memory_map_n - ( (N)new_entry - (N)E_main_S_memory_map ) / E_main_S_descriptor_l ) * E_main_S_descriptor_l );
                     ( *memory_map_n )++;
                     new_entry->physical_start = next_entry_physical_start + next_entry_size;
                     new_entry->pages = ( entry_physical_start + entry_size - new_entry->physical_start ) / H_oux_E_mem_S_page_size;
@@ -824,51 +819,57 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
                 else
                 {   E_mem_Q_blk_I_copy( entry, ( Pc )entry + E_main_S_descriptor_l, ( *memory_map_n - (( (N)entry - (N)E_main_S_memory_map ) / E_main_S_descriptor_l + 1 )) * E_main_S_descriptor_l );
                     ( *memory_map_n )--;
-                    next_entry = (P)(( Pc )next_entry + E_main_S_descriptor_l );
-                    entry = next_entry;
+                    next_entry = (P)(( Pc )next_entry - E_main_S_descriptor_l );
+                    if( entry != E_main_S_memory_map )
+                        entry = (P)(( Pc )entry - E_main_S_descriptor_l );
+                    struct H_uefi_Z_memory_type_descriptor *entry_ = entry;
+                    while( entry_ != E_main_S_memory_map
+                    && !entry_->pages
+                    )
+                        entry_ = (P)(( Pc )entry_ - E_main_S_descriptor_l );
+                    if( entry_ != entry
+                    && entry_->pages
+                    )
+                        entry = entry_;
+                    else
+                        goto Entry_next;
                 }
-            }else if((( entry_type == H_uefi_Z_memory_type_S_unusable
-                || entry_type == H_uefi_Z_memory_type_S_unaccepted
-              )
-              && next_entry->type != H_uefi_Z_memory_type_S_loader_code
-              && next_entry->type != H_uefi_Z_memory_type_S_loader_data
-              && next_entry->type != H_uefi_Z_memory_type_S_runtime_services_code
-              && next_entry->type != H_uefi_Z_memory_type_S_runtime_services_data
-              && next_entry->type != H_uefi_Z_memory_type_S_kernel
-            )
-            || (( entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
-                || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
-                || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
-                || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
-              )
-              && ( next_entry->type == H_uefi_Z_memory_type_S_reserved
-            ))
-            || ( entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
-              && ( next_entry->type == H_uefi_Z_memory_type_S_runtime_services_data
-                || next_entry->type == H_uefi_Z_memory_type_S_acpi_nvs
-            ))
-            || (( entry_type == H_uefi_Z_memory_type_S_reserved
-                || entry_type == H_uefi_Z_memory_type_S_loader_code
-                || entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
-                || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
-                || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
-                || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
-                || entry_type == H_uefi_Z_memory_type_S_pal_code
-                || entry_type == H_uefi_Z_memory_type_S_persistent
-              )
-              && next_entry->type == H_uefi_Z_memory_type_S_conventional
-            )) // Drugi blok ustępuje pierwszemu.
+            }else if( next_entry_physical_start != (N)E_main_S_kernel_args.kernel
+            && ( next_entry_type == H_uefi_Z_memory_type_S_conventional
+              || entry_type == H_uefi_Z_memory_type_S_unusable
+              || entry_type == H_uefi_Z_memory_type_S_unaccepted
+              || (( entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+                  || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
+                  || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
+                  || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
+                )
+                && ( next_entry_type == H_uefi_Z_memory_type_S_reserved
+              ))
+              || (( entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+                  || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
+                  || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
+                )
+                && ( next_entry_type == H_uefi_Z_memory_type_S_boot_services_code
+                  || next_entry_type == H_uefi_Z_memory_type_S_boot_services_data
+                  || next_entry_type == H_uefi_Z_memory_type_S_runtime_services_code
+                  || next_entry_type == H_uefi_Z_memory_type_S_runtime_services_data
+                  || next_entry_type == H_uefi_Z_memory_type_S_acpi_nvs
+              ))
+              || ( entry_type == H_uefi_Z_memory_type_S_reserved
+                && next_entry_type == H_uefi_Z_memory_type_S_boot_services_data
+            ))) // Drugi blok ustępuje pierwszemu.
             {   if( entry_physical_start + entry_size < next_entry_physical_start + next_entry_size )
                 {   struct H_uefi_Z_memory_type_descriptor *new_entry = (P)(( Pc )next_entry + E_main_S_descriptor_l );
                     while( new_entry != (P)(( Pc )E_main_S_memory_map + *memory_map_n * E_main_S_descriptor_l )
-                    && new_entry->physical_start < next_entry_physical_start + next_entry_size
+                    && new_entry->physical_start < entry_physical_start + entry_size
                     )
                         new_entry = (P)(( Pc )new_entry + E_main_S_descriptor_l );
                     new_entry = (P)(( Pc )new_entry - E_main_S_descriptor_l );
                     E_mem_Q_blk_I_copy( next_entry, ( Pc )next_entry + E_main_S_descriptor_l, (N)new_entry - (N)next_entry );
-                    next_entry = (P)(( Pc )next_entry - E_main_S_descriptor_l );
                     new_entry->physical_start = entry_physical_start + entry_size;
                     new_entry->pages = ( next_entry_physical_start + next_entry_size - new_entry->physical_start ) / H_oux_E_mem_S_page_size;
+                    new_entry->type = next_entry_type;
+                    next_entry = (P)(( Pc )next_entry - E_main_S_descriptor_l );
                 }else
                 {   E_mem_Q_blk_I_copy( next_entry, ( Pc )next_entry + E_main_S_descriptor_l, ( *memory_map_n - (( (N)next_entry - (N)E_main_S_memory_map ) / E_main_S_descriptor_l + 1 )) * E_main_S_descriptor_l );
                     ( *memory_map_n )--;
@@ -877,25 +878,48 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
             }else
                 return ~0;
         else
-            entry = next_entry;
+Entry_next:
+        {   do
+                entry = (P)(( Pc )entry + E_main_S_descriptor_l );
+            while( !entry->pages );
+            next_entry = entry;
+        }
     }
     return 0;
 }
-N
-E_main_Q_memory_map_I_remove_bad( N memory_map_n
-){  N n = 0;
-    struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + ( memory_map_n - 1 ) * E_main_S_descriptor_l );
-    for_n_rev( i, memory_map_n )
-    {   if( !memory_map->pages
-        || memory_map->type == H_uefi_Z_memory_type_S_unusable
-        || memory_map->type == H_uefi_Z_memory_type_S_unaccepted
-        )
-        {   n++;
-            E_mem_Q_blk_I_copy( memory_map, ( Pc )memory_map + E_main_S_descriptor_l, ( memory_map_n-- - i ) * E_main_S_descriptor_l );
+void
+E_main_Q_memory_map_I_remove_bad( N *memory_map_n
+){  N n = *memory_map_n;
+    while( n > 1 )
+    {   struct H_uefi_Z_memory_type_descriptor *entry_prev = E_main_S_memory_map;
+        N new_n = 0;
+        for( N i = 1; i != n; i++ )
+        {   struct H_uefi_Z_memory_type_descriptor *entry = ( struct H_uefi_Z_memory_type_descriptor * )(( Pc )E_main_S_memory_map + i * E_main_S_descriptor_l );
+            if(( !entry_prev->pages
+              || entry_prev->type == H_uefi_Z_memory_type_S_unusable
+              || entry_prev->type == H_uefi_Z_memory_type_S_unaccepted
+              || entry_prev->physical_start > entry->physical_start
+            )
+            && entry->pages
+            && entry->type != H_uefi_Z_memory_type_S_unusable
+            && entry->type != H_uefi_Z_memory_type_S_unaccepted
+            )
+            {   J_swap( struct H_uefi_Z_memory_type_descriptor, *entry_prev, *entry );
+                new_n = i;
+            }
+            entry_prev = entry;
         }
-        memory_map = (P)(( Pc )memory_map - E_main_S_descriptor_l );
+        n = new_n;
     }
-    return n;
+    for_n_rev( i, *memory_map_n )
+    {   struct H_uefi_Z_memory_type_descriptor *entry = ( struct H_uefi_Z_memory_type_descriptor * )(( Pc )E_main_S_memory_map + i * E_main_S_descriptor_l );
+        if( entry->pages
+        && entry->type != H_uefi_Z_memory_type_S_unusable
+        && entry->type != H_uefi_Z_memory_type_S_unaccepted
+        )
+            break;
+    }
+    *memory_map_n = i + 1;
 }
 //------------------------------------------------------------------------------
 void
@@ -955,6 +979,8 @@ E_main_Q_memory_map_R_saved_n( N memory_map_n
     N n = 0;
     for_n( i, memory_map_n )
     {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved //TODO Czy potrzebne?
+        || memory_map->type == H_uefi_Z_memory_type_S_loader_code
+        || memory_map->type == H_uefi_Z_memory_type_S_loader_data
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
         || memory_map->type == H_uefi_Z_memory_type_S_runtime_services_code //TODO Czy potrzebne?
@@ -965,7 +991,6 @@ E_main_Q_memory_map_R_saved_n( N memory_map_n
         || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io
         || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
         || memory_map->type == H_uefi_Z_memory_type_S_pal_code //TODO Czy potrzebne?
-        || memory_map->type == H_uefi_Z_memory_type_S_processor_startup_page
         )
             n++;
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
@@ -1003,11 +1028,10 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
 , B reserved_from_end
 , N *memory_map_new_entries
 ){  *memory_map_new_entries = 0;
-    N startup_page_virtual_address;
     struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
     for_n( i, memory_map_n )
-    {   if( memory_map->type == (N32)H_uefi_Z_memory_type_S_processor_startup_page )
-        {   startup_page_virtual_address = memory_map->virtual_start = memory_map->physical_start;
+    {   if( memory_map->physical_start == E_main_S_kernel_args.processor_start_page )
+        {   memory_map->virtual_start = memory_map->physical_start;
             break;
         }
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
@@ -1027,13 +1051,16 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
                 );
             memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
         }
-        if( next_virtual_address < startup_page_virtual_address + H_oux_E_mem_S_page_size )
+        if( next_virtual_address < E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size )
             return ~0;
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
         {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code 
-            || memory_map->type == H_uefi_Z_memory_type_S_loader_data
+            || ( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+              && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
+              && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
+            )
             || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
@@ -1059,7 +1086,7 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         }
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == (N32)H_uefi_Z_memory_type_S_kernel )
+        {   if( memory_map->physical_start == (N)E_main_S_kernel_args.kernel )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1078,8 +1105,6 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_code
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_data
             && memory_map->type != H_uefi_Z_memory_type_S_conventional
-            && memory_map->type != (N32)H_uefi_Z_memory_type_S_kernel
-            && memory_map->type != (N32)H_uefi_Z_memory_type_S_processor_startup_page
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
@@ -1097,8 +1122,6 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_code
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_data
             && memory_map->type != H_uefi_Z_memory_type_S_conventional
-            && memory_map->type != (N32)H_uefi_Z_memory_type_S_kernel
-            && memory_map->type != (N32)H_uefi_Z_memory_type_S_processor_startup_page
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
@@ -1108,11 +1131,11 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
                 );
             memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
         }
-        if( next_virtual_address < startup_page_virtual_address + H_oux_E_mem_S_page_size )
+        if( next_virtual_address < E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size )
             return ~0;
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == (N32)H_uefi_Z_memory_type_S_kernel )
+        {   if( memory_map->physical_start == (N)E_main_S_kernel_args.kernel )
             {   E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1140,7 +1163,10 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
         {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code
-            || memory_map->type == H_uefi_Z_memory_type_S_loader_data
+            || ( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+              && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
+              && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
+            )
             || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
@@ -1193,18 +1219,14 @@ E_main_I_allocate_page_table_I_next_page( struct H_uefi_Z_memory_type_descriptor
 ){  if( reserved_from_end )
     {   if( !(*pages)-- )
         {   *entry = (P)(( Pc )*entry - E_main_S_descriptor_l );
-            while(( *entry )->type == H_uefi_Z_memory_type_S_loader_code
-            || ( *entry )->type == H_uefi_Z_memory_type_S_processor_startup_page
-            )
+            while(( *entry )->physical_start == E_main_S_kernel_args.processor_start_page )
                 *entry = (P)(( Pc )*entry - E_main_S_descriptor_l );
             *pages = ( *entry )->pages - 1;
         }
     }else
         if( ++*pages == ( *entry )->pages )
         {   *entry = (P)(( Pc )*entry + E_main_S_descriptor_l );
-            while(( *entry )->type == H_uefi_Z_memory_type_S_loader_code
-            || ( *entry )->type == H_uefi_Z_memory_type_S_processor_startup_page
-            )
+            while(( *entry )->physical_start == E_main_S_kernel_args.processor_start_page )
                 *entry = (P)(( Pc )*entry + E_main_S_descriptor_l );
             *pages = 0;
         }
@@ -1213,11 +1235,7 @@ void
 E_main_I_allocate_page_table_I_next_physical_address( struct H_uefi_Z_memory_type_descriptor **entry
 , N *pages
 ){  if( ++*pages == ( *entry )->pages )
-    {   do
-            *entry = (P)(( Pc )*entry + E_main_S_descriptor_l );
-        while(( *entry )->type == H_uefi_Z_memory_type_S_unusable
-        && ( *entry )->type == H_uefi_Z_memory_type_S_unaccepted
-        );
+    {   *entry = (P)(( Pc )*entry + E_main_S_descriptor_l );
         *pages = 0;
     }
 }
@@ -1713,7 +1731,7 @@ H_uefi_I_main( P image_handle
             status = ~0;
             break;
         }
-        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_type_S_kernel
+        status = system_table->boot_services->M_pages( H_uefi_Z_allocate_Z_any, H_uefi_Z_memory_type_S_loader_data
         , E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size
         , ( N64 * )&E_main_S_kernel_args.kernel
         );
@@ -1817,11 +1835,15 @@ H_uefi_I_main( P image_handle
     {   S status_ = system_table->boot_services->W_pool( (P)loader_start_new_physical );
         return ~0;
     }
-    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 ) * 2 * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 ) * 2 * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w poprzednim “M_pool”
      * 2 na możliwość wstawienia w następnym “M_pool”
      * n na zakresy odczytane podczas wyliczania PCI
-     * 1 na dopisanie bloku ‘framebuffer’
+     * 1 na 
+     * 1 na zakres SMM
+     * 1 na 
+     * 1 na dopisanie bloku ‘kernela’
+     * 1 na dopisanie bloku ‘framebuffera’
      * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
      * 1 na dopisanie bloku PCIe
@@ -1863,9 +1885,30 @@ H_uefi_I_main( P image_handle
         E_main_Q_msr_P( 0x1b, v );
     }
     E_main_S_sata_ahci_n = 0;
-    if( K_error( E_pci_I_check_buses( &memory_map_l )))
+    N r = E_pci_I_check_buses( &memory_map_l );
+    if( K_error(r) )
         goto End;
     struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + memory_map_l );
+    memory_map->type = H_uefi_Z_memory_type_S_reserved;
+    memory_map->physical_start = 0;
+    memory_map->pages = 1;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_type_S_reserved;
+    memory_map->physical_start = 0x30000;
+    memory_map->pages = 0x20;
+    memory_map_l += E_main_S_descriptor_l;
+    //memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+    //memory_map->type = H_uefi_Z_memory_type_S_reserved;
+    //memory_map->physical_start = 0x80000;
+    //memory_map->pages = 0x80;
+    //memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+    memory_map->type = H_uefi_Z_memory_type_S_loader_data;
+    memory_map->physical_start = (N)E_main_S_kernel_args.kernel;
+    memory_map->pages = E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
     memory_map->physical_start = (N)E_main_S_kernel_args.framebuffer.p;
     memory_map->pages = E_simple_Z_n_I_align_up_to_v2( (N)E_main_S_kernel_args.framebuffer.p % H_oux_E_mem_S_page_size + E_main_S_kernel_args.framebuffer.height * E_main_S_kernel_args.framebuffer.pixels_per_scan_line * E_main_S_kernel_args.framebuffer.bits_per_pixel / 8, H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
@@ -1888,12 +1931,23 @@ H_uefi_I_main( P image_handle
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_align( memory_map_n );
     E_main_Q_memory_map_I_sort_physical( memory_map_n );
+    memory_map = E_main_S_memory_map;
+    for_n_( i, memory_map_n ) //NDFN
+    {   if( memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io
+        && !memory_map->physical_start
+        && memory_map->pages == 0x10000
+        )
+        {   memory_map->pages = 0;
+            break;
+        }
+        memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+    }
     status = E_main_Q_memory_map_I_remove_overlapped( &memory_map_n );
     if( status < 0 )
         goto End;
-    memory_map_n -= E_main_Q_memory_map_I_remove_bad( memory_map_n );
+    E_main_Q_memory_map_I_remove_bad( &memory_map_n );
     memory_map_l = memory_map_n * E_main_S_descriptor_l;
-    E_main_S_kernel_args.processor_start_page = 0;
+    E_main_S_kernel_args.processor_start_page = ~0;
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n )
     {   if( memory_map->type == H_uefi_Z_memory_type_S_conventional )
@@ -1906,18 +1960,18 @@ H_uefi_I_main( P image_handle
         }
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
-    if( !E_main_S_kernel_args.processor_start_page )
+    if( !~E_main_S_kernel_args.processor_start_page )
         goto End;
     if( memory_map->pages )
     {   memory_map = (P)(( Pc )E_main_S_memory_map + memory_map_n * E_main_S_descriptor_l );
         memory_map_l += E_main_S_descriptor_l;
         memory_map_n++;
-        memory_map->type = H_uefi_Z_memory_type_S_processor_startup_page;
+        memory_map->type = H_uefi_Z_memory_type_S_loader_data;
         memory_map->physical_start = E_main_S_kernel_args.processor_start_page;
         memory_map->pages = 1;
         E_main_Q_memory_map_I_sort_physical( memory_map_n );
     }else
-    {   memory_map->type = H_uefi_Z_memory_type_S_processor_startup_page;
+    {   memory_map->type = H_uefi_Z_memory_type_S_loader_data;
         memory_map->physical_start = E_main_S_kernel_args.processor_start_page;
         memory_map->pages = 1;
     }
@@ -2073,6 +2127,8 @@ H_uefi_I_main( P image_handle
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n )
     {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved //TODO Czy potrzebne?
+        || memory_map->type == H_uefi_Z_memory_type_S_loader_code
+        || memory_map->type == H_uefi_Z_memory_type_S_loader_data
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
         || memory_map->type == H_uefi_Z_memory_type_S_runtime_services_code //TODO Czy potrzebne?
@@ -2083,7 +2139,6 @@ H_uefi_I_main( P image_handle
         || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io
         || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
         || memory_map->type == H_uefi_Z_memory_type_S_pal_code //TODO Czy potrzebne?
-        || memory_map->type == H_uefi_Z_memory_type_S_processor_startup_page
         )
         {   my_memory_map->physical_start = memory_map->physical_start;
             my_memory_map->virtual_start = memory_map->virtual_start;
@@ -2092,7 +2147,8 @@ H_uefi_I_main( P image_handle
         }
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
-    if( K_error( E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size )))
+    r = E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
+    if( K_error(r) )
         goto End;
     E_vga_I_fill_rect( 0, 0, E_main_S_kernel_args.framebuffer.width, E_main_S_kernel_args.framebuffer.height, E_vga_R_video_color( E_vga_S_background_color ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
@@ -2104,11 +2160,15 @@ H_uefi_I_main( P image_handle
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 + 4 + 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
-    if( K_error( E_font_M() ))
+    r = E_font_M();
+    if( K_error(r) )
         goto End;
     E_font_I_print( "OUX/C+ OS boot loader ©overcq <overcq@int.pl> https://github.com/overcq\n" );
-    E_font_W();
-    if( K_error( E_main_M_madt( E_main_S_apic_content, E_main_S_apic_content_l )))
+    r = E_font_W();
+    if( K_error(r) )
+        goto End;
+    r = E_main_M_madt( E_main_S_apic_content, E_main_S_apic_content_l );
+    if( K_error(r) )
         goto End;
     Mt_( E_main_S_kernel_args.processor_proc, E_main_S_kernel_args.processor_n - 1 );
     if( K_error( E_main_S_kernel_args.processor_proc )

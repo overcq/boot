@@ -325,9 +325,7 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
             K( E_main_I_complete_page_table_pre() )
                 return ~0;
             header = E_main_Z_p_I_to_virtual_pre( (P)xsdt->table_address[ table_i ] );
-            if( header->length <= sizeof( *header )
-            //|| E_acpi_I_checksum( header, header->length )
-            )
+            if( header->length <= sizeof( *header ))
             {   E_main_Z_memory_table_S++;
                 continue;
             }

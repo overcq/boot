@@ -205,8 +205,9 @@ E_main_Q_memory_map_I_remove_overlapped( void
         N32 entry_type = entry->type;
         N64 next_entry_physical_start = next_entry->physical_start;
         N64 next_entry_size = next_entry->size;
+        N32 next_entry_type = next_entry->type;
         if( entry_physical_start + entry_size >= next_entry_physical_start
-        && entry_type == next_entry->type
+        && entry_type == next_entry_type
         ) // Bloki są scalane w jeden.
         {   if( entry_physical_start + entry_size < next_entry_physical_start + next_entry_size )
                 entry->size = next_entry_physical_start + next_entry_size - entry_physical_start;
@@ -214,25 +215,19 @@ E_main_Q_memory_map_I_remove_overlapped( void
             E_main_Z_memory_table_S++;
             entry++;
         }else if( entry_physical_start + entry_size > next_entry_physical_start )
-            if(( entry_type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
+            if( entry_type == E_main_Z_memory_table_Z_memory_type_S_available
+            || ( entry_type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
               && entry_type != E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-              && ( !next_entry->type
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_bad
-                || next_entry->type > ( N32 )E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+              && ( !next_entry_type
+                || next_entry_type == E_main_Z_memory_table_Z_memory_type_S_bad
+                || next_entry_type > ( N32 )E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
             ))
             || ( entry_type == E_main_Z_memory_table_Z_memory_type_S_reserved
-              && ( next_entry->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+              && ( next_entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
+                || next_entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
+                || next_entry_type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
             ))
-            || ( entry_type == E_main_Z_memory_table_Z_memory_type_S_available
-              && ( next_entry->type == E_main_Z_memory_table_Z_memory_type_S_reserved
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
-                || next_entry->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-            ))) // Pierwszy blok ustępuje drugiemu.
+            ) // Pierwszy blok ustępuje drugiemu.
             {   if( entry_physical_start + entry_size > next_entry_physical_start + next_entry_size )
                 {   struct E_main_Z_memory_map_entry *new_entry = next_entry + 1;
                     while( new_entry != (P)E_main_Z_memory_table_S_orig_end
@@ -252,41 +247,51 @@ E_main_Q_memory_map_I_remove_overlapped( void
                     entry->size = next_entry_physical_start - entry_physical_start;
                 else
                 {   E_mem_Q_blk_I_copy( E_main_Z_memory_table_S + 1, E_main_Z_memory_table_S, ( entry - E_main_Z_memory_table_S ) * sizeof( *E_main_Z_memory_table_S ));
+                    if( entry == E_main_Z_memory_table_S )
+                    {   E_main_Z_memory_table_S++;
+                        goto Entry_next;
+                    }
                     E_main_Z_memory_table_S++;
-                    entry = next_entry;
+                    struct E_main_Z_memory_map_entry *entry_ = entry;
+                    while( entry_ != (P)E_main_Z_memory_table_S
+                    && !entry_->size
+                    )
+                        entry_--;
+                    if( entry_ != entry
+                    && entry_->size
+                    )
+                        entry = entry_;
+                    else
+                        goto Entry_next;
                 }
-            }else if((( !entry_type
+            }else if( next_entry_type == E_main_Z_memory_table_Z_memory_type_S_available
+            || (( !entry_type
                 || entry_type == E_main_Z_memory_table_Z_memory_type_S_bad
                 || entry_type > ( N32 )E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
               )
-              && next_entry->type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
-              && next_entry->type != E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+              && next_entry_type != E_main_Z_memory_table_Z_memory_type_S_boot_loader
+              && next_entry_type != E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
             )
             || (( entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                 || entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
                 || entry_type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
               )
-              && ( next_entry->type == E_main_Z_memory_table_Z_memory_type_S_reserved
+              && ( next_entry_type == E_main_Z_memory_table_Z_memory_type_S_reserved
             ))
-            || (( entry_type == E_main_Z_memory_table_Z_memory_type_S_reserved
-                || entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
-                || entry_type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-                || entry_type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
-                || entry_type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
-                || entry_type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-              )
-              && next_entry->type == E_main_Z_memory_table_Z_memory_type_S_available
-            )) // Drugi blok ustępuje pierwszemu.
+            ) // Drugi blok ustępuje pierwszemu.
             {   if( entry_physical_start + entry_size < next_entry_physical_start + next_entry_size )
                 {   struct E_main_Z_memory_map_entry *new_entry = next_entry + 1;
                     while( new_entry != (P)E_main_Z_memory_table_S_orig_end
-                    && new_entry->physical_start < next_entry_physical_start + next_entry_size
+                    && new_entry->physical_start < entry_physical_start + entry_size
                     )
                         new_entry++;
                     new_entry--;
                     E_mem_Q_blk_I_copy( next_entry, next_entry + 1, ( new_entry - next_entry ) * sizeof( *E_main_Z_memory_table_S ));
                     new_entry->physical_start = entry_physical_start + entry_size;
                     new_entry->size = next_entry_physical_start + next_entry_size - new_entry->physical_start;
+                    new_entry->type = next_entry_type;
+                    if( new_entry - next_entry )
+                        next_entry--;
                 }else
                 {   E_mem_Q_blk_I_copy( E_main_Z_memory_table_S + 1, E_main_Z_memory_table_S, ( next_entry - E_main_Z_memory_table_S ) * sizeof( *E_main_Z_memory_table_S ));
                     E_main_Z_memory_table_S++;
@@ -295,7 +300,12 @@ E_main_Q_memory_map_I_remove_overlapped( void
             }else
                 return ~0;
         else
-            entry = next_entry;
+Entry_next:
+        {   do
+                entry++;
+            while( !entry->size );
+            next_entry = entry;
+        }
     }
     return 0;
 }
@@ -1361,9 +1371,11 @@ main( struct E_main_Z_memory_map_entry *memory_map
     E_main_S_kernel_args.framebuffer.red_size = video->red_size;
     E_main_S_kernel_args.framebuffer.red_shift = video->red_start;
     E_main_Q_memory_map_I_align();
-    if( K_error( E_main_I_allocate_page_table_pre() ))
+    N r = E_main_I_allocate_page_table_pre();
+    if( K_error(r) )
         goto End;
-    if( K_error( E_acpi_I_search() ))
+    r = E_acpi_I_search();
+    if( K_error(r) )
         goto End;
     if( E_acpi_S_pic_mode )
     {   E_main_I_out_8( 0x21, 0xff );
@@ -1383,12 +1395,13 @@ main( struct E_main_Z_memory_map_entry *memory_map
     // Przygotowanie tablicy zakresów pamięci.
     E_main_S_sata_ahci_n = 0;
     E_main_S_ethernet_address = E_main_S_ethernet_eeprom_address = 0;
-    if( K_error( E_pci_I_check_buses() ))
+    r = E_pci_I_check_buses();
+    if( K_error(r) )
         goto End;
     E_main_S_kernel_args.processor_start_page = 0xf000;
-    *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
+    *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) //NDFN
     { 0
-    , E_mem_S_page_size
+    , 0x2000
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     };
     *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
@@ -1446,7 +1459,8 @@ main( struct E_main_Z_memory_map_entry *memory_map
     E_main_Q_memory_map_I_align();
     E_main_Z_memory_table_S_end = E_main_Z_memory_table_S_orig_end;
     E_main_Q_memory_map_I_sort_physical();
-    if( K_error( E_main_Q_memory_map_I_remove_overlapped() ))
+    r = E_main_Q_memory_map_I_remove_overlapped();
+    if( K_error(r) )
         goto End;
     E_main_Q_memory_map_I_remove_bad();
     E_main_Q_memory_map_I_set_virtual_0();
@@ -1510,7 +1524,8 @@ main( struct E_main_Z_memory_map_entry *memory_map
     if( !E_main_S_kernel_args.framebuffer.p )
         goto End;
     E_mem_M_0( memory_size );
-    if( K_error( E_font_M() ))
+    r = E_font_M();
+    if( K_error(r) )
         goto End;
     E_vga_I_fill_rect( 0, 0, E_main_S_kernel_args.framebuffer.width, E_main_S_kernel_args.framebuffer.height, E_vga_R_video_color( E_vga_S_background_color ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2 - 50, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
@@ -1523,22 +1538,10 @@ main( struct E_main_Z_memory_map_entry *memory_map
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10 - 13, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_vga_I_fill_rect( E_main_S_kernel_args.framebuffer.width / 2, E_main_S_kernel_args.framebuffer.height / 2 - 10, 48, 5, E_vga_R_video_color( 0x2b2b2b ));
     E_font_I_print( "OUX/C+ OS boot loader ©overcq <overcq@int.pl> http://github.com/overcq\n" );
-
-    //N n = ( struct E_main_Z_memory_map_entry * )E_main_Z_memory_table_S_end - E_main_Z_memory_table_S;
-    //for_n( i, n )
-    //{   E_font_I_print( ",type=" );
-        //E_font_I_print_hex( E_main_Z_memory_table_S[i].type );
-        //E_font_I_print( ",va=" );
-        //E_font_I_print_hex( E_main_Z_memory_table_S[i].virtual_start );
-        //E_font_I_print( ",pa=" );
-        //E_font_I_print_hex( E_main_Z_memory_table_S[i].physical_start );
-        //E_font_I_print( ",size=" );
-        //E_font_I_print_hex( E_main_Z_memory_table_S[i].size );
-    //}
-
     E_acpi_S_apic_content = E_main_Z_p_I_to_virtual( E_acpi_S_apic_content );
     E_main_S_kernel_args.io_apic_address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.io_apic_address );
-    if( K_error( E_main_M_madt( E_acpi_S_apic_content, E_acpi_S_apic_content_l )))
+    r = E_main_M_madt( E_acpi_S_apic_content, E_acpi_S_apic_content_l );
+    if( K_error(r) )
         goto End;
     P interrupt_stack = E_mem_Q_blk_M_align_tab( E_mem_S_page_size, 2, E_mem_S_page_size );
     if( K_error( interrupt_stack ))
@@ -1562,13 +1565,15 @@ main( struct E_main_Z_memory_map_entry *memory_map
     : "g" ( S_gd )
     : "ax"
     );
-    if( K_error( E_interrupt_M() ))
+    r = E_interrupt_M();
+    if( K_error(r) )
         goto End;
     __asm__ volatile (
     "\n" "sti"
     );
     E_main_S_kernel_args.local_apic_address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.local_apic_address );
-    if( K_error( E_pci_I_check_buses_1() ))
+    r = E_pci_I_check_buses_1();
+    if( K_error(r) )
     {   __asm__ volatile (
         "\n" "cli"
         );
@@ -1591,9 +1596,11 @@ main( struct E_main_Z_memory_map_entry *memory_map
     ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, E_mem_S_page_size ) - stack_size
     : memory_size - stack_size
     );
-    if( K_error( E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size )))
+    r = E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
+    if( K_error(r) )
         goto End;
-    if( K_error( E_ouxfs_Q_kernel_I_read( E_main_S_kernel_args.kernel )))
+    r = E_ouxfs_Q_kernel_I_read( E_main_S_kernel_args.kernel );
+    if( K_error(r) )
     {   __asm__ volatile (
         "\n" "cli"
         );
@@ -1724,7 +1731,8 @@ main( struct E_main_Z_memory_map_entry *memory_map
         E_main_S_kernel_args.acpi.ssdt_content[i].address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.ssdt_content[i].address );
     if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
         E_main_S_kernel_args.acpi.pm1a_control_block = (N)E_main_Z_p_I_to_virtual( (P)E_main_S_kernel_args.acpi.pm1a_control_block );
-    if( K_error( E_main_M_madt( E_acpi_S_apic_content, E_acpi_S_apic_content_l )))
+    r = E_main_M_madt( E_acpi_S_apic_content, E_acpi_S_apic_content_l );
+    if( K_error(r) )
         goto End;
     __asm__ volatile (
     "\n" "mov   %%cr0,%%rax"

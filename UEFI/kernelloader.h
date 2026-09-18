@@ -41,6 +41,10 @@ typedef __int128            S128;
 #define J_a_R_n(a)                          ( sizeof(a) / sizeof( (a)[0] ))
 //------------------------------------------------------------------------------
 #define J_swap(type,a,b)                    { type J_autogen(c) = a; a = b; b = J_autogen(c); }
+#define J_min(a,b)                          ( (a) > (b) ? (b) : (a) )
+#define J_max(a,b)                          ( (a) < (b) ? (b) : (a) )
+#define J_min_max(a,b,c)                    ( J_min( (a), J_max( (b), (c) )))
+#define J_abs(v)                            ( (v) < 0 ? -(v) : (v) )
 //------------------------------------------------------------------------------
 #define J_autogen_S                         _autogen
 #define J_autogen(a)                        J_a_b( a, J_autogen_S )
@@ -308,8 +312,6 @@ enum H_uefi_Z_memory
 , H_uefi_Z_memory_type_S_pal_code
 , H_uefi_Z_memory_type_S_persistent
 , H_uefi_Z_memory_type_S_unaccepted
-, H_uefi_Z_memory_type_S_kernel = 0x80000000U
-, H_uefi_Z_memory_type_S_processor_startup_page
 };
 #define H_uefi_Z_memory_type_protection_S_write      0x1000
 #define H_uefi_Z_memory_type_protection_S_read       0x2000
@@ -795,8 +797,6 @@ struct H_uefi_Z_protocol_Z_graphics
   struct H_uefi_Z_protocol_Z_graphics_Z_mode *mode;
 };
 //==============================================================================
-#define E_mem_Q_blk_S_free_n_init       4
-#define E_mem_Q_blk_S_allocated_n_init  6
 struct H_oux_E_mem_Z_memory_map
 { N physical_start;
   N virtual_start;

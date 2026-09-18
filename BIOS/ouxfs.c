@@ -46,7 +46,8 @@ E_ouxfs_Q_disk_M( N block_size
     Kp(sector)
         return ~0;
     E_disc_S.partition.oux.sector_size = block_size;
-    if( K_error( E_disc_R( 0, 1, sector )))
+    N r = E_disc_R( 0, 1, sector );
+    if( K_error(r) )
         goto Error_0;
     if( !E_mem_Q_blk_T_eq( sector, E_ouxfs_Q_device_S_ident, J_s0_R_l( E_ouxfs_Q_device_S_ident )))
         goto Error_0;
@@ -164,7 +165,8 @@ End_loop_0:
             goto Error_1;
     if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
         {   if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.pre )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector - 1, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector - 1, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.pre );
                 do
@@ -236,7 +238,8 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.n; sector_i++ ) // Czyta kolejne sektory z szeregu ciągłych.
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + sector_i, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + sector_i, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -308,7 +311,8 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             if( E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.n, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.n, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -380,7 +384,8 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.sectors.post );
             }
         }else
-        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector, 1, sector )))
+        {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_i_read ].sector, 1, sector );
+            if( K_error(r) )
                 goto Error_1;
             Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_i_read ].location.in_sector.start;
             do // Czyta wpisy pliku tablicy bloków znajdujące się we fragmencie sektora.
@@ -482,7 +487,8 @@ End_loop_0:
     for( directory_table_i = 0; directory_table_i != block_table_directory_table_n; directory_table_i++ )
     {   if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
         {   if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector - 1, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector - 1, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.pre );
                 do
@@ -527,7 +533,8 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n; sector_i++ )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector + sector_i, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector + sector_i, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -572,12 +579,13 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             if( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post )
-            {   if( K_error( E_disc_R(
+            {   r = E_disc_R(
                   E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector
                   + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.n
                 , 1
                 , sector
-                )))
+                );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -622,7 +630,8 @@ End_loop_0:
                 }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.sectors.post );
             }
         }else
-        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector, 1, sector )))
+        {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].sector, 1, sector );
+            if( K_error(r) )
                 goto Error_1;
             Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_directory_table_start + directory_table_i ].location.in_sector.start;
             do
@@ -696,7 +705,8 @@ End_loop_1:
     for( file_table_i = 0; file_table_i != block_table_file_table_n; file_table_i++ )
     {   if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location_type == E_ouxfs_Z_block_Z_location_S_sectors )
         {   if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector - 1, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector - 1, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector + ( E_disc_S.partition.oux.sector_size - E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.pre );
                 do
@@ -755,7 +765,8 @@ End_loop_1:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             for( N64 sector_i = 0; sector_i != E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.n; sector_i++ )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector + sector_i, 1, sector )))
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector + sector_i, 1, sector );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -814,11 +825,12 @@ End_loop_1:
                 }while( data != sector + E_disc_S.partition.oux.sector_size );
             }
             if( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post )
-            {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector
+            {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector
                   + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.n
                 , 1
                 , sector
-                )))
+                );
+                if( K_error(r) )
                     goto Error_1;
                 Pc data = sector;
                 do
@@ -877,7 +889,8 @@ End_loop_1:
                 }while( data != sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.sectors.post );
             }
         }else
-        {   if( K_error( E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector, 1, sector )))
+        {   r = E_disc_R( E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].sector, 1, sector );
+            if( K_error(r) )
                 goto Error_1;
             Pc data = sector + E_disc_S.partition.oux.block_table[ block_table_file_table_start + file_table_i ].location.in_sector.start;
             do
