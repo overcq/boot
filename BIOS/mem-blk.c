@@ -53,7 +53,7 @@ P E_mem_Q_blk_M_new_0( N * );
  * • (0xf000 — niezarejestrowana strona pamięci na program startowy procesorów)
  */
 void
-E_mem_M_0(
+ E_mem_M_0(
   N memory_size
 ){  E_main_S_kernel_args.mem_blk.memory_size = memory_size;
     E_main_S_kernel_args.mem_blk.reserved_from_end = no;
@@ -152,7 +152,7 @@ E_mem_M(
     struct E_mem_Q_blk_Z_free *free_p = (P)E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.free_id ].p;
     if( reserved_from_end )
     {   free_p[0].l = E_main_S_kernel_args.processor_start_page - E_mem_S_page_size;
-        free_p[0].p = free_p[0].l ? (P)E_mem_S_page_size : 0;
+        free_p[0].p = (P)E_mem_S_page_size;
         free_p[1].l = (N)E_main_S_kernel_args.boot_loader - ( E_main_S_kernel_args.processor_start_page + E_mem_S_page_size );
         free_p[1].p = free_p[0].l ? (P)( (N)E_main_S_kernel_args.processor_start_page + E_mem_S_page_size ) : 0;
         free_p[2].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( (N)E_main_S_kernel_args.boot_loader + E_main_S_boot_loader_orig_end - E_main_S_boot_loader_orig_start );
@@ -179,7 +179,7 @@ E_mem_M(
             E_mem_Q_blk_Q_sys_table_f_I_move_empty_entry(0);
     }else
     {   free_p[0].l = E_main_S_kernel_args.processor_start_page - E_mem_S_page_size;
-        free_p[0].p = free_p[0].l ? (P)E_mem_S_page_size : 0;
+        free_p[0].p = (P)E_mem_S_page_size;
         free_p[1].l = E_mem_S_page_size + E_main_S_boot_loader_orig_end - E_main_S_boot_loader_orig_start - ( E_main_S_kernel_args.processor_start_page + E_mem_S_page_size );
         free_p[1].p = free_p[0].l ? (P)( (N)E_main_S_kernel_args.processor_start_page + E_mem_S_page_size ) : 0;
         free_p[2].l = memory_map_address - ( kernel_address + kernel_size );

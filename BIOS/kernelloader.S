@@ -302,7 +302,7 @@ I_hlt_16:
 0:  mov     %esp,%esp
     fninit
     pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
-    mov     $E_main_S_video,%rsi
+    lea     E_main_S_video(%rip),%rsi
     jmp     main
 #===============================================================================
 .code16

@@ -43,7 +43,7 @@ init-usb:
     && $(H_ocq_S_mkfs_oux)/mkfs.oux $(H_ocq_S_usb_dev)3 512
 #-------------------------------------------------------------------------------
 run-qemu-bios:
-	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 2G,maxmem=2G \
+	qemu-system-x86_64 -machine q35 -cpu IvyBridge -smp 4,cores=2 -m 8G,maxmem=8G \
     -device VGA,vgamem_mb=8 \
     -boot order=c,once=c \
     -drive media=disk,format=raw,file=disk.img,if=none,id=disc0 \

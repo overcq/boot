@@ -25,12 +25,12 @@ Makefile mbr.ld
 %.o: %.c kernelloader.h \
 simple.h \
 Makefile
-	$(CC) $(CFLAGS) -std=c23 -m64 -march=x86-64 -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
+	$(CC) $(CFLAGS) -std=c23 -m64 -mcmodel=large -march=x86-64 -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -fno-asynchronous-unwind-tables -ffreestanding -fno-stack-check -fno-stack-protector -fno-unwind-tables -fno-zero-initialized-in-bss -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -fno-pic -c -o $@ $<
 kernelloader: kernelloader.S $(patsubst %.c,%.o,$(wildcard *.c)) interrupt.S mp-init.S remap_jump.S \
 Makefile kernelloader.ld \
 reloc/a.out
 	$(CC) -c -o a.out kernelloader.S \
-    && $(CC) -m64 -fno-pic -static -nostdlib -Wl,-q,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
+    && $(CC) -m64 -mcmodel=large -fno-pic -static -nostdlib -Wl,-q,-T,kernelloader.ld -o $@ a.out $(filter %.o,$^) $(filter-out kernelloader.S,$(filter %.S,$^)) \
     && rm a.out \
     && touch a.out \
     && reloc/a.out $@ a.out \

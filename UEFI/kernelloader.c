@@ -2031,6 +2031,7 @@ H_uefi_I_main( P image_handle
     if( status < 0 )
         goto End;
     remap_jump( E_main_S_loader_stack, pml4, loader_start - loader_start_old );
+    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
     system_table = E_main_S_system_table;
     _0_( &E_main_S_tss );
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))

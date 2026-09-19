@@ -115,8 +115,8 @@ extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2,
 struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct E_main_I_tss E_main_S_tss;
 N32 E_main_S_sata_ahci_addresses[8];
-N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N8 E_main_S_sata_ahci_n;
+N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N E_main_S_framebuffer_physical, E_main_S_framebuffer_virtual;
 struct E_main_Z_memory_map_entry *E_main_Z_memory_table_S;
 N E_main_Z_memory_table_S_end;
@@ -902,6 +902,7 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
     N physical_size = -E_mem_S_page_size;
     B end = no;
     const N table_n = E_mem_S_page_size / sizeof(N);
+    max_memory -= E_mem_S_page_size;
     for_n( pml4_i, table_n )
         if( !end )
         {   E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
@@ -920,7 +921,7 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i  << 30 ) | ( pd_i << 21 ) | ( pt_i * E_mem_S_page_size );
-                                    if( virtual_address == max_memory - E_mem_S_page_size )
+                                    if( virtual_address == max_memory )
                                         end = yes;
                                     if( !virtual_address )
                                         pt[ pt_i ] = 0;
@@ -945,7 +946,7 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
 void
 E_main_I_allocate_page_table_0( N max_memory
 ){  N max_memory_step = 16 * 1024 * 1024; // Maksimum 16 MiB pamięci. Tablice stron pamięci zajmują maksymalnie ok. 35 KiB.
-    N max_memory_ = J_min( max_memory_step, max_memory );
+    N max_memory_ = J_min( max_memory_step, max_memory ) - E_mem_S_page_size;
     N table_address = (N)E_simple_Z_p_I_align_down_to_v2( E_main_Z_memory_table_S, E_mem_S_page_size ); // Start poniżej tablicy pamięci, malejąco.
     struct E_main_Z_memory_map_entry *memory_map_ = E_main_Z_memory_table_S;
     volatile N *pml4 = (P)( table_address -= E_mem_S_page_size );
@@ -964,7 +965,7 @@ E_main_I_allocate_page_table_0( N max_memory
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * E_mem_S_page_size );
-                                    if( virtual_address == max_memory_ - E_mem_S_page_size )
+                                    if( virtual_address == max_memory_ )
                                         end = yes;
                                     if( !virtual_address )
                                         pt[ pt_i ] = 0;
@@ -1050,6 +1051,7 @@ E_main_I_allocate_page_table_1( N max_memory
     E_main_S_kernel_args.additional_pages = 0;
     N additional_pages_ = 1UL << 15; //CONF Maksymalna liczba (‘guard pages’ stosów) ‹zadań› w systemie.
     const N table_n = E_mem_S_page_size / sizeof(N);
+    max_memory -= E_mem_S_page_size;
     for_n( pml4_i, table_n )
         if( !end
         || additional_pages_
@@ -1074,7 +1076,7 @@ E_main_I_allocate_page_table_1( N max_memory
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * E_mem_S_page_size );
-                                    if( virtual_address == max_memory - E_mem_S_page_size )
+                                    if( virtual_address == max_memory )
                                         end = yes;
                                     if( !virtual_address )
                                         pt[ pt_i ] = 0;
@@ -1143,6 +1145,7 @@ E_main_I_allocate_page_table( N max_memory
     E_main_S_kernel_args.additional_pages = 0;
     N additional_pages_ = 1UL << 15; //CONF Maksymalna liczba (‘guard pages’ stosów) ‹zadań› w systemie.
     const N table_n = E_mem_S_page_size / sizeof(N);
+    max_memory -= E_mem_S_page_size;
     for_n( pml4_i, table_n )
         if( !end
         || additional_pages_
@@ -1167,7 +1170,7 @@ E_main_I_allocate_page_table( N max_memory
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * E_mem_S_page_size );
-                                    if( virtual_address == max_memory - E_mem_S_page_size )
+                                    if( virtual_address == max_memory )
                                         end = yes;
                                     if( !virtual_address )
                                         pt[ pt_i ] = 0;
@@ -1176,7 +1179,7 @@ E_main_I_allocate_page_table( N max_memory
                                         N physical_address = memory_map->physical_start + physical_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
                                         B sata_ahci = no;
-                                        for_n( i, E_main_S_sata_ahci_n )
+                                       for_n( i, E_main_S_sata_ahci_n )
                                             if( physical_address == E_main_S_sata_ahci_addresses[i]
                                             || physical_address == E_main_S_sata_ahci_addresses[i] + E_mem_S_page_size
                                             )
@@ -1466,9 +1469,18 @@ main( struct E_main_Z_memory_map_entry *memory_map
     E_main_Q_memory_map_I_set_virtual_0();
     E_main_Q_memory_map_I_sort_virtual();
     N memory_size_0 = E_main_Q_memory_map_R_size_0();
-    if( memory_size_0 < E_mem_S_page_size + E_main_S_boot_loader_orig_end - E_main_S_boot_loader_orig_start + 2 * 1024 * 1024 ) // NDFN
+    if( memory_size_0 < E_mem_S_page_size + E_main_S_boot_loader_orig_end - E_main_S_boot_loader_orig_start + 2 * 1024 * 1024 ) //NDFN
         goto End;
     E_main_I_allocate_page_table_0( memory_size_0 );
+    N reserved_size = E_main_Q_memory_map_R_reserved_size();
+    B reserved_from_end = no; //CONF
+    N memory_size = E_main_Q_memory_map_R_size();
+    if( reserved_from_end
+    && memory_size - reserved_size - E_mem_S_page_size > 0x100000000UL - E_mem_S_page_size
+    )
+        reserved_from_end = no;
+    N loader_start_0 = E_simple_Z_n_I_align_down_to_v2( memory_size_0 / 2, E_mem_S_page_size );
+    N loader_start_physical = (N)E_main_Z_p_I_to_physical( (P)loader_start_0 );
     memory_map = E_main_Z_memory_table_S;
     while( memory_map != (P)E_main_Z_memory_table_S_orig_end )
     {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader )
@@ -1487,15 +1499,6 @@ main( struct E_main_Z_memory_map_entry *memory_map
     , E_main_S_boot_loader_orig_second_start - E_main_S_boot_loader_orig_first_end
     , E_main_Z_memory_table_Z_memory_type_S_reserved
     };
-    N reserved_size = E_main_Q_memory_map_R_reserved_size();
-    B reserved_from_end = yes; //CONF
-    N memory_size = E_main_Q_memory_map_R_size();
-    if( reserved_from_end
-    && memory_size - reserved_size - E_mem_S_page_size > 0x100000000UL - E_mem_S_page_size
-    )
-        reserved_from_end = no;
-    N loader_start_0 = E_simple_Z_n_I_align_down_to_v2( memory_size_0 / 2, E_mem_S_page_size );
-    N loader_start_physical = (N)E_main_Z_p_I_to_physical( (P)loader_start_0 );
     E_main_Q_memory_map_I_sort_physical();
     E_main_Q_memory_map_I_join_physical();
     E_main_Q_memory_map_I_set_virtual( reserved_from_end );
@@ -1514,6 +1517,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     );
     E_main_Q_loader_I_relocate( loader_start_0, (N)E_main_S_kernel_args.boot_loader );
     remap_jump( E_main_S_pml4, (N)E_main_S_kernel_args.boot_loader - E_main_S_boot_loader_orig_start );
+    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
     E_main_Z_memory_table_S = (P)( (N)E_main_S_kernel_args.boot_loader + (N)E_main_Z_memory_table_S - E_main_S_boot_loader_orig_start );
     E_main_Z_memory_table_S_end = (N)E_main_S_kernel_args.boot_loader + E_main_Z_memory_table_S_orig_end - E_main_S_boot_loader_orig_start;
     if( reserved_from_end )
@@ -1596,9 +1600,6 @@ main( struct E_main_Z_memory_map_entry *memory_map
     ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, E_mem_S_page_size ) - stack_size
     : memory_size - stack_size
     );
-    r = E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
-    if( K_error(r) )
-        goto End;
     r = E_ouxfs_Q_kernel_I_read( E_main_S_kernel_args.kernel );
     if( K_error(r) )
     {   __asm__ volatile (
@@ -1676,6 +1677,9 @@ main( struct E_main_Z_memory_map_entry *memory_map
                 *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) = (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].addend;
                 break;
         }
+    r = E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
+    if( K_error(r) )
+        goto End;
     Mt_( E_main_S_kernel_args.processor_proc, E_main_S_kernel_args.processor_n - 1 );
     if( K_error( E_main_S_kernel_args.processor_proc )
     || !E_main_S_kernel_args.processor_proc
