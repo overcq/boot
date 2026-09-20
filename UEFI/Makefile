@@ -17,7 +17,7 @@ build: kernelloader
 .PHONY: all build clean install-qemu install-virtualbox install-vmware
 #===============================================================================
 kernelloader: simple.h kernelloader.h $(wildcard *.c) remap_jump.S mp-init.S Makefile
-	$(CC) $(CFLAGS) -std=c23 -march=x86-64 -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -ffreestanding -fno-asynchronous-unwind-tables -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fno-unwind-tables -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^) $(filter %.S,$^)
+	$(CC) $(CFLAGS) -std=c23 -mcmodel=large -march=x86-64 -mno-sse -mno-red-zone -mno-stack-arg-probe -fcf-protection=none -ffreestanding -fno-asynchronous-unwind-tables -fshort-wchar -fno-stack-check -fno-stack-protector -fno-strict-aliasing -funsigned-char -fno-unwind-tables -fwrapv -Wall -Wextra -Wno-address-of-packed-member -Wno-dangling-else -Wno-parentheses -Wno-sign-compare -Wno-switch -nostdlib --target=x86_64-unknown-windows -fuse-ld=lld -Wl,-entry:H_uefi_I_main,-subsystem:efi_application -o $@ $(filter %.c,$^) $(filter %.S,$^)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 clean:
 	-rm kernelloader

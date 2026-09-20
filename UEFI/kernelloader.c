@@ -119,7 +119,7 @@ struct H_uefi_Z_memory_type_descriptor *E_main_S_memory_map;
 N E_main_S_memory_map_n;
 N E_main_S_descriptor_l;
 N E_main_S_loader_stack;
-N64 gdt[7], ldt[2], idt[2];
+N64 E_main_S_gdt[7], E_main_S_ldt[2], E_main_S_idt[2];
 struct __attribute__ (( __packed__ )) E_main_I_tss
 { N32 reserved_0;
   N rsp[3];
@@ -1359,43 +1359,21 @@ E_main_Q_loader_I_relocate( N loader_start
     if( image_dos_header->magic != 0x5a4d )
         return ~0;
     struct E_base_Z_image_nt_headers64 *image_nt_headers64 = (P)(( Pc )loader_start + image_dos_header->lfanew );
-    if( image_nt_headers64->signature != 0x4550 )
+    if( image_nt_headers64->signature != 0x4550
+    || image_nt_headers64->optional_header.magic != 0x20b
+    )
         return ~0;
     struct E_base_Z_image_data_directory *reloc = &image_nt_headers64->optional_header.data_directory[5];
-    if( !reloc->virtual_address
-    || !reloc->size
-    )
-        return 0;
     struct E_base_Z_image_relocation *image_relocation = (P)( loader_start + reloc->virtual_address );
-    while( image_relocation->virtual_address
-    && image_relocation->size_of_block
-    )
+    if( reloc->size < sizeof( *image_relocation ))
+        return ~0;
+    N size = 0;
+    while( size + sizeof( *image_relocation ) <= reloc->size )
     {   for_n( i, ( image_relocation->size_of_block - sizeof( *image_relocation )) / sizeof( image_relocation->entries[0] ))
         {   N offset = image_relocation->entries[i] & 0xfff;
             switch( image_relocation->entries[i] >> 12 )
             { case 0:
                     break;
-              case 1:
-                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
-                    *fixup += ( delta & 0xffff0000 ) >> 16;
-                    break;
-                }
-              case 2:
-                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
-                    *fixup += delta & 0xffff;
-                    break;
-                }
-              case 3:
-                {   N32 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
-                    *fixup += delta & 0xffffffff;
-                    break;
-                }
-              case 4:
-                {   N16 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
-                    fixup[0] += ( delta & 0xffff0000 ) >> 16;
-                    fixup[1] = delta & 0xffff;
-                    break;
-                }
               case 10:
                 {   N64 *fixup = (P)( loader_start + image_relocation->virtual_address + offset );
                     *fixup += delta;
@@ -1405,6 +1383,7 @@ E_main_Q_loader_I_relocate( N loader_start
                     return ~0;
             }
         }
+        size += image_relocation->size_of_block;
         image_relocation = (P)(( Pc )image_relocation + image_relocation->size_of_block );
     }
     return 0;
@@ -2012,15 +1991,12 @@ H_uefi_I_main( P image_handle
     ? E_simple_Z_n_I_align_down_to_v2( (N)E_main_S_kernel_args.memory_map, H_oux_E_mem_S_page_size ) - stack_size
     : memory_size - stack_size
     );
-    E_mem_Q_blk_I_copy( (P)loader_start_new_physical, (P)loader_start, loader_end - loader_start );
-    N loader_start_old = loader_start;
-    E_main_I_convert_pointer( memory_map_n, ( P * )&loader_start );
-    loader_end += loader_start - loader_start_old;
-    status = E_main_Q_loader_I_relocate( loader_start_new_physical, loader_start - loader_start_old );
-    if( status < 0 )
-        goto End;
     E_main_Z_remap_jump remap_jump = (P)(N)E_main_S_kernel_args.processor_start_page;
     E_mem_Q_blk_I_copy( remap_jump, &E_remap_jump_I, ( Pc )&E_remap_jump_I_end - ( Pc )&E_remap_jump_I );
+    N loader_start_old = loader_start;
+    loader_start = loader_start_new_physical;
+    E_main_I_convert_pointer( memory_map_n, ( P * )&loader_start );
+    loader_end += loader_start - loader_start_old;
     E_main_S_memory_map_n = memory_map_n;
     E_main_S_system_table = system_table;
     __asm__ volatile (
@@ -2030,34 +2006,37 @@ H_uefi_I_main( P image_handle
     status = system_table->runtime_services->P_virtual_address_map( memory_map_l, E_main_S_descriptor_l, descriptor_version, E_main_S_memory_map );
     if( status < 0 )
         goto End;
+    E_mem_Q_blk_I_copy( (P)loader_start_new_physical, (P)loader_start_old, loader_end - loader_start );
+    status = E_main_Q_loader_I_relocate( loader_start_new_physical, loader_start - loader_start_old );
+    if( status < 0 )
+        goto End;
     remap_jump( E_main_S_loader_stack, pml4, loader_start - loader_start_old );
-    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
+    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
     system_table = E_main_S_system_table;
     _0_( &E_main_S_tss );
+    E_main_S_tss.io_map_base_address = ~0;
 #define E_main_J_code_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_code | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_Z_code_S_64bit | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_data_descriptor( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_data_S_write | E_cpu_Z_gdt_S_code_data | E_cpu_Z_gdt_S_present | E_cpu_Z_gdt_S_granularity | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_local_descriptor_low( base, limit ) (( (N)(limit) & (( 1 << 16 ) - 1 )) | (( (N)(base) & (( 1 << 24 ) - 1 )) << 16 ) | E_cpu_Z_gdt_Z_type_S_ldt | E_cpu_Z_gdt_S_present | ((( (N)(limit) >> 16 ) & (( 1 << 4 ) - 1 )) << ( 32 + 16 )) | (( (N)(base) >> 24 ) << ( 32 + 24 )))
 #define E_main_J_task_descriptor_low( segment_selector, offset ) (( (N)(offset) & (( 1 << 16 ) - 1 )) | ( (N)( segment_selector ) << 16 ) | E_cpu_Z_gdt_Z_type_S_tss | E_cpu_Z_gdt_S_present | ((( (N)(offset) >> 16 ) & (( 1 << 16 ) - 1 )) << ( 32 + 16 )))
-    gdt[1] = E_main_J_code_descriptor( 0, ~0ULL );
-    gdt[2] = E_main_J_data_descriptor( 0, ~0ULL );
-    gdt[3] = E_main_J_local_descriptor_low( (N)&ldt[0], sizeof(ldt) - 1 );
-    gdt[4] = (N)&ldt[0] >> 32;
-    gdt[5] = E_main_J_task_descriptor_low( 2 << 8, (N)&E_main_S_tss );
-    gdt[6] = (N)&E_main_S_tss >> 32;
-    ldt[0] = 0;
-    ldt[1] = 0;
-    idt[0] = 0;
-    idt[1] = 0;
+    E_main_S_gdt[1] = E_main_J_code_descriptor( 0, ~0ULL );
+    E_main_S_gdt[2] = E_main_J_data_descriptor( 0, ~0ULL );
+    E_main_S_gdt[3] = E_main_J_local_descriptor_low( (N)&E_main_S_ldt[0], sizeof(E_main_S_ldt) - 1 );
+    E_main_S_gdt[4] = (N)&E_main_S_ldt[0] >> 32;
+    E_main_S_gdt[5] = E_main_J_task_descriptor_low( 2 << 8, (N)&E_main_S_tss );
+    E_main_S_gdt[6] = (N)&E_main_S_tss >> 32;
+    E_main_S_ldt[0] = 0;
+    E_main_S_ldt[1] = 0;
+    E_main_S_idt[0] = 0;
+    E_main_S_idt[1] = 0;
     struct __attribute__ ((packed))
-    { N32 pad_1;
-      N16 pad_2;
-      N16 limit;
+    { N16 limit;
       N base;
     }gd, id;
-    gd.base = (N)&gdt[0];
-    gd.limit = sizeof(gdt) - 1;
-    id.base = (N)&idt[0];
-    id.limit = sizeof(idt) - 1;
+    gd.base = (N)&E_main_S_gdt[0];
+    gd.limit = sizeof( E_main_S_gdt ) - 1;
+    id.base = (N)&E_main_S_idt[0];
+    id.limit = sizeof( E_main_S_idt ) - 1;
     __asm__ volatile (
     "\n" "lgdt  %0"
     "\n" "mov   $3 << 3,%%ax"
@@ -2077,7 +2056,7 @@ H_uefi_I_main( P image_handle
     "\n0: mov   $5 << 3,%%ax"
     "\n" "ltr   %%ax"
     :
-    : "p" ( &gd.limit ), "p" ( &id.limit )
+    : "m" (gd), "m" (id)
     : "rax", "memory"
     );
     // Przeniesienie stosu.
@@ -2091,9 +2070,9 @@ H_uefi_I_main( P image_handle
         , H_oux_E_mem_S_page_size - ( E_main_S_loader_stack & 0xfff )
         );
         __asm__ volatile (
-        "\n" "lea   %0,%%rsp"
+        "\n" "mov   %0,%%rsp"
         :
-        : "p" (( (N)E_main_S_kernel_args.kernel_stack + stack_size - H_oux_E_mem_S_page_size ) | ( E_main_S_loader_stack & 0xfff ))
+        : "g" (( (N)E_main_S_kernel_args.kernel_stack + stack_size - H_oux_E_mem_S_page_size ) | ( E_main_S_loader_stack & 0xfff ))
         : "memory"
         );
     }
