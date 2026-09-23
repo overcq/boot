@@ -13,6 +13,9 @@ N E_main_I_complete_page_table_pre(void);
 //==============================================================================
 extern struct E_main_Z_kernel_args E_main_S_kernel_args;
 extern struct E_main_Z_memory_map_entry *E_main_Z_memory_table_S;
+extern N64 E_main_S_vtd_address;
+extern N64 E_main_S_vtd_dma_address[2], E_main_S_vtd_dma_size[2];
+extern N E_main_S_vtd_dma_n;
 //==============================================================================
 B E_acpi_S_pic_mode;
 P E_acpi_S_apic_content;
@@ -33,6 +36,8 @@ __attribute__ (( __warn_unused_result__ ))
 N
 E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
 ){  E_main_S_kernel_args.pcie_base_address = 0;
+    E_main_S_vtd_address = 0;
+    E_main_S_vtd_dma_n = 0;
     if( rsdp->revision < 2 )
     {   struct H_acpi_Z_rsdt *rsdt = E_main_Z_p_I_to_virtual_pre( (P)(N)rsdp->RSDT_address );
         *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
@@ -146,10 +151,41 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                     table += (N8)table[1];
                 }
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( header->signature )))
-            {   // Na razie zawartość jest ignorowana.
-                struct H_acpi_Z_dmar *dmar = (P)header;
-                E_main_S_kernel_args.acpi.dmar_content = ( Pc )(N)rsdt->table_address[ table_i ] + sizeof( *dmar );
-                E_main_S_kernel_args.acpi.dmar_content_l = dmar->header.length - sizeof( *dmar );
+            {   struct H_acpi_Z_dmar *dmar = (P)header;
+                struct H_acpi_Z_dmar_entry_header *dmar_entry_header = (P)(( Pc )dmar + sizeof( *dmar ));
+                while(( Pc )dmar_entry_header + sizeof( *dmar_entry_header ) <= ( Pc )dmar + dmar->header.length )
+                {   switch( dmar_entry_header->type )
+                    { case 0: // DRHD
+                        {   struct dmar_drhd
+                            { N16 type;
+                              N16 length;
+                              N8  flags;
+                              N8  reserved;
+                              N16 segment;
+                              N64 base;
+                            } *drhd = (P)dmar_entry_header;
+                            E_main_S_vtd_address = drhd->base;
+                            break;
+                        }
+                      case 1: // RMRR
+                        {   if( E_main_S_vtd_dma_n == J_a_R_n( E_main_S_vtd_dma_address ))
+                                return ~0;
+                            struct dmar_rmrr
+                            { N16 type;
+                              N16 length;
+                              N16 segment;
+                              N16 reserved;
+                              N64 base;
+                              N64 limit;
+                            } *rmrr = (P)dmar_entry_header;
+                            E_main_S_vtd_dma_address[ E_main_S_vtd_dma_n ] = rmrr->base;
+                            E_main_S_vtd_dma_size[ E_main_S_vtd_dma_n ] = rmrr->limit - rmrr->base + 1;
+                            E_main_S_vtd_dma_n++;
+                            break;
+                        }
+                    }
+                    dmar_entry_header = (P)(( Pc )dmar_entry_header + dmar_entry_header->length );
+                }
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( header->signature )))
             {   E_main_Z_memory_table_S++;
                 N dsdt_physical, facs_physical;
@@ -221,15 +257,13 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 {
                 }
                 E_main_Z_memory_table_S++;
-                if( E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature ))
-                && header->length > sizeof( *header )
-                )
+                if( E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature )))
                 {   E_main_S_kernel_args.acpi.dsdt_content = ( Pc )dsdt_physical + sizeof( *header );
                     E_main_S_kernel_args.acpi.dsdt_content_l = header->length - sizeof( *header );
                     if( dsdt_physical % E_mem_S_page_size + header->length > E_mem_S_page_size + first_block_add )
                         *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                         { E_simple_Z_n_I_align_down_to_v2( dsdt_physical, E_mem_S_page_size ) + E_mem_S_page_size + first_block_add
-                        , E_simple_Z_n_I_align_up_to_v2( header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
+                        , E_simple_Z_n_I_align_up_to_v2( dsdt_physical % E_mem_S_page_size + header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
                         , E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                         };
                 }else
@@ -248,8 +282,9 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( header->signature )))
             {   E_main_Z_memory_table_S++;
-                struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )header + sizeof( *header ));
-                N n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                struct H_acpi_Z_mcfg *mcfg = (P)header;
+                struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )mcfg + sizeof( *mcfg ));
+                N n = ( header->length - sizeof( *mcfg )) / sizeof( *mcfg_entry );
                 if( n != 1 )
                     return ~0;
                 E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
@@ -262,7 +297,7 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 if( rsdt->table_address[ table_i ] % E_mem_S_page_size + header->length > E_mem_S_page_size + first_block_add )
                     *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                     { E_simple_Z_n_I_align_down_to_v2( rsdt->table_address[ table_i ], E_mem_S_page_size ) + E_mem_S_page_size + first_block_add
-                    , E_simple_Z_n_I_align_up_to_v2( header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
+                    , E_simple_Z_n_I_align_up_to_v2( rsdt->table_address[ table_i ] % E_mem_S_page_size + header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
                     , E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                     };
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WAET", sizeof( header->signature )))
@@ -395,10 +430,41 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                     table += (N8)table[1];
                 }
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( header->signature )))
-            {   // Na razie zawartość jest ignorowana.
-                struct H_acpi_Z_dmar *dmar = (P)header;
-                E_main_S_kernel_args.acpi.dmar_content = ( Pc )xsdt->table_address[ table_i ] + sizeof( *dmar );
-                E_main_S_kernel_args.acpi.dmar_content_l = dmar->header.length - sizeof( *dmar );
+            {   struct H_acpi_Z_dmar *dmar = (P)header;
+                struct H_acpi_Z_dmar_entry_header *dmar_entry_header = (P)(( Pc )dmar + sizeof( *dmar ));
+                while(( Pc )dmar_entry_header + sizeof( *dmar_entry_header ) <= ( Pc )dmar + dmar->header.length )
+                {   switch( dmar_entry_header->type )
+                    { case 0: // DRHD
+                        {   struct dmar_drhd
+                            { N16 type;
+                              N16 length;
+                              N8  flags;
+                              N8  reserved;
+                              N16 segment;
+                              N64 base;
+                            } *drhd = (P)dmar_entry_header;
+                            E_main_S_vtd_address = drhd->base;
+                            break;
+                        }
+                      case 1: // RMRR
+                        {   if( E_main_S_vtd_dma_n == J_a_R_n( E_main_S_vtd_dma_address ))
+                                return ~0;
+                            struct dmar_rmrr
+                            { N16 type;
+                              N16 length;
+                              N16 segment;
+                              N16 reserved;
+                              N64 base;
+                              N64 limit;
+                            } *rmrr = (P)dmar_entry_header;
+                            E_main_S_vtd_dma_address[ E_main_S_vtd_dma_n ] = rmrr->base;
+                            E_main_S_vtd_dma_size[ E_main_S_vtd_dma_n ] = rmrr->limit - rmrr->base + 1;
+                            E_main_S_vtd_dma_n++;
+                            break;
+                        }
+                    }
+                    dmar_entry_header = (P)(( Pc )dmar_entry_header + dmar_entry_header->length );
+                }
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( header->signature )))
             {   E_main_Z_memory_table_S++;
                 N dsdt_physical, facs_physical;
@@ -484,15 +550,13 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 {
                 }
                 E_main_Z_memory_table_S++;
-                if( E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature ))
-                && header->length > sizeof( *header )
-                )
+                if( E_mem_Q_blk_T_eq( &header->signature[0], "DSDT", sizeof( header->signature )))
                 {   E_main_S_kernel_args.acpi.dsdt_content = ( Pc )dsdt_physical + sizeof( *header );
                     E_main_S_kernel_args.acpi.dsdt_content_l = header->length - sizeof( *header );
                     if( dsdt_physical % E_mem_S_page_size + header->length > E_mem_S_page_size + first_block_add )
                         *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                         { E_simple_Z_n_I_align_down_to_v2( dsdt_physical, E_mem_S_page_size ) + E_mem_S_page_size + first_block_add
-                        , E_simple_Z_n_I_align_up_to_v2( header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
+                        , E_simple_Z_n_I_align_up_to_v2( dsdt_physical % E_mem_S_page_size + header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
                         , E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                         };
                 }else
@@ -511,8 +575,9 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( header->signature )))
             {   E_main_Z_memory_table_S++;
-                struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )header + sizeof( *header ));
-                N n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                struct H_acpi_Z_mcfg *mcfg = (P)header;
+                struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )mcfg + sizeof( *mcfg ));
+                N n = ( header->length - sizeof( *mcfg )) / sizeof( *mcfg_entry );
                 if( n != 1 )
                     return ~0;
                 E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
@@ -525,7 +590,7 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 if( xsdt->table_address[ table_i ] % E_mem_S_page_size + header->length > E_mem_S_page_size + first_block_add )
                     *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                     { E_simple_Z_n_I_align_down_to_v2( xsdt->table_address[ table_i ], E_mem_S_page_size ) + E_mem_S_page_size + first_block_add
-                    , E_simple_Z_n_I_align_up_to_v2( header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
+                    , E_simple_Z_n_I_align_up_to_v2( xsdt->table_address[ table_i ] % E_mem_S_page_size + header->length, E_mem_S_page_size ) - ( E_mem_S_page_size + first_block_add )
                     , E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim
                     };
             }else if( E_mem_Q_blk_T_eq( &header->signature[0], "WAET", sizeof( header->signature )))

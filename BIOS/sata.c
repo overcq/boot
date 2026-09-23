@@ -200,7 +200,7 @@ extern struct E_disc_Z E_disc_S;
 void
 E_sata_I_interrupt( void
 ){  if( E_disc_S.type == E_disc_Z_type_S_satapi_ahci )
-    {   if( !( E_disc_S.sata_ahci.memory->interrupt_status & ( 1 << E_disc_S.satapi_ahci.port )))
+    {   if( !( E_disc_S.satapi_ahci.memory->interrupt_status & ( 1 << E_disc_S.satapi_ahci.port )))
             return;
         E_disc_S.satapi_ahci.memory->port[ E_disc_S.satapi_ahci.port ].interrupt_status = E_sata_S_interrupt_status_clear_mask;
         E_disc_S.satapi_ahci.memory->interrupt_status = 1 << E_disc_S.satapi_ahci.port;
@@ -255,11 +255,11 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
           && ( sata_memory->port[port].command_status & ( 1 << 19 )) // mechanical presence switch attached to port
           && ( sata_memory->port[port].command_status & ( 1 << 13 )) // mechanical presence switch state
         ))
-            goto Next_port;
+            goto Next_port_0;
         if( sata_memory->host_cap & ( 1 << 27 )) // staggered spin‐up
         {   sata_memory->port[port].command_status |= ( 1 << 1 ); // spin‐up device
             if( sata_memory->port[port].sata_error & ~( 1 << 16 ))
-                goto Next_port;
+                goto Next_port_0;
         }
         while(( sata_memory->port[port].sata_status & 0xf ) != 3 )
             __asm__ volatile (
@@ -290,10 +290,10 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
         sata_memory->port[port].recv_fis_base = (N)E_main_Z_p_I_to_physical( recv_fis );
         sata_memory->port[port].command_status |= 1 << 4; // fis receive enable
         if( sata_memory->port[port].sata_error )
-            goto Next_port;
-        E_disc_S.type = E_disc_Z_type_S_unknown;
+            goto Next_port_0;
         E_disc_S.sata_ahci.memory = sata_memory;
         E_disc_S.sata_ahci.port = port;
+        E_disc_S.type = E_disc_Z_type_S_unknown;
         sata_memory->port[port].interrupt_enable = 0x7dc0007f;
         sata_memory->global_host_control |= 1 << 1; // interrupt enable
         while( sata_memory->port[port].task_file_data & (( 1 << 7 ) | ( 1 << 3 )))
@@ -302,7 +302,7 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
             );
         sata_memory->port[port].command_status |= 1; // start
         if( sata_memory->port[port].sata_error )
-            goto Next_port;
+            goto Next_port_1;
         // IDENTIFY DEVICE
         command_table_0->command_fis.command = E_sata_Z_ata_command_S_identify_device;
         N16 *identify = E_mem_Q_blk_Z_single_memory_M_align( 256 * sizeof( N16 ), sizeof( N16 ));
@@ -323,7 +323,7 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
         { case 0x101:
                 E_disc_S.type = E_disc_Z_type_S_sata_ahci;
                 if( !( identify[83] & ( 1 << 10 ))) // 48‐bit addressable
-                    goto End;
+                    goto Next_port_2;
                 E_disc_S.sata_ahci.logical_sector_n = *( N64 * )&identify[100];
                 if( E_disc_S.sata_ahci.logical_sector_n == 0xffffffffffffUL )
                 {   //TODO Odczytać ze SMART.
@@ -334,14 +334,14 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
                     if( E_disc_S.sata_ahci.logical_sector_size < 512
                     || !E_simple_Z_n_T_power_2( E_disc_S.sata_ahci.logical_sector_size )
                     )
-                        goto End;
+                        goto Next_port_2;
                 }else
                     E_disc_S.sata_ahci.logical_sector_size = 512;
                 if( identify[106] & ( 1 << 13 )) // Wiele logicznych sektorów w fizycznym sektorze.
                 {   E_disc_S.sata_ahci.physical_sector_size = ( 1 << ( identify[106] & 0xf )) * E_disc_S.sata_ahci.logical_sector_size;
                     E_disc_S.sata_ahci.logical_sector_shift = identify[209] & 0x3fff;
                     if( E_disc_S.sata_ahci.logical_sector_shift >= E_disc_S.sata_ahci.physical_sector_size / E_disc_S.sata_ahci.logical_sector_size )
-                        goto End;
+                        goto Next_port_2;
                 }else
                 {   E_disc_S.sata_ahci.physical_sector_size = E_disc_S.sata_ahci.logical_sector_size;
                     E_disc_S.sata_ahci.logical_sector_shift = 0;
@@ -350,6 +350,8 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
                 E_disc_S.sata_ahci.max_sectors = ( 1 << 22 ) / E_disc_S.sata_ahci.logical_sector_size;
                 break;
          case 0xeb140101:
+                E_disc_S.satapi_ahci.memory = sata_memory;
+                E_disc_S.satapi_ahci.port = port;
                 E_disc_S.type = E_disc_Z_type_S_satapi_ahci;
                 sata_memory->port[port].command_status |= 1 << 24; // ATAPI
                 // IDENTIFY PACKET DEVICE
@@ -368,20 +370,24 @@ E_sata_I_init( volatile struct E_sata_Z_memory *sata_memory
                 while( sata_memory->port[port].command_issue & 1 );
                 break;
          case 0xc33c0101:
-                goto Next_port;
+                goto Next_port_2;
          case 0x96690101:
-                goto Next_port;
+                goto Next_port_2;
          default:
-                goto Next_port;
+                goto Next_port_2;
         }
         K( E_disc_I_init() )
         {   K_( ~1, W(identify) );
             return ~0;
         }
-End:    K_( ~1, W(identify) );
-Next_port:
+Next_port_2:
+        K_( ~1, W(identify) );
+Next_port_1:
+        sata_memory->global_host_control &= ~( 1 << 1 ); // interrupt disable
+Next_port_0:
         port_implemented >>= 1;
     }
+    sata_memory->global_host_control |= 1 << 1; // interrupt enable
     return 0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -434,9 +440,9 @@ E_sata_Q_sata_ahci_I_read(
         command_table->command_fis.count = command_slot_i << 3;
         command_table->region[0].data_base_address = (N)E_main_Z_p_I_to_physical(buffer);
         command_table->region[0].data_count = count * E_disc_S.sata_ahci.logical_sector_size - 1;
+        *slot_mask &= E_disc_S.sata_ahci.memory->port[ E_disc_S.sata_ahci.port ].sata_active;
         E_disc_S.sata_ahci.memory->port[ E_disc_S.sata_ahci.port ].sata_active = 1 << command_slot_i;
         E_disc_S.sata_ahci.memory->port[ E_disc_S.sata_ahci.port ].command_issue = 1 << command_slot_i;
-        *slot_mask &= E_disc_S.sata_ahci.memory->port[ E_disc_S.sata_ahci.port ].sata_active;
         *slot_mask |= 1 << command_slot_i;
         if( logical_sector_count <= E_disc_S.sata_ahci.max_sectors )
             break;

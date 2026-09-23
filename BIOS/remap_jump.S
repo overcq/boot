@@ -15,6 +15,7 @@ E_remap_jump_I:
     mov     %rdi,%cr3
     lea     (%rax,%rsi),%rax
     lea     (%rsp,%rsi),%rsp
+    lea     (%rbp,%rsi),%rbp
     jmp     *%rax
 E_remap_jump_I_end:
 #*******************************************************************************

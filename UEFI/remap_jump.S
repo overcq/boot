@@ -13,7 +13,9 @@
 E_remap_jump_I:
     pop     %rax
     mov     %rdx,%cr3
+    sub     %rsp,%rbp
     lea     (%rax,%r8),%rax
+    lea     (%rbp,%rcx),%rbp
     mov     %rcx,%rsp
     jmp     *%rax
 E_remap_jump_I_end:

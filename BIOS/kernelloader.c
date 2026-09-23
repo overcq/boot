@@ -8,47 +8,47 @@
 *******************************************************************************/
 #include "kernelloader.h"
 //==============================================================================
-#define E_cpu_Z_cr0_S_mp                ( 1UL << 1 )
-#define E_cpu_Z_cr0_S_em                ( 1UL << 2 )
-#define E_cpu_Z_cr0_S_ts                ( 1UL << 3 )
-#define E_cpu_Z_cr0_S_ne                ( 1UL << 5 )
-#define E_cpu_Z_cr0_S_wp                ( 1UL << 16 )
-#define E_cpu_Z_cr0_S_nw                ( 1UL << 29 )
-#define E_cpu_Z_cr0_S_cd                ( 1UL << 30 )
-#define E_cpu_Z_cr3_S_pwt               ( 1UL << 3 )
-#define E_cpu_Z_cr3_S_pcd               ( 1UL << 4 )
-#define E_cpu_Z_cr4_S_vme               ( 1UL << 0 )
-#define E_cpu_Z_cr4_S_pvi               ( 1UL << 1 )
-#define E_cpu_Z_cr4_S_tsd               ( 1UL << 2 )
-#define E_cpu_Z_cr4_S_de                ( 1UL << 3 )
-#define E_cpu_Z_cr4_S_mce               ( 1UL << 6 )
-#define E_cpu_Z_cr4_S_pge               ( 1UL << 7 )
-#define E_cpu_Z_cr4_S_pce               ( 1UL << 8 )
-#define E_cpu_Z_cr4_S_osfxsr            ( 1UL << 9 )
-#define E_cpu_Z_cr4_S_osxmmexcpt        ( 1UL << 10 )
-#define E_cpu_Z_cr4_S_umip              ( 1UL << 11 )
-#define E_cpu_Z_cr4_S_fsgsbase          ( 1UL << 16 )
-#define E_cpu_Z_cr4_S_pcide             ( 1UL << 17 )
-#define E_cpu_Z_cr4_S_osxsave           ( 1UL << 18 )
-#define E_cpu_Z_cr4_S_smep              ( 1UL << 20 )
-#define E_cpu_Z_cr4_S_smap              ( 1UL << 21 )
-#define E_cpu_Z_cr4_S_pke               ( 1UL << 22 )
-#define E_cpu_Z_cr4_S_pks               ( 1UL << 24 )
-#define E_cpu_Z_cr4_S_uintr             ( 1UL << 25 )
-#define E_cpu_Z_cr4_S_lam_sup           ( 1UL << 28 )
-#define E_cpu_Z_page_entry_S_present    ( 1UL << 0 )
-#define E_cpu_Z_page_entry_S_write      ( 1UL << 1 )
-#define E_cpu_Z_page_entry_S_pwt        ( 1UL << 3 )
-#define E_cpu_Z_page_entry_S_pcd        ( 1UL << 4 )
-#define E_cpu_Z_page_entry_S_pat        ( 1UL << 7 )
-#define E_cpu_Z_gdt_Z_data_S_write      ( 1UL << 9 )
-#define E_cpu_Z_gdt_Z_type_S_code       ( 1UL << 11 )
-#define E_cpu_Z_gdt_S_code_data         ( 1UL << 12 )
-#define E_cpu_Z_gdt_S_present           ( 1UL << 15 )
-#define E_cpu_Z_gdt_Z_code_S_64bit      ( 1UL << 21 )
-#define E_cpu_Z_gdt_S_granularity       ( 1UL << 23 )
-#define E_cpu_Z_gdt_Z_type_S_ldt        ( 1UL << 9 )
-#define E_cpu_Z_gdt_Z_type_S_tss        ( 9UL << 8 )
+#define E_cpu_Z_cr0_S_mp                ( 1 << 1 )
+#define E_cpu_Z_cr0_S_em                ( 1 << 2 )
+#define E_cpu_Z_cr0_S_ts                ( 1 << 3 )
+#define E_cpu_Z_cr0_S_ne                ( 1 << 5 )
+#define E_cpu_Z_cr0_S_wp                ( 1 << 16 )
+#define E_cpu_Z_cr0_S_nw                ( 1 << 29 )
+#define E_cpu_Z_cr0_S_cd                ( 1 << 30 )
+#define E_cpu_Z_cr3_S_pwt               ( 1 << 3 )
+#define E_cpu_Z_cr3_S_pcd               ( 1 << 4 )
+#define E_cpu_Z_cr4_S_vme               ( 1 << 0 )
+#define E_cpu_Z_cr4_S_pvi               ( 1 << 1 )
+#define E_cpu_Z_cr4_S_tsd               ( 1 << 2 )
+#define E_cpu_Z_cr4_S_de                ( 1 << 3 )
+#define E_cpu_Z_cr4_S_mce               ( 1 << 6 )
+#define E_cpu_Z_cr4_S_pge               ( 1 << 7 )
+#define E_cpu_Z_cr4_S_pce               ( 1 << 8 )
+#define E_cpu_Z_cr4_S_osfxsr            ( 1 << 9 )
+#define E_cpu_Z_cr4_S_osxmmexcpt        ( 1 << 10 )
+#define E_cpu_Z_cr4_S_umip              ( 1 << 11 )
+#define E_cpu_Z_cr4_S_fsgsbase          ( 1 << 16 )
+#define E_cpu_Z_cr4_S_pcide             ( 1 << 17 )
+#define E_cpu_Z_cr4_S_osxsave           ( 1 << 18 )
+#define E_cpu_Z_cr4_S_smep              ( 1 << 20 )
+#define E_cpu_Z_cr4_S_smap              ( 1 << 21 )
+#define E_cpu_Z_cr4_S_pke               ( 1 << 22 )
+#define E_cpu_Z_cr4_S_pks               ( 1 << 24 )
+#define E_cpu_Z_cr4_S_uintr             ( 1 << 25 )
+#define E_cpu_Z_cr4_S_lam_sup           ( 1 << 28 )
+#define E_cpu_Z_page_entry_S_present    ( 1 << 0 )
+#define E_cpu_Z_page_entry_S_write      ( 1 << 1 )
+#define E_cpu_Z_page_entry_S_pwt        ( 1 << 3 )
+#define E_cpu_Z_page_entry_S_pcd        ( 1 << 4 )
+#define E_cpu_Z_page_entry_S_pat        ( 1 << 7 )
+#define E_cpu_Z_gdt_Z_data_S_write      ( 1 << 9 )
+#define E_cpu_Z_gdt_Z_type_S_code       ( 1 << 11 )
+#define E_cpu_Z_gdt_S_code_data         ( 1 << 12 )
+#define E_cpu_Z_gdt_S_present           ( 1 << 15 )
+#define E_cpu_Z_gdt_Z_code_S_64bit      ( 1 << 21 )
+#define E_cpu_Z_gdt_S_granularity       ( 1 << 23 )
+#define E_cpu_Z_gdt_Z_type_S_ldt        ( 1 << 9 )
+#define E_cpu_Z_gdt_Z_type_S_tss        ( 9 << 8 )
 //==============================================================================
 #define J_descriptor_low(base,limit,flags) \
   ( (limit) & ~( ~0 << 16 )) \
@@ -116,6 +116,9 @@ struct E_main_Z_kernel_args E_main_S_kernel_args;
 struct E_main_I_tss E_main_S_tss;
 N32 E_main_S_sata_ahci_addresses[8];
 N8 E_main_S_sata_ahci_n;
+N64 E_main_S_vtd_address;
+N64 E_main_S_vtd_dma_address[2], E_main_S_vtd_dma_size[2];
+N E_main_S_vtd_dma_n;
 N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N E_main_S_framebuffer_physical, E_main_S_framebuffer_virtual;
 struct E_main_Z_memory_map_entry *E_main_Z_memory_table_S;
@@ -730,28 +733,29 @@ E_main_Q_memory_map_I_set_virtual( B reserved_from_end
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void
-E_main_I_allocate_page_table_I_next_page( B reserved_from_end
-, struct E_main_Z_memory_map_entry **entry
+E_main_I_allocate_page_table_I_next_page_reserved_from_end( struct E_main_Z_memory_map_entry **entry
 , N *size
-){  if( reserved_from_end )
-    {   if( !*size )
-        {   ( *entry )--;
-            while(( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
-            || ( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-            )
-                ( *entry )--;
-            *size = ( *entry )->size;
-        }
-        *size -= E_mem_S_page_size;
-    }else
-        if(( *size += E_mem_S_page_size ) == ( *entry )->size )
-        {   ( *entry )++;
-            while(( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
-            || ( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-            )
-                ( *entry )++;
-            *size = 0;
-        }
+){  if( !*size )
+    {   ( *entry )--;
+        while(( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
+        || ( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+        )
+            ( *entry )--;
+        *size = ( *entry )->size;
+    }
+    *size -= E_mem_S_page_size;
+}
+void
+E_main_I_allocate_page_table_I_next_page( struct E_main_Z_memory_map_entry **entry
+, N *size
+){  if(( *size += E_mem_S_page_size ) == ( *entry )->size )
+    {   ( *entry )++;
+        while(( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
+        || ( *entry )->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+        )
+            ( *entry )++;
+        *size = 0;
+    }
 }
 void
 E_main_I_allocate_page_table_I_next_physical_address( struct E_main_Z_memory_map_entry **entry
@@ -896,7 +900,7 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
 , struct E_main_Z_memory_map_entry **memory_map_entry_available
 , N *size
 ){  struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
-    E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
+    E_main_I_allocate_page_table_I_next_page( memory_map_entry_available, size );
     N pml4_physical = ( *memory_map_entry_available )->physical_start + *size;
     volatile N *pml4 = (P)(( *memory_map_entry_available )->virtual_start + *size );
     N physical_size = -E_mem_S_page_size;
@@ -905,17 +909,17 @@ E_main_I_allocate_page_table_0_I_allocate( N max_memory
     max_memory -= E_mem_S_page_size;
     for_n( pml4_i, table_n )
         if( !end )
-        {   E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
+        {   E_main_I_allocate_page_table_I_next_page( memory_map_entry_available, size );
             N pdpt_physical = ( *memory_map_entry_available )->physical_start + *size;
             volatile N *pdpt = (P)(( * memory_map_entry_available )->virtual_start + *size );
             for_n( pdpt_i, table_n )
                 if( !end )
-                {   E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
+                {   E_main_I_allocate_page_table_I_next_page( memory_map_entry_available, size );
                     N pd_physical = ( *memory_map_entry_available )->physical_start + *size;
                     volatile N *pd = (P)(( *memory_map_entry_available )->virtual_start + *size );
                     for_n( pd_i, table_n )
                         if( !end )
-                        {   E_main_I_allocate_page_table_I_next_page( no, memory_map_entry_available, size );
+                        {   E_main_I_allocate_page_table_I_next_page( memory_map_entry_available, size );
                             N pt_physical = ( *memory_map_entry_available )->physical_start + *size;
                             volatile N *pt = (P)(( *memory_map_entry_available )->virtual_start + *size );
                             for_n( pt_i, table_n )
@@ -990,7 +994,7 @@ E_main_I_allocate_page_table_0( N max_memory
     //DFN Jest co najmniej jeden blok pamięci typu “E_main_Z_memory_table_Z_memory_type_S_available”.
     while( memory_map_entry_available->type != E_main_Z_memory_table_Z_memory_type_S_available )
         memory_map_entry_available++;
-    N size = -E_mem_S_page_size;
+    N size = 0; // Pozostawia jedną stronę pamięci na ewentualne PML4 w “E_main_I_allocate_page_table_1”.
     if( max_memory <= max_memory_step )
         goto End;
     max_memory_step = 2UL * 1024 * 1024 * 1024; // Maksimum 2 GiB pamięci. Tablice stron pamięci zajmują maksymalnie ok. 4 MiB.
@@ -1040,12 +1044,15 @@ E_main_I_allocate_page_table_1( N max_memory
 , N memory_size_0
 ){  struct E_main_Z_memory_map_entry *memory_map = E_main_Z_memory_table_S;
     //DFN Jest co najmniej jeden blok pamięci typu “E_main_Z_memory_table_Z_memory_type_S_available”.
-    struct E_main_Z_memory_map_entry *memory_map_entry_available = ( struct E_main_Z_memory_map_entry * )E_main_Z_memory_table_S_orig_end - 1;
+    struct E_main_Z_memory_map_entry *memory_map_entry_available = E_main_Z_memory_table_S;
+    while( memory_map_entry_available->type != E_main_Z_memory_table_Z_memory_type_S_available )
+        memory_map_entry_available++;
+    N pml4_physical = memory_map_entry_available->physical_start;
+    volatile N *pml4 = (P)E_mem_S_page_size;
+    memory_map_entry_available = ( struct E_main_Z_memory_map_entry * )E_main_Z_memory_table_S_orig_end - 1;
     while( memory_map_entry_available->type != E_main_Z_memory_table_Z_memory_type_S_available )
         memory_map_entry_available--;
-    N size = memory_map_entry_available->size - E_mem_S_page_size;
-    N pml4_physical = memory_map_entry_available->physical_start + size;
-    volatile N *pml4 = (P)( memory_size_0 -= E_mem_S_page_size );
+    N size = memory_map_entry_available->size;
     N physical_size = -E_mem_S_page_size;
     B end = no;
     E_main_S_kernel_args.additional_pages = 0;
@@ -1056,21 +1063,21 @@ E_main_I_allocate_page_table_1( N max_memory
         if( !end
         || additional_pages_
         )
-        {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
+        {   E_main_I_allocate_page_table_I_next_page_reserved_from_end( &memory_map_entry_available, &size );
             N pdpt_physical = memory_map_entry_available->physical_start + size;
             volatile N *pdpt = (P)( memory_size_0 -= E_mem_S_page_size );
             for_n( pdpt_i, table_n )
                 if( !end
                 || additional_pages_
                 )
-                {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
+                {   E_main_I_allocate_page_table_I_next_page_reserved_from_end( &memory_map_entry_available, &size );
                     N pd_physical = memory_map_entry_available->physical_start + size;
                     volatile N *pd = (P)( memory_size_0 -= E_mem_S_page_size );
                     for_n( pd_i, table_n )
                         if( !end
                         || additional_pages_
                         )
-                        {   E_main_I_allocate_page_table_I_next_page( yes, &memory_map_entry_available, &size );
+                        {   E_main_I_allocate_page_table_I_next_page_reserved_from_end( &memory_map_entry_available, &size );
                             N pt_physical = memory_map_entry_available->physical_start + size;
                             volatile N *pt = (P)( memory_size_0 -= E_mem_S_page_size );
                             for_n( pt_i, table_n )
@@ -1098,6 +1105,9 @@ E_main_I_allocate_page_table_1( N max_memory
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
+                                        )
+                                        || ( E_main_S_kernel_args.acpi.hpet.address.address
+                                          && physical_address == E_main_S_kernel_args.acpi.hpet.address.address
                                         )
                                         || ( E_main_S_ethernet_address
                                           && physical_address >= E_main_S_ethernet_address
@@ -1150,21 +1160,21 @@ E_main_I_allocate_page_table( N max_memory
         if( !end
         || additional_pages_
         )
-        {   E_main_I_allocate_page_table_I_next_page( no, &memory_map_entry_available, &size );
+        {   E_main_I_allocate_page_table_I_next_page( &memory_map_entry_available, &size );
             N pdpt_physical = memory_map_entry_available->physical_start + size;
             volatile N *pdpt = (P)(N)( memory_map_entry_available->virtual_start + size );
             for_n( pdpt_i, table_n )
                 if( !end
                 || additional_pages_
                 )
-                {   E_main_I_allocate_page_table_I_next_page( no, &memory_map_entry_available, &size );
+                {   E_main_I_allocate_page_table_I_next_page( &memory_map_entry_available, &size );
                     N pd_physical = memory_map_entry_available->physical_start + size;
                     volatile N *pd = (P)(N)( memory_map_entry_available->virtual_start + size );
                     for_n( pd_i, table_n )
                         if( !end
                         || additional_pages_
                         )
-                        {   E_main_I_allocate_page_table_I_next_page( no, &memory_map_entry_available, &size );
+                        {   E_main_I_allocate_page_table_I_next_page( &memory_map_entry_available, &size );
                             N pt_physical = memory_map_entry_available->physical_start + size;
                             volatile N *pt = (P)(N)( memory_map_entry_available->virtual_start + size );
                             for_n( pt_i, table_n )
@@ -1179,7 +1189,7 @@ E_main_I_allocate_page_table( N max_memory
                                         N physical_address = memory_map->physical_start + physical_size;
                                         pt[ pt_i ] = E_cpu_Z_page_entry_S_present | E_cpu_Z_page_entry_S_write | physical_address;
                                         B sata_ahci = no;
-                                       for_n( i, E_main_S_sata_ahci_n )
+                                        for_n( i, E_main_S_sata_ahci_n )
                                             if( physical_address == E_main_S_sata_ahci_addresses[i]
                                             || physical_address == E_main_S_sata_ahci_addresses[i] + E_mem_S_page_size
                                             )
@@ -1192,6 +1202,9 @@ E_main_I_allocate_page_table( N max_memory
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * 4096
+                                        )
+                                        || ( E_main_S_kernel_args.acpi.hpet.address.address
+                                          && physical_address == E_main_S_kernel_args.acpi.hpet.address.address
                                         )
                                         || ( E_main_S_ethernet_address
                                           && physical_address >= E_main_S_ethernet_address
@@ -1384,14 +1397,9 @@ main( struct E_main_Z_memory_map_entry *memory_map
     {   E_main_I_out_8( 0x21, 0xff );
         E_main_I_out_8( 0xa1, 0xff );
     }
-    // Przygotowanie ‘write‐combining’ (dla ‘framebuffera’).
-    N64 v = E_main_Q_msr_R( 0x277 );
-    v &= ~0x70000;
-    v |= 0x10000;
-    E_main_Q_msr_P( 0x277, v );
     // Włączenie x2APIC.
     if( E_main_S_kernel_args.x2apic )
-    {   v = E_main_Q_msr_R( 0x1b );
+    {   N64 v = E_main_Q_msr_R( 0x1b );
         v |= ( 1 << 11 ) | ( 1 << 10 );
         E_main_Q_msr_P( 0x1b, v );
     }
@@ -1417,11 +1425,6 @@ main( struct E_main_Z_memory_map_entry *memory_map
     , E_main_S_boot_loader_orig_end - E_main_S_boot_loader_orig_start
     , E_main_Z_memory_table_Z_memory_type_S_boot_loader
     };
-    *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) //NDFN 0x200000 potrzebne tylko dla symulatora Vmware. Powinny być realne zakresy zastrzeżone.
-    { E_main_S_boot_loader_orig_end
-    , 0x100000 - E_main_S_boot_loader_orig_end
-    , E_main_Z_memory_table_Z_memory_type_S_reserved
-    };
     //*--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) // ISA
     //{ 0xf00000
     //, 0x100000
@@ -1437,6 +1440,18 @@ main( struct E_main_Z_memory_map_entry *memory_map
         *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) // HPET
         { E_main_S_kernel_args.acpi.hpet.address.address
         , E_mem_S_page_size
+        , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+        };
+    if( E_main_S_vtd_address )
+        *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) // VT-d
+        { E_main_S_vtd_address
+        , 16 * E_mem_S_page_size
+        , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+        };
+    for_n( i, E_main_S_vtd_dma_n )
+        *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
+        { E_main_S_vtd_dma_address[i]
+        , E_main_S_vtd_dma_size[i]
         , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
         };
     //*--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry ) // TPM
@@ -1473,12 +1488,8 @@ main( struct E_main_Z_memory_map_entry *memory_map
         goto End;
     E_main_I_allocate_page_table_0( memory_size_0 );
     N reserved_size = E_main_Q_memory_map_R_reserved_size();
-    B reserved_from_end = no; //CONF
+    B reserved_from_end = yes; //CONF
     N memory_size = E_main_Q_memory_map_R_size();
-    if( reserved_from_end
-    && memory_size - reserved_size - E_mem_S_page_size > 0x100000000UL - E_mem_S_page_size
-    )
-        reserved_from_end = no;
     N loader_start_0 = E_simple_Z_n_I_align_down_to_v2( memory_size_0 / 2, E_mem_S_page_size );
     N loader_start_physical = (N)E_main_Z_p_I_to_physical( (P)loader_start_0 );
     memory_map = E_main_Z_memory_table_S;
@@ -1517,7 +1528,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     );
     E_main_Q_loader_I_relocate( loader_start_0, (N)E_main_S_kernel_args.boot_loader );
     remap_jump( E_main_S_pml4, (N)E_main_S_kernel_args.boot_loader - E_main_S_boot_loader_orig_start );
-    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
+    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
     E_main_Z_memory_table_S = (P)( (N)E_main_S_kernel_args.boot_loader + (N)E_main_Z_memory_table_S - E_main_S_boot_loader_orig_start );
     E_main_Z_memory_table_S_end = (N)E_main_S_kernel_args.boot_loader + E_main_Z_memory_table_S_orig_end - E_main_S_boot_loader_orig_start;
     if( reserved_from_end )
@@ -1583,12 +1594,14 @@ main( struct E_main_Z_memory_map_entry *memory_map
         );
         goto End;
     }
-    E_main_S_kernel_args.page_table = (P)( reserved_from_end ? E_main_S_start_end_address : E_main_S_pml4 );
+    E_main_S_kernel_args.page_table = (P)( reserved_from_end
+    ? E_main_S_start_end_address
+    : E_main_S_pml4 );
     N kernel_size = E_ouxfs_Q_kernel_R_size();
     E_main_S_kernel_args.kernel = (P)( reserved_from_end
     ? (N)E_main_S_kernel_args.page_table - E_simple_Z_n_I_align_up_to_v2( kernel_size, E_mem_S_page_size )
     : E_main_S_start_end_address );
-    N page_table_size = ( reserved_from_end ? E_main_S_pml4 + E_mem_S_page_size : (N)E_main_S_kernel_args.kernel ) - (N)E_main_S_kernel_args.page_table;
+    N page_table_size = ( reserved_from_end ? memory_size - reserved_size : (N)E_main_S_kernel_args.kernel ) - (N)E_main_S_kernel_args.page_table;
     E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n();
     N memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
     E_main_S_kernel_args.memory_map = (P)( reserved_from_end
@@ -1610,6 +1623,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     __asm__ volatile (
     "\n" "cli"
     );
+    // ‘Relokacja’ kernela.
     Pn kernel_p = E_main_S_kernel_args.kernel;
     if( !E_mem_Q_blk_T_eq( kernel_p, "OUXEXE", 6 ))
         goto End;
@@ -1641,7 +1655,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     || (N)kernel_data.entry >= (N)kernel_data.data
     )
         goto End;
-    for_n( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
+    for_n_( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
         if( kernel_data.rela[i].offset < (N)kernel_data.got - (N)E_main_S_kernel_args.kernel
         || kernel_data.rela[i].offset >= kernel_size //NDFN Być może ‘relokacje’ mogą być tylko w GOT.
         )
@@ -1651,23 +1665,6 @@ main( struct E_main_Z_memory_map_entry *memory_map
         || kernel_data.exports[i].offset >= (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, E_mem_S_page_size )
         )
             goto End;
-    // ‘Relokacja’ kernela.
-    kernel_p = (P)(( Pc )E_main_S_kernel_args.kernel + 6 );
-    kernel_data.rela_plt = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.exports = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.dynstr = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.got = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.text = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.data = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.entry = (P)( (N)E_main_S_kernel_args.kernel + *kernel_p );
-    kernel_p++;
-    kernel_data.rela = (P)kernel_p;
     for_n_( i, ( (N)kernel_data.rela_plt - (N)kernel_data.rela ) / sizeof( *kernel_data.rela ))
         switch( kernel_data.rela[i].type )
         { case 6:
@@ -1677,6 +1674,29 @@ main( struct E_main_Z_memory_map_entry *memory_map
                 *(Pn)( (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].offset ) = (N)E_main_S_kernel_args.kernel + kernel_data.rela[i].addend;
                 break;
         }
+    E_main_Q_memory_map_I_sort_physical();
+    struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
+    memory_map = E_main_Z_memory_table_S;
+    while( memory_map != (P)E_main_Z_memory_table_S_end )
+    {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_available
+        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim //TODO Czy potrzebne?
+        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
+        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
+        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
+        )
+        {   my_memory_map->physical_start = memory_map->physical_start;
+            my_memory_map->virtual_start = memory_map->virtual_start;
+            my_memory_map->pages = memory_map->size / E_mem_S_page_size;
+            my_memory_map++;
+        }
+        memory_map++;
+    }
+    E_main_S_kernel_args.acpi.dsdt_content = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.dsdt_content );
+    for_n_( i, E_main_S_kernel_args.acpi.ssdt_content_n )
+        E_main_S_kernel_args.acpi.ssdt_content[i].address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.ssdt_content[i].address );
+    if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
+        E_main_S_kernel_args.acpi.pm1a_control_block = (N)E_main_Z_p_I_to_virtual( (P)E_main_S_kernel_args.acpi.pm1a_control_block );
     r = E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
     if( K_error(r) )
         goto End;
@@ -1711,30 +1731,7 @@ main( struct E_main_Z_memory_map_entry *memory_map
     {   E_main_S_kernel_args.processor_proc[i] = (P)~0UL;
         E_interrupt_I_ipi_init( 1 + i );
     }
-    E_main_Q_memory_map_I_sort_physical();
-    struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
-    memory_map = E_main_Z_memory_table_S;
-    while( memory_map != (P)E_main_Z_memory_table_S_end )
-    {   if( memory_map->type == E_main_Z_memory_table_Z_memory_type_S_available
-        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_reclaim //TODO Czy potrzebne?
-        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_acpi_nvs
-        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_boot_loader
-        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
-        || memory_map->type == E_main_Z_memory_table_Z_memory_type_S_processor_startup_page
-        )
-        {   my_memory_map->physical_start = memory_map->physical_start;
-            my_memory_map->virtual_start = memory_map->virtual_start;
-            my_memory_map->pages = memory_map->size / E_mem_S_page_size;
-            my_memory_map++;
-        }
-        memory_map++;
-    }
     _0( &E_main_S_kernel_args.uefi_runtime_services, sizeof( E_main_S_kernel_args.uefi_runtime_services ));
-    E_main_S_kernel_args.acpi.dsdt_content = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.dsdt_content );
-    for_n_( i, E_main_S_kernel_args.acpi.ssdt_content_n )
-        E_main_S_kernel_args.acpi.ssdt_content[i].address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.ssdt_content[i].address );
-    if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
-        E_main_S_kernel_args.acpi.pm1a_control_block = (N)E_main_Z_p_I_to_virtual( (P)E_main_S_kernel_args.acpi.pm1a_control_block );
     r = E_main_M_madt( E_acpi_S_apic_content, E_acpi_S_apic_content_l );
     if( K_error(r) )
         goto End;
@@ -1759,10 +1756,11 @@ main( struct E_main_Z_memory_map_entry *memory_map
     );
     // Przed wyrzuceniem z pamięci programu ‘boot loadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.
     __asm__ volatile (
-    "\n" "mov   %0,%%rsp"
-    "\n" "jmp   *%1"
+    "\n" "lea   -4*8(%0),%%rsp"
+    "\n" "call  *%1"
     :
-    : "g" ( (N)E_main_S_kernel_args.kernel_stack + stack_size ), "r" ( kernel_data.entry ), "D" ( &E_main_S_kernel_args )
+    : "r" ( (N)E_main_S_kernel_args.kernel_stack + stack_size ), "r" ( kernel_data.entry ), "D" ( &E_main_S_kernel_args )
+    : "rsp", "memory"
     );
     __builtin_unreachable();
 End:O{  __asm__ volatile (

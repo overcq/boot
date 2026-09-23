@@ -8,39 +8,39 @@
 *******************************************************************************/
 #include "kernelloader.h"
 //==============================================================================
-#define E_cpu_Z_cr0_S_mp                ( 1ULL << 1 )
-#define E_cpu_Z_cr0_S_em                ( 1ULL << 2 )
-#define E_cpu_Z_cr0_S_ts                ( 1ULL << 3 )
-#define E_cpu_Z_cr0_S_ne                ( 1ULL << 5 )
-#define E_cpu_Z_cr0_S_wp                ( 1ULL << 16 )
-#define E_cpu_Z_cr0_S_nw                ( 1ULL << 29 )
-#define E_cpu_Z_cr0_S_cd                ( 1ULL << 30 )
-#define E_cpu_Z_cr3_S_pwt               ( 1ULL << 3 )
-#define E_cpu_Z_cr3_S_pcd               ( 1ULL << 4 )
-#define E_cpu_Z_cr4_S_vme               ( 1ULL << 0 )
-#define E_cpu_Z_cr4_S_pvi               ( 1ULL << 1 )
-#define E_cpu_Z_cr4_S_tsd               ( 1ULL << 2 )
-#define E_cpu_Z_cr4_S_de                ( 1ULL << 3 )
-#define E_cpu_Z_cr4_S_mce               ( 1ULL << 6 )
-#define E_cpu_Z_cr4_S_pge               ( 1ULL << 7 )
-#define E_cpu_Z_cr4_S_pce               ( 1ULL << 8 )
-#define E_cpu_Z_cr4_S_osfxsr            ( 1ULL << 9 )
-#define E_cpu_Z_cr4_S_osxmmexcpt        ( 1ULL << 10 )
-#define E_cpu_Z_cr4_S_umip              ( 1ULL << 11 )
-#define E_cpu_Z_cr4_S_fsgsbase          ( 1ULL << 16 )
-#define E_cpu_Z_cr4_S_pcide             ( 1ULL << 17 )
-#define E_cpu_Z_cr4_S_osxsave           ( 1ULL << 18 )
-#define E_cpu_Z_cr4_S_smep              ( 1ULL << 20 )
-#define E_cpu_Z_cr4_S_smap              ( 1ULL << 21 )
-#define E_cpu_Z_cr4_S_pke               ( 1ULL << 22 )
-#define E_cpu_Z_cr4_S_pks               ( 1ULL << 24 )
-#define E_cpu_Z_cr4_S_uintr             ( 1ULL << 25 )
-#define E_cpu_Z_cr4_S_lam_sup           ( 1ULL << 28 )
-#define E_cpu_Z_page_entry_S_present    ( 1ULL << 0 )
-#define E_cpu_Z_page_entry_S_write      ( 1ULL << 1 )
-#define E_cpu_Z_page_entry_S_pwt        ( 1ULL << 3 )
-#define E_cpu_Z_page_entry_S_pcd        ( 1ULL << 4 )
-#define E_cpu_Z_page_entry_S_pat        ( 1ULL << 7 )
+#define E_cpu_Z_cr0_S_mp                ( 1 << 1 )
+#define E_cpu_Z_cr0_S_em                ( 1 << 2 )
+#define E_cpu_Z_cr0_S_ts                ( 1 << 3 )
+#define E_cpu_Z_cr0_S_ne                ( 1 << 5 )
+#define E_cpu_Z_cr0_S_wp                ( 1 << 16 )
+#define E_cpu_Z_cr0_S_nw                ( 1 << 29 )
+#define E_cpu_Z_cr0_S_cd                ( 1 << 30 )
+#define E_cpu_Z_cr3_S_pwt               ( 1 << 3 )
+#define E_cpu_Z_cr3_S_pcd               ( 1 << 4 )
+#define E_cpu_Z_cr4_S_vme               ( 1 << 0 )
+#define E_cpu_Z_cr4_S_pvi               ( 1 << 1 )
+#define E_cpu_Z_cr4_S_tsd               ( 1 << 2 )
+#define E_cpu_Z_cr4_S_de                ( 1 << 3 )
+#define E_cpu_Z_cr4_S_mce               ( 1 << 6 )
+#define E_cpu_Z_cr4_S_pge               ( 1 << 7 )
+#define E_cpu_Z_cr4_S_pce               ( 1 << 8 )
+#define E_cpu_Z_cr4_S_osfxsr            ( 1 << 9 )
+#define E_cpu_Z_cr4_S_osxmmexcpt        ( 1 << 10 )
+#define E_cpu_Z_cr4_S_umip              ( 1 << 11 )
+#define E_cpu_Z_cr4_S_fsgsbase          ( 1 << 16 )
+#define E_cpu_Z_cr4_S_pcide             ( 1 << 17 )
+#define E_cpu_Z_cr4_S_osxsave           ( 1 << 18 )
+#define E_cpu_Z_cr4_S_smep              ( 1 << 20 )
+#define E_cpu_Z_cr4_S_smap              ( 1 << 21 )
+#define E_cpu_Z_cr4_S_pke               ( 1 << 22 )
+#define E_cpu_Z_cr4_S_pks               ( 1 << 24 )
+#define E_cpu_Z_cr4_S_uintr             ( 1 << 25 )
+#define E_cpu_Z_cr4_S_lam_sup           ( 1 << 28 )
+#define E_cpu_Z_page_entry_S_present    ( 1 << 0 )
+#define E_cpu_Z_page_entry_S_write      ( 1 << 1 )
+#define E_cpu_Z_page_entry_S_pwt        ( 1 << 3 )
+#define E_cpu_Z_page_entry_S_pcd        ( 1 << 4 )
+#define E_cpu_Z_page_entry_S_pat        ( 1 << 7 )
 #define E_cpu_Z_gdt_Z_data_S_write      ( 1ULL << ( 32 + 9 ))
 #define E_cpu_Z_gdt_Z_type_S_code       ( 1ULL << ( 32 + 11 ))
 #define E_cpu_Z_gdt_S_code_data         ( 1ULL << ( 32 + 12 ))
@@ -132,8 +132,11 @@ B E_main_S_pic_mode = no;
 P E_main_S_apic_content;
 N E_main_S_apic_content_l;
 N32 E_main_S_sata_ahci_addresses[8];
-N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
 N8 E_main_S_sata_ahci_n;
+N64 E_main_S_ethernet_address, E_main_S_ethernet_eeprom_address;
+N64 E_main_S_vtd_address;
+N64 E_main_S_vtd_dma_address[2], E_main_S_vtd_dma_size[2];
+N E_main_S_vtd_dma_n;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 extern P E_remap_jump_I, E_remap_jump_I_end;
 extern P E_mp_init_I, E_mp_init_I_end, E_mp_init_I_reloc_1, E_mp_init_I_reloc_2, E_mp_init_I_reloc_3, E_mp_init_I_reloc_4, E_mp_init_I_reloc_5, E_mp_init_I_reloc_6, E_mp_init_I_reloc_7, E_mp_init_I_reloc_8, E_mp_init_S_gdt_32, E_mp_init_S_gdt, E_mp_init_S_gd_32, E_mp_init_S_gd;
@@ -247,6 +250,7 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
 ){  _0( &E_main_S_kernel_args.acpi, sizeof( E_main_S_kernel_args.acpi ));
     E_main_S_kernel_args.io_apic_address = 0;
     E_main_S_kernel_args.pcie_base_address = 0;
+    E_main_S_vtd_address = 0;
     struct H_uefi_Z_guid guid_;
 #define Z_guid_T_eq( variable, guid ) guid_ = ( struct H_uefi_Z_guid )guid; if( E_mem_Q_blk_T_eq( &variable, &guid_, sizeof(variable) ))
     for_n( i, system_table->configuration_table_n )
@@ -344,8 +348,40 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( header->signature )))
                     {   struct H_acpi_Z_dmar *dmar = (P)header;
-                        E_main_S_kernel_args.acpi.dmar_content = ( Pc )dmar + sizeof( *dmar );
-                        E_main_S_kernel_args.acpi.dmar_content_l = dmar->header.length - sizeof( *dmar );
+                        struct H_acpi_Z_dmar_entry_header *dmar_entry_header = (P)(( Pc )dmar + sizeof( *dmar ));
+                        while(( Pc )dmar_entry_header + sizeof( *dmar_entry_header ) <= ( Pc )dmar + dmar->header.length )
+                        {   switch( dmar_entry_header->type )
+                            { case 0: // DRHD
+                                {   struct dmar_drhd
+                                    { N16 type;
+                                      N16 length;
+                                      N8  flags;
+                                      N8  reserved;
+                                      N16 segment;
+                                      N64 base;
+                                    } *drhd = (P)dmar_entry_header;
+                                    E_main_S_vtd_address = drhd->base;
+                                    break;
+                                }
+                              case 1: // RMRR
+                                {   if( E_main_S_vtd_dma_n == J_a_R_n( E_main_S_vtd_dma_address ))
+                                        return ~0;
+                                    struct dmar_rmrr
+                                    { N16 type;
+                                      N16 length;
+                                      N16 segment;
+                                      N16 reserved;
+                                      N64 base;
+                                      N64 limit;
+                                    } *rmrr = (P)dmar_entry_header;
+                                    E_main_S_vtd_dma_address[ E_main_S_vtd_dma_n ] = rmrr->base;
+                                    E_main_S_vtd_dma_size[ E_main_S_vtd_dma_n ] = rmrr->limit - rmrr->base + 1;
+                                    E_main_S_vtd_dma_n++;
+                                    break;
+                                }
+                            }
+                            dmar_entry_header = (P)(( Pc )dmar_entry_header + dmar_entry_header->length );
+                        }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( header->signature )))
                     {   struct H_acpi_Z_facs *facs;
                         if( header->revision == 1 )
@@ -409,8 +445,9 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         E_main_S_kernel_args.acpi.hpet.minimum_tick = hpet->minimum_tick;
                         E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( header->signature )))
-                    {   struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )header + sizeof( *header ));
-                        N n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                    {   struct H_acpi_Z_mcfg *mcfg = (P)header;
+                        struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )mcfg + sizeof( *mcfg ));
+                        N n = ( header->length - sizeof( *mcfg )) / sizeof( *mcfg_entry );
                         if( n != 1 )
                             return ~0;
                         E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
@@ -523,8 +560,40 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "DMAR", sizeof( header->signature )))
                     {   struct H_acpi_Z_dmar *dmar = (P)header;
-                        E_main_S_kernel_args.acpi.dmar_content = ( Pc )dmar + sizeof( *dmar );
-                        E_main_S_kernel_args.acpi.dmar_content_l = dmar->header.length - sizeof( *dmar );
+                        struct H_acpi_Z_dmar_entry_header *dmar_entry_header = (P)(( Pc )dmar + sizeof( *dmar ));
+                        while(( Pc )dmar_entry_header + sizeof( *dmar_entry_header ) <= ( Pc )dmar + dmar->header.length )
+                        {   switch( dmar_entry_header->type )
+                            { case 0: // DRHD
+                                {   struct dmar_drhd
+                                    { N16 type;
+                                      N16 length;
+                                      N8  flags;
+                                      N8  reserved;
+                                      N16 segment;
+                                      N64 base;
+                                    } *drhd = (P)dmar_entry_header;
+                                    E_main_S_vtd_address = drhd->base;
+                                    break;
+                                }
+                              case 1: // RMRR
+                                {   if( E_main_S_vtd_dma_n == J_a_R_n( E_main_S_vtd_dma_address ))
+                                        return ~0;
+                                    struct dmar_rmrr
+                                    { N16 type;
+                                      N16 length;
+                                      N16 segment;
+                                      N16 reserved;
+                                      N64 base;
+                                      N64 limit;
+                                    } *rmrr = (P)dmar_entry_header;
+                                    E_main_S_vtd_dma_address[ E_main_S_vtd_dma_n ] = rmrr->base;
+                                    E_main_S_vtd_dma_size[ E_main_S_vtd_dma_n ] = rmrr->limit - rmrr->base + 1;
+                                    E_main_S_vtd_dma_n++;
+                                    break;
+                                }
+                            }
+                            dmar_entry_header = (P)(( Pc )dmar_entry_header + dmar_entry_header->length );
+                        }
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "FACP", sizeof( header->signature )))
                     {   struct H_acpi_Z_facs *facs;
                         if( header->revision == 6 )
@@ -599,8 +668,9 @@ E_main_I_acpi( struct H_uefi_Z_system_table *system_table
                         E_main_S_kernel_args.acpi.hpet.minimum_tick = hpet->minimum_tick;
                         E_main_S_kernel_args.acpi.hpet.page_protection = hpet->page_protection;
                     }else if( E_mem_Q_blk_T_eq( &header->signature[0], "MCFG", sizeof( header->signature )))
-                    {   struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )header + sizeof( *header ));
-                        N n = ( header->length - sizeof( *header )) / sizeof( struct H_acpi_Z_mcfg_entry );
+                    {   struct H_acpi_Z_mcfg *mcfg = (P)header;
+                        struct H_acpi_Z_mcfg_entry *mcfg_entry = (P)(( Pc )mcfg + sizeof( *mcfg ));
+                        N n = ( header->length - sizeof( *mcfg )) / sizeof( *mcfg_entry );
                         if( n != 1 )
                             return ~0;
                         E_main_S_kernel_args.pcie_base_address = (P)mcfg_entry->base_address;
@@ -671,9 +741,6 @@ E_main_I_virtual_address_change( P event
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , &E_main_S_apic_content
-    );
-    E_main_I_virtual_address_change_I_convert_pointer( runtime_services
-    , &E_main_S_kernel_args.acpi.dmar_content
     );
     E_main_I_virtual_address_change_I_convert_pointer( runtime_services
     , &E_main_S_kernel_args.acpi.dsdt_content
@@ -941,23 +1008,14 @@ E_main_Q_memory_map_R_reserved_size( N memory_map_n
 ){  N size = 0;
     struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
     for_n( i, memory_map_n )
-    {   if( memory_map->type != H_uefi_Z_memory_type_S_loader_code
-        && memory_map->type != H_uefi_Z_memory_type_S_loader_data
-        && memory_map->type != H_uefi_Z_memory_type_S_boot_services_code
-        && memory_map->type != H_uefi_Z_memory_type_S_boot_services_data
-        && memory_map->type != H_uefi_Z_memory_type_S_conventional
+    {   if( memory_map->type == H_uefi_Z_memory_type_S_runtime_services_code
+        || memory_map->type == H_uefi_Z_memory_type_S_runtime_services_data
+        || memory_map->type == H_uefi_Z_memory_type_S_acpi_reclaim
+        || memory_map->type == H_uefi_Z_memory_type_S_acpi_nvs
+        || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io
+        || memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
+        || memory_map->type == H_uefi_Z_memory_type_S_pal_code
         )
-            size += memory_map->pages * H_oux_E_mem_S_page_size;
-        memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-    }
-    return size;
-}
-N
-E_main_Q_memory_map_R_reserved_size_from_start( N memory_map_n
-){  N size = 0;
-    struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
-    for_n( i, memory_map_n )
-    {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved )
             size += memory_map->pages * H_oux_E_mem_S_page_size;
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
@@ -978,8 +1036,7 @@ E_main_Q_memory_map_R_saved_n( N memory_map_n
 ){  struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
     N n = 0;
     for_n( i, memory_map_n )
-    {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved //TODO Czy potrzebne?
-        || memory_map->type == H_uefi_Z_memory_type_S_loader_code
+    {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code
         || memory_map->type == H_uefi_Z_memory_type_S_loader_data
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
@@ -1042,7 +1099,7 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
     if( reserved_from_end )
     {   memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1056,8 +1113,7 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code 
-            || ( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+        {   if(( memory_map->type == H_uefi_Z_memory_type_S_loader_data
               && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
               && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
             )
@@ -1117,7 +1173,19 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
     }else
     {   memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type != H_uefi_Z_memory_type_S_loader_code
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code )
+                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
+                , &memory_map_end
+                , memory_map_new_entries
+                , &next_virtual_address
+                , &processor_start_page_computed
+                );
+            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        }
+        memory_map = E_main_S_memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map->type != H_uefi_Z_memory_type_S_reserved
+            && memory_map->type != H_uefi_Z_memory_type_S_loader_code
             && memory_map->type != H_uefi_Z_memory_type_S_loader_data
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_code
             && memory_map->type != H_uefi_Z_memory_type_S_boot_services_data
@@ -1162,8 +1230,7 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code
-            || ( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+        {   if(( memory_map->type == H_uefi_Z_memory_type_S_loader_data
               && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
               && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
             )
@@ -1177,6 +1244,12 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
                 );
             memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
         }
+    }
+    memory_map = E_main_S_memory_map;
+    for_n_( i, memory_map_n )
+    {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved )
+            memory_map->virtual_start = ~0;
+        memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
     return 0;
 }
@@ -1250,8 +1323,14 @@ E_main_I_allocate_page_table( N memory_map_l
 ){  struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
     P memory_map_end = ( Pc )memory_map + memory_map_l;
     struct H_uefi_Z_memory_type_descriptor *memory_map_entry_conventional;
-    N pages;
     //DFN Jest co najmniej jeden blok pamięci z typów: “H_uefi_Z_memory_type_S_boot_services_code”, “H_uefi_Z_memory_type_S_conventional”.
+    memory_map_entry_conventional = memory_map;
+    while( memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_boot_services_code
+    && memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_conventional
+    )
+        memory_map_entry_conventional = (P)(( Pc )memory_map_entry_conventional + E_main_S_descriptor_l );
+    volatile Pn pml4 = (P)memory_map_entry_conventional->physical_start;
+    N pages;
     if( reserved_from_end )
     {   memory_map_entry_conventional = (P)(( Pc )memory_map_end - E_main_S_descriptor_l );
         while( memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_boot_services_code
@@ -1260,14 +1339,7 @@ E_main_I_allocate_page_table( N memory_map_l
             memory_map_entry_conventional = (P)(( Pc )memory_map_entry_conventional - E_main_S_descriptor_l );
         pages = memory_map_entry_conventional->pages - 1;
     }else
-    {   memory_map_entry_conventional = memory_map;
-        while( memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_boot_services_code
-        && memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_conventional
-        )
-            memory_map_entry_conventional = (P)(( Pc )memory_map_entry_conventional + E_main_S_descriptor_l );
         pages = 0;
-    }
-    volatile Pn pml4 = (P)( memory_map_entry_conventional->physical_start + pages * H_oux_E_mem_S_page_size );
     N physical_pages = -1;
     B end = no;
     *additional_pages = 0;
@@ -1316,6 +1388,9 @@ E_main_I_allocate_page_table( N memory_map_l
                                         || ( E_main_S_kernel_args.pcie_base_address
                                           && physical_address >= (N)E_main_S_kernel_args.pcie_base_address
                                           && physical_address < (N)E_main_S_kernel_args.pcie_base_address + 256 * 32 * 8 * H_oux_E_mem_S_page_size
+                                        )
+                                        || ( E_main_S_kernel_args.acpi.hpet.address.address
+                                          && physical_address == E_main_S_kernel_args.acpi.hpet.address.address
                                         )
                                         || ( physical_address >= E_main_S_ethernet_address
                                           && physical_address < E_main_S_ethernet_address + 0x20000
@@ -1657,6 +1732,7 @@ H_uefi_I_main( P image_handle
         while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
         goto End;
     }*/
+    E_main_S_vtd_dma_n = 0;
     status = E_main_I_acpi( system_table );
     struct H_uefi_Z_input_key key;
     while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
@@ -1814,18 +1890,19 @@ H_uefi_I_main( P image_handle
     {   S status_ = system_table->boot_services->W_pool( (P)loader_start_new_physical );
         return ~0;
     }
-    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 ) * 2 * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + E_main_S_vtd_dma_n + 1 + 1 ) * 2 * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w poprzednim “M_pool”
      * 2 na możliwość wstawienia w następnym “M_pool”
      * n na zakresy odczytane podczas wyliczania PCI
-     * 1 na 
      * 1 na zakres SMM
-     * 1 na 
      * 1 na dopisanie bloku ‘kernela’
      * 1 na dopisanie bloku ‘framebuffera’
      * 1 na dopisanie bloku “local_apic_address”
      * 1 na dopisanie bloku “io_apic_address”
      * 1 na dopisanie bloku PCIe
+     * 1 na dopisanie bloku HPET
+     * 1 na dopisanie bloku VT-d
+     * E_main_S_vtd_dma_n na dopisanie bloków DMA VT-d
      * 1 na stronę pamięci poniżej 1 MiB na program startowy procesorów
      * 1 na wykonanie procedury “E_main_Q_memory_map_I_set_virtual”
      * pomnożone przez 2 na możliwość dodania bloków z powodu przecinania się zakresów
@@ -1852,14 +1929,9 @@ H_uefi_I_main( P image_handle
     {   E_main_I_out_8( 0x21, 0xff );
         E_main_I_out_8( 0xa1, 0xff );
     }
-    // Przygotowanie ‘write‐combining’ (dla ‘frame buffera’).
-    N64 v = E_main_Q_msr_R( 0x277 );
-    v &= ~0x70000ULL;
-    v |= 0x10000;
-    E_main_Q_msr_P( 0x277, v );
     // Włączenie x2APIC.
     if( E_main_S_kernel_args.x2apic )
-    {   v = E_main_Q_msr_R( 0x1b );
+    {   N64 v = E_main_Q_msr_R( 0x1b );
         v |= ( 1 << 11 ) | ( 1 << 10 );
         E_main_Q_msr_P( 0x1b, v );
     }
@@ -1869,19 +1941,9 @@ H_uefi_I_main( P image_handle
         goto End;
     struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + memory_map_l );
     memory_map->type = H_uefi_Z_memory_type_S_reserved;
-    memory_map->physical_start = 0;
-    memory_map->pages = 1;
-    memory_map_l += E_main_S_descriptor_l;
-    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-    memory_map->type = H_uefi_Z_memory_type_S_reserved;
     memory_map->physical_start = 0x30000;
     memory_map->pages = 0x20;
     memory_map_l += E_main_S_descriptor_l;
-    //memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-    //memory_map->type = H_uefi_Z_memory_type_S_reserved;
-    //memory_map->physical_start = 0x80000;
-    //memory_map->pages = 0x80;
-    //memory_map_l += E_main_S_descriptor_l;
     memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_type_S_loader_data;
     memory_map->physical_start = (N)E_main_S_kernel_args.kernel;
@@ -1902,14 +1964,36 @@ H_uefi_I_main( P image_handle
     memory_map->physical_start = (N)E_main_S_kernel_args.io_apic_address;
     memory_map->pages = 1;
     memory_map_l += E_main_S_descriptor_l;
-    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-    memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
-    memory_map->physical_start = (N)E_main_S_kernel_args.pcie_base_address;
-    memory_map->pages = 256 * 32 * 8;
-    memory_map_l += E_main_S_descriptor_l;
+    if( E_main_S_kernel_args.pcie_base_address )
+    {   memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
+        memory_map->physical_start = (N)E_main_S_kernel_args.pcie_base_address;
+        memory_map->pages = 256 * 32 * 8;
+        memory_map_l += E_main_S_descriptor_l;
+    }
+    if( E_main_S_kernel_args.acpi.hpet.address.address )
+    {   memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
+        memory_map->physical_start = (N)E_main_S_kernel_args.acpi.hpet.address.address;
+        memory_map->pages = 1;
+        memory_map_l += E_main_S_descriptor_l;
+    }
+    if( E_main_S_vtd_address )
+    {   memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
+        memory_map->physical_start = E_main_S_vtd_address;
+        memory_map->pages = 16;
+        memory_map_l += E_main_S_descriptor_l;
+    }
+    for_n_( i, E_main_S_vtd_dma_n )
+    {   memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        memory_map->type = H_uefi_Z_memory_type_S_memory_mapped_io;
+        memory_map->physical_start = E_main_S_vtd_dma_address[i];
+        memory_map->pages = E_simple_Z_n_I_align_up_to_v2( E_main_S_vtd_dma_size[i], H_oux_E_mem_S_page_size ) / H_oux_E_mem_S_page_size;
+        memory_map_l += E_main_S_descriptor_l;
+    }
     N memory_map_n = memory_map_l / E_main_S_descriptor_l;
     E_main_Q_memory_map_I_align( memory_map_n );
-    E_main_Q_memory_map_I_sort_physical( memory_map_n );
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n ) //NDFN
     {   if( memory_map->type == H_uefi_Z_memory_type_S_memory_mapped_io
@@ -1921,6 +2005,7 @@ H_uefi_I_main( P image_handle
         }
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
+    E_main_Q_memory_map_I_sort_physical( memory_map_n );
     status = E_main_Q_memory_map_I_remove_overlapped( &memory_map_n );
     if( status < 0 )
         goto End;
@@ -1957,12 +2042,6 @@ H_uefi_I_main( P image_handle
     N reserved_size = E_main_Q_memory_map_R_reserved_size( memory_map_n );
     B reserved_from_end = yes; //CONF
     N memory_size = E_main_Q_memory_map_R_size( memory_map_n );
-    N reserved_size_from_start;
-    if( reserved_from_end )
-    {   reserved_size_from_start = E_main_Q_memory_map_R_reserved_size_from_start( memory_map_n );
-        if( memory_size - ( reserved_size - reserved_size_from_start ) - E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ) - H_oux_E_mem_S_page_size > 0x100000000ULL - H_oux_E_mem_S_page_size )
-            reserved_from_end = no;
-    }
     N memory_map_new_entries;
     status = E_main_Q_memory_map_I_set_virtual( memory_map_n, reserved_from_end, &memory_map_new_entries );
     if( status < 0 )
@@ -1976,8 +2055,8 @@ H_uefi_I_main( P image_handle
         goto End;
     E_main_I_convert_pointer( memory_map_n, &E_main_S_kernel_args.kernel );
     N page_table_size = reserved_from_end
-    ? (N)E_main_S_kernel_args.kernel - start_end_address
-    : start_end_address - ( (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size ));
+    ? (N)E_main_S_kernel_args.kernel - start_end_address // Bez strony PML4.
+    : start_end_address - ( (N)E_main_S_kernel_args.kernel + E_simple_Z_n_I_align_up_to_v2( kernel_size, H_oux_E_mem_S_page_size )); // Razem ze stroną PML4.
     E_main_S_kernel_args.page_table = (P)( reserved_from_end ? start_end_address : start_end_address - page_table_size );
     E_main_S_kernel_args.memory_map_n = E_main_Q_memory_map_R_saved_n( memory_map_n );
     N memory_map_size = E_main_S_kernel_args.memory_map_n * sizeof( *E_main_S_kernel_args.memory_map );
@@ -2011,7 +2090,7 @@ H_uefi_I_main( P image_handle
     if( status < 0 )
         goto End;
     remap_jump( E_main_S_loader_stack, pml4, loader_start - loader_start_old );
-    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
+    __asm__ volatile ( "" ::: "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "memory" );
     system_table = E_main_S_system_table;
     _0_( &E_main_S_tss );
     E_main_S_tss.io_map_base_address = ~0;
@@ -2106,8 +2185,7 @@ H_uefi_I_main( P image_handle
     struct H_oux_E_mem_Z_memory_map *my_memory_map = E_main_S_kernel_args.memory_map;
     memory_map = E_main_S_memory_map;
     for_n_( i, memory_map_n )
-    {   if( memory_map->type == H_uefi_Z_memory_type_S_reserved //TODO Czy potrzebne?
-        || memory_map->type == H_uefi_Z_memory_type_S_loader_code
+    {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_code
         || memory_map->type == H_uefi_Z_memory_type_S_loader_data
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
         || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
@@ -2127,7 +2205,9 @@ H_uefi_I_main( P image_handle
         }
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
-    r = E_mem_M( reserved_from_end, reserved_size_from_start, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
+    N pml4_virtual = pml4;
+    E_main_I_convert_pointer( memory_map_n, &pml4_virtual );
+    r = E_mem_M( reserved_from_end, pml4_virtual, loader_start, loader_end - loader_start, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
     if( K_error(r) )
         goto End;
     E_vga_I_fill_rect( 0, 0, E_main_S_kernel_args.framebuffer.width, E_main_S_kernel_args.framebuffer.height, E_vga_R_video_color( E_vga_S_background_color ));
@@ -2215,10 +2295,11 @@ H_uefi_I_main( P image_handle
     );
     // Przed wyrzuceniem z pamięci programu ‘boot loadera’ ‘kernel’ potrzebuje przenieść dostarczone dane, ustawić LDT, IDT, TSS.
     __asm__ volatile (
-    "\n" "mov   %0,%%rsp"
-    "\n" "jmp   *%1"
+    "\n" "lea   -4*8(%0),%%rsp"
+    "\n" "call  *%1"
     :
-    : "g" ( (N)E_main_S_kernel_args.kernel_stack + stack_size ), "r" ( kernel_data.entry ), "D" ( &E_main_S_kernel_args )
+    : "r" ( (N)E_main_S_kernel_args.kernel_stack + stack_size ), "r" ( kernel_data.entry ), "D" ( &E_main_S_kernel_args )
+    : "rsp", "memory"
     );
     __builtin_unreachable();
 End:

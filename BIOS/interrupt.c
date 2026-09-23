@@ -326,30 +326,7 @@ E_interrupt_M( void
     Mt_( E_interrupt_S_idt, idt_n * 2 );
     Kp( E_interrupt_S_idt )
         return ~0;
-    E_interrupt_J_interrupt_descriptor( 0, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 1, E_interrupt_I_external_spurious, 1 );
-    //E_interrupt_J_interrupt_descriptor( 2, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_S_idt[ 2 * 2 ] = 0;
-    E_interrupt_J_interrupt_descriptor( 3, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 4, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 5, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 6, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 7, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 8, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_S_idt[ 9 * 2 ] = 0;
-    E_interrupt_J_interrupt_descriptor( 10, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 11, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 12, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 13, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 14, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_S_idt[ 15 * 2 ] = 0;
-    E_interrupt_J_interrupt_descriptor( 16, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 17, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 18, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 19, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 20, E_interrupt_I_external_spurious, 1 );
-    E_interrupt_J_interrupt_descriptor( 21, E_interrupt_I_external_spurious, 1 );
-    for( N i = 22; i != 32; i++ )
+    for_n( i, 32 )
         E_interrupt_S_idt[ i * 2 ] = 0;
     Mt_( E_interrupt_S_external, E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n );
     Kp( E_interrupt_S_external )
@@ -357,7 +334,7 @@ E_interrupt_M( void
         return ~0;
     }
     _0t_( E_interrupt_S_external, E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n );
-    for( N i = 32; i != 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n; i++ )
+    for( i = 32; i != 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n; i++ )
         switch(i)
         { case 32:
                 E_interrupt_J_interrupt_descriptor( i, E_interrupt_I_external_32, 1 );
@@ -1041,7 +1018,7 @@ E_interrupt_M( void
         E_main_Q_msr_P( 0x80f, ( E_main_Q_msr_R( 0x80f ) & ~0xff ) | 0x100 | ( 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n )); // Ustaw numer przerwania nieoczekiwanego i włącz APIC.
     else
         *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0xf0 ) = ( *( volatile N32 * )(( Pc )E_main_S_kernel_args.local_apic_address + 0xf0 ) & ~0xff ) | 0x100 | ( 32 + E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n );
-    for_n( i, E_main_S_kernel_args.gsi_n )
+    for_n_( i, E_main_S_kernel_args.gsi_n )
         if( ~(S8)E_main_S_kernel_args.gsi[i].source )
             E_interrupt_Q_io_apic_I_enable(i);
     return 0;

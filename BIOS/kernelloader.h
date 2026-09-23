@@ -255,6 +255,10 @@ struct __attribute__ (( __packed__ )) H_acpi_Z_apic
   N32 flags;
 };
 //------------------------------------------------------------------------------
+struct __attribute__ (( __packed__ )) H_acpi_Z_dmar_entry_header
+{ N16 type;
+  N16 length;
+};
 struct __attribute__ (( __packed__ )) H_acpi_Z_dmar
 { struct H_acpi_Z_table_header header;
   N8 host_addreass_width;
@@ -644,9 +648,7 @@ struct H_main_Z_uefi_runtime_services
   P R_variable_info;
 };
 struct H_main_Z_kernel_Z_acpi
-{ P dmar_content;
-  N dmar_content_l;
-  P dsdt_content;
+{ P dsdt_content;
   N dsdt_content_l;
   struct H_oux_Z_hpet hpet;
   struct
