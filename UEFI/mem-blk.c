@@ -21,7 +21,7 @@ _internal P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 _internal P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
- * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • przestrzeń ‘niezmapowana’ (na początku, na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • pamięć zarezerwowana
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
  * • ‘kernel’; wyrównany adres
@@ -38,7 +38,7 @@ _internal P E_mem_Q_blk_M_new_0( N * );
  * • (niezarejestrowana strona pamięci na program startowy procesorów)
  * • stary program ‘boot loadera’
  * W przeciwnym przypadku (“!reserved_from_end”):
- * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • przestrzeń ‘niezmapowana’ (na początku, na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • stos; wyrównany adres i rozmiar
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • nowy program ‘boot loadera’
@@ -141,7 +141,7 @@ E_mem_M(
     {   free_p[0].l = E_main_S_kernel_args.processor_start_page - H_oux_E_mem_S_page_size;
         free_p[0].p = (P)H_oux_E_mem_S_page_size;
         free_p[1].l = loader_start - ( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
-        free_p[1].p = (P)( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
+        free_p[1].p = (P)( (N)E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
         free_p[2].l = pml4_virtual - ( loader_start + loader_size );
         free_p[2].p = (P)( loader_start + loader_size );
         free_p[3].l = (N)E_main_S_kernel_args.mem_blk.allocated - ( pml4_virtual + H_oux_E_mem_S_page_size );
@@ -159,7 +159,7 @@ E_mem_M(
     {   free_p[0].l = E_main_S_kernel_args.processor_start_page - H_oux_E_mem_S_page_size;
         free_p[0].p = (P)H_oux_E_mem_S_page_size;
         free_p[1].l = H_oux_E_mem_S_page_size + H_oux_E_mem_S_page_size + loader_size - ( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
-        free_p[1].p = (P)( E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
+        free_p[1].p = (P)( (N)E_main_S_kernel_args.processor_start_page + H_oux_E_mem_S_page_size );
         free_p[2].l = kernel_size % H_oux_E_mem_S_page_size ? H_oux_E_mem_S_page_size - kernel_size % H_oux_E_mem_S_page_size : 0;
         free_p[2].p = (Pc)kernel_address + kernel_size;
         free_p[3].l = loader_start - (N)( E_main_S_kernel_args.mem_blk.allocated + E_main_S_kernel_args.mem_blk.allocated[ E_main_S_kernel_args.mem_blk.allocated_id ].n );

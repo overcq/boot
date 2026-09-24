@@ -302,8 +302,9 @@ I_hlt_16:
 0:  mov     %esp,%esp
     fninit
     pop     %rdi                            # Przekazanie adresu tablicy obszarów pamięci RAM.
+    lea     -4*8(%rsp),%rsp
     lea     E_main_S_video(%rip),%rsi
-    jmp     main
+    call    main
 #===============================================================================
 .code16
 Q_vga_I_print_hex_word:

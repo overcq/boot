@@ -56,4 +56,3 @@ run-qemu-uefi:
     -drive media=disk,format=raw,file=disk.img,if=none,id=disc0 \
     -device ahci,id=ahci0 -device ide-hd,drive=disc0,bus=ahci0.0
 #*******************************************************************************
-

@@ -849,7 +849,8 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
             || next_entry_type == H_uefi_Z_memory_type_S_unusable
             || next_entry_type == H_uefi_Z_memory_type_S_unaccepted
             || ( entry_type == H_uefi_Z_memory_type_S_reserved
-              && ( next_entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+              && ( next_entry_type == H_uefi_Z_memory_type_S_runtime_services_data
+                || next_entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
                 || next_entry_type == H_uefi_Z_memory_type_S_acpi_nvs
                 || next_entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
                 || next_entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
@@ -905,7 +906,8 @@ E_main_Q_memory_map_I_remove_overlapped( N *memory_map_n
             && ( next_entry_type == H_uefi_Z_memory_type_S_conventional
               || entry_type == H_uefi_Z_memory_type_S_unusable
               || entry_type == H_uefi_Z_memory_type_S_unaccepted
-              || (( entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
+              || (( entry_type == H_uefi_Z_memory_type_S_runtime_services_data
+                  || entry_type == H_uefi_Z_memory_type_S_acpi_reclaim
                   || entry_type == H_uefi_Z_memory_type_S_acpi_nvs
                   || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io
                   || entry_type == H_uefi_Z_memory_type_S_memory_mapped_io_port_space
@@ -1026,7 +1028,8 @@ E_main_Q_memory_map_R_size( N memory_map_n
 ){  struct H_uefi_Z_memory_type_descriptor *memory_map = E_main_S_memory_map;
     N size = H_oux_E_mem_S_page_size;
     for_n( i, memory_map_n )
-    {   size += memory_map->pages * H_oux_E_mem_S_page_size;
+    {   if( memory_map->type != H_uefi_Z_memory_type_S_reserved )
+            size += memory_map->pages * H_oux_E_mem_S_page_size;
         memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     }
     return size;
@@ -1129,9 +1132,18 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         }
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
-            || memory_map->type == H_uefi_Z_memory_type_S_conventional
-            )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code )
+                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
+                , &memory_map_end
+                , memory_map_new_entries
+                , &next_virtual_address
+                , &processor_start_page_computed
+                );
+            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        }
+        memory_map = E_main_S_memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_conventional )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1216,9 +1228,18 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         }
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
-            || memory_map->type == H_uefi_Z_memory_type_S_conventional
-            )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_conventional )
+                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
+                , &memory_map_end
+                , memory_map_new_entries
+                , &next_virtual_address
+                , &processor_start_page_computed
+                );
+            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        }
+        memory_map = E_main_S_memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1230,12 +1251,21 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if(( memory_map->type == H_uefi_Z_memory_type_S_loader_data
-              && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
-              && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+            && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
+            && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
             )
-            || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
-            )
+                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
+                , &memory_map_end
+                , memory_map_new_entries
+                , &next_virtual_address
+                , &processor_start_page_computed
+                );
+            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
+        }
+        memory_map = E_main_S_memory_map;
+        for_n_( i, memory_map_n )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_data )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1337,7 +1367,7 @@ E_main_I_allocate_page_table( N memory_map_l
         && memory_map_entry_conventional->type != H_uefi_Z_memory_type_S_conventional
         )
             memory_map_entry_conventional = (P)(( Pc )memory_map_entry_conventional - E_main_S_descriptor_l );
-        pages = memory_map_entry_conventional->pages - 1;
+        pages = memory_map_entry_conventional->pages;
     }else
         pages = 0;
     N physical_pages = -1;
@@ -1345,6 +1375,7 @@ E_main_I_allocate_page_table( N memory_map_l
     *additional_pages = 0;
     N additional_pages_ = 1ULL << 15; //CONF Maksymalna liczba (‘guard pages’ stosów) ‹zadań› w systemie.
     const N table_n = H_oux_E_mem_S_page_size / sizeof(N);
+    max_memory -= H_oux_E_mem_S_page_size;
     for_n( pml4_i, table_n )
     {   if( !end
         || additional_pages_
@@ -1366,7 +1397,7 @@ E_main_I_allocate_page_table( N memory_map_l
                             for_n( pt_i, table_n )
                                 if( !end )
                                 {   N virtual_address = ( pml4_i << 39 ) | ( pdpt_i << 30 ) | ( pd_i << 21 ) | ( pt_i * H_oux_E_mem_S_page_size );
-                                    if( virtual_address == max_memory - H_oux_E_mem_S_page_size )
+                                    if( virtual_address == max_memory )
                                         end = yes;
                                     if( !virtual_address )
                                         pt[ pt_i ] = 0;
@@ -1890,10 +1921,11 @@ H_uefi_I_main( P image_handle
     {   S status_ = system_table->boot_services->W_pool( (P)loader_start_new_physical );
         return ~0;
     }
-    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + E_main_S_vtd_dma_n + 1 + 1 ) * 2 * E_main_S_descriptor_l;
+    memory_map_l += ( 2 + 2 + n + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + E_main_S_vtd_dma_n + 1 + 1 ) * 2 * E_main_S_descriptor_l;
     /* 2 na możliwość wstawienia w poprzednim “M_pool”
      * 2 na możliwość wstawienia w następnym “M_pool”
      * n na zakresy odczytane podczas wyliczania PCI
+     * 1 na początkowe strony pamięci
      * 1 na zakres SMM
      * 1 na dopisanie bloku ‘kernela’
      * 1 na dopisanie bloku ‘framebuffera’
@@ -1940,6 +1972,11 @@ H_uefi_I_main( P image_handle
     if( K_error(r) )
         goto End;
     struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + memory_map_l );
+    memory_map->type = H_uefi_Z_memory_type_S_reserved;
+    memory_map->physical_start = 0;
+    memory_map->pages = 4;
+    memory_map_l += E_main_S_descriptor_l;
+    memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_type_S_reserved;
     memory_map->physical_start = 0x30000;
     memory_map->pages = 0x20;

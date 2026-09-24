@@ -24,7 +24,7 @@ P E_mem_Q_blk_Q_table_M_from_free( N *, N, N, P, N, N, N );
 P E_mem_Q_blk_M_new_0( N * );
 //==============================================================================
 /* Jeśli pamięć zarezerwowana jest umieszczona od góry (“reserved_from_end”), to początkowo bloki pamięci są ułożone następująco od największego adresu wirtualnego:
- * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • przestrzeń ‘niezmapowana’ (na początku, na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • pamięć zarezerwowana
  * • tablica stron pamięci wirtualnej; wyrównany adres i rozmiar
  * • ewentualny blok nie przydzielonej pamięci “mem-blk”
@@ -41,7 +41,7 @@ P E_mem_Q_blk_M_new_0( N * );
  * • stary program ‘boot loadera’
  * • (0xf000 — niezarejestrowana strona pamięci na program startowy procesorów)
  * W przeciwnym przypadku (“!reserved_from_end”):
- * • przestrzeń ‘niezmapowana’ (na początku – na strony zamiast ‘guard pages’ stosów ‹zadań›)
+ * • przestrzeń ‘niezmapowana’ (na początku, na strony zamiast ‘guard pages’ stosów ‹zadań›)
  * • stos; wyrównany adres i rozmiar
  * • ewentualna pozostała przestrzeń przydzialania pamięci przez “mem-blk”
  * • nowy program ‘boot loadera’
