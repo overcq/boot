@@ -7,13 +7,6 @@
 *         main
 * (c)overcq              on WSL\Debian (Linux 6.18.33.2)             2026-8-31 c
 *******************************************************************************/
-//NDFN Moduł z OUX nie działa, więc tymczasowo procedury zastąpione.
-#define E_mem_Q_file_M( path, ro, mode )    open( path, O_RDWR )
-#define E_mem_Q_file_W(file)                close(file)
-#define E_mem_Q_file_P_pos( file, pos )     lseek( file, pos, SEEK_SET )
-#define E_mem_Q_file_R_sl( file, s, l )     read( file, s, l )
-#define E_mem_Q_file_P_sl( file, s, l )     write( file, s, l )
-//==============================================================================
 #define E_main_S_boot_loader_start          0x10000
 //==============================================================================
 struct __attribute__ (( __packed__ )) Q_elf_Z_header
@@ -68,7 +61,7 @@ main(
     {   r = ~0;
         goto Error_0;
     }
-    int file = E_mem_Q_file_M( argv[1], no, 0 );
+    int file = E_mem_Q_file_M( argv[1], yes, 0 );
     K(file)
     {   r = ~0;
         goto Error_0;
