@@ -1120,19 +1120,9 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
               && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
               && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
             )
+            || memory_map->type == H_uefi_Z_memory_type_S_boot_services_code
             || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
             )
-                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , &memory_map_end
-                , memory_map_new_entries
-                , &next_virtual_address
-                , &processor_start_page_computed
-                );
-            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-        }
-        memory_map = E_main_S_memory_map;
-        for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1237,23 +1227,14 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
                 );
             memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
         }
-        memory_map = E_main_S_memory_map;
-        for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code )
-                E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
-                , &memory_map_end
-                , memory_map_new_entries
-                , &next_virtual_address
-                , &processor_start_page_computed
-                );
-            memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
-        }
         //DFN Początkowo stos jest w pamięci typu “H_uefi_Z_memory_type_S_boot_services_data”, a “E_main_S_memory_map” 〃 “H_uefi_Z_memory_type_S_loader_data”.
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_loader_data
-            && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
-            && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
+        {   if(( memory_map->type == H_uefi_Z_memory_type_S_loader_data
+              && memory_map->physical_start != E_main_S_kernel_args.processor_start_page
+              && memory_map->physical_start != (N)E_main_S_kernel_args.kernel
+            )
+            || memory_map->type == H_uefi_Z_memory_type_S_boot_services_data
             )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
@@ -1265,7 +1246,7 @@ E_main_Q_memory_map_I_set_virtual( N memory_map_n
         }
         memory_map = E_main_S_memory_map;
         for_n_( i, memory_map_n )
-        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_data )
+        {   if( memory_map->type == H_uefi_Z_memory_type_S_boot_services_code )
                 E_main_Q_memory_map_I_set_virtual_I_entry( memory_map
                 , &memory_map_end
                 , memory_map_new_entries
@@ -1974,7 +1955,7 @@ H_uefi_I_main( P image_handle
     struct H_uefi_Z_memory_type_descriptor *memory_map = (P)(( Pc )E_main_S_memory_map + memory_map_l );
     memory_map->type = H_uefi_Z_memory_type_S_reserved;
     memory_map->physical_start = 0;
-    memory_map->pages = 4;
+    memory_map->pages = 2;
     memory_map_l += E_main_S_descriptor_l;
     memory_map = (P)(( Pc )memory_map + E_main_S_descriptor_l );
     memory_map->type = H_uefi_Z_memory_type_S_reserved;
