@@ -312,9 +312,9 @@ E_interrupt_R_gsi_next( void
 }
 N8
 E_interrupt_R_free_external( void
-){  for_n( i, E_main_S_kernel_args.gsi_n )
-        if( !E_interrupt_S_external[ E_interrupt_S_gsi_ex_n + i ] )
-            return E_interrupt_S_gsi_ex_n + i;
+){  for( N i = E_interrupt_S_gsi_ex_n + 16; i != E_interrupt_S_gsi_ex_n + E_main_S_kernel_args.gsi_n; i++ )
+        if( !E_interrupt_S_external[i] )
+            return i;
     return ~0;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
