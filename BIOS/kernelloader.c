@@ -1697,6 +1697,10 @@ main( struct E_main_Z_memory_map_entry *memory_map
         E_main_S_kernel_args.acpi.ssdt_content[i].address = E_main_Z_p_I_to_virtual( E_main_S_kernel_args.acpi.ssdt_content[i].address );
     if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
         E_main_S_kernel_args.acpi.pm1a_control_block = (N)E_main_Z_p_I_to_virtual( (P)E_main_S_kernel_args.acpi.pm1a_control_block );
+    if( E_main_S_kernel_args.acpi.pm1b_control_block
+    && E_main_S_kernel_args.acpi.pm1b_control_block_mmio
+    )
+        E_main_S_kernel_args.acpi.pm1b_control_block = (N)E_main_Z_p_I_to_virtual( (P)E_main_S_kernel_args.acpi.pm1b_control_block );
     r = E_mem_M( reserved_from_end, (N)E_main_S_kernel_args.kernel_stack, stack_size, (N)E_main_S_kernel_args.memory_map, memory_map_size, (N)E_main_S_kernel_args.page_table, page_table_size, (N)E_main_S_kernel_args.kernel, kernel_size, memory_size, reserved_size );
     if( K_error(r) )
         goto End;

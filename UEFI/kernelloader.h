@@ -864,8 +864,8 @@ struct H_main_Z_kernel_Z_acpi
     N l;
   }ssdt_content[4];
   N ssdt_content_n;
-  N pm1a_control_block;
-  unsigned pm1a_control_block_mmio          :1;
+  N pm1a_control_block, pm1b_control_block;
+  B pm1a_control_block_mmio, pm1b_control_block_mmio;
   unsigned virt_guest_rtc_good              :1;
   unsigned virt_guest_pm_good               :1;
   unsigned smm_validate_fixed_comm_buffers  :1;

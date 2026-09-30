@@ -193,16 +193,24 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 {   struct H_acpi_Z_fadt_v3 *fadt = (P)header;
                     if( fadt->ex_PM1a_control_block.address )
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1a_control_block.address;
+                        E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1b_control_block.address;
                         E_main_S_kernel_args.acpi.pm1a_control_block_mmio = fadt->ex_PM1a_control_block.space;
+                        E_main_S_kernel_args.acpi.pm1b_control_block_mmio = fadt->ex_PM1a_control_block.space;
                         if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
                             *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                             { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1a_control_block, E_mem_S_page_size )
                             , E_mem_S_page_size
                             , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
                             };
+                        if( E_main_S_kernel_args.acpi.pm1b_control_block_mmio )
+                            *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
+                            { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1b_control_block, E_mem_S_page_size )
+                            , E_mem_S_page_size
+                            , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                            };
                     }else
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->PM1a_control_block;
-                        E_main_S_kernel_args.acpi.pm1a_control_block_mmio = no;
+                        E_main_S_kernel_args.acpi.pm1b_control_block = fadt->PM1b_control_block;
                     }
                     dsdt_physical = fadt->ex_dsdt ? fadt->ex_dsdt : fadt->dsdt;
                     if( header->length != sizeof( *fadt )
@@ -222,7 +230,7 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 }else if( header->revision == 1 )
                 {   struct H_acpi_Z_fadt_v1 *fadt = (P)header;
                     E_main_S_kernel_args.acpi.pm1a_control_block = fadt->PM1a_control_block;
-                    E_main_S_kernel_args.acpi.pm1a_control_block_mmio = no;
+                    E_main_S_kernel_args.acpi.pm1b_control_block = fadt->PM1b_control_block;
                     dsdt_physical = fadt->dsdt;
                     if( header->length != sizeof( *fadt )
                     || !dsdt_physical
@@ -472,16 +480,24 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 {   struct H_acpi_Z_fadt *fadt = (P)header;
                     if( fadt->ex_PM1a_control_block.address )
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1a_control_block.address;
+                        E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1b_control_block.address;
                         E_main_S_kernel_args.acpi.pm1a_control_block_mmio = fadt->ex_PM1a_control_block.space;
+                        E_main_S_kernel_args.acpi.pm1b_control_block_mmio = fadt->ex_PM1a_control_block.space;
                         if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
                             *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                             { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1a_control_block, E_mem_S_page_size )
                             , E_mem_S_page_size
                             , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
                             };
+                        if( E_main_S_kernel_args.acpi.pm1b_control_block_mmio )
+                            *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
+                            { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1b_control_block, E_mem_S_page_size )
+                            , E_mem_S_page_size
+                            , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                            };
                     }else
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->PM1a_control_block;
-                        E_main_S_kernel_args.acpi.pm1a_control_block_mmio = no;
+                        E_main_S_kernel_args.acpi.pm1b_control_block = fadt->PM1b_control_block;
                     }
                     dsdt_physical = fadt->ex_dsdt ? fadt->ex_dsdt : fadt->dsdt;
                     if( header->length != sizeof( *fadt )
@@ -505,16 +521,24 @@ E_acpi_I_rsdp( struct H_acpi_Z_rsdp *rsdp
                 {   struct H_acpi_Z_fadt_v3 *fadt = (P)header;
                     if( fadt->ex_PM1a_control_block.address )
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1a_control_block.address;
+                        E_main_S_kernel_args.acpi.pm1a_control_block = fadt->ex_PM1b_control_block.address;
                         E_main_S_kernel_args.acpi.pm1a_control_block_mmio = fadt->ex_PM1a_control_block.space;
+                        E_main_S_kernel_args.acpi.pm1b_control_block_mmio = fadt->ex_PM1a_control_block.space;
                         if( E_main_S_kernel_args.acpi.pm1a_control_block_mmio )
                             *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
                             { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1a_control_block, E_mem_S_page_size )
                             , E_mem_S_page_size
                             , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
                             };
+                        if( E_main_S_kernel_args.acpi.pm1b_control_block_mmio )
+                            *--E_main_Z_memory_table_S = ( struct E_main_Z_memory_map_entry )
+                            { E_simple_Z_n_I_align_down_to_v2( E_main_S_kernel_args.acpi.pm1b_control_block, E_mem_S_page_size )
+                            , E_mem_S_page_size
+                            , E_main_Z_memory_table_Z_memory_type_S_memory_mapped_io
+                            };
                     }else
                     {   E_main_S_kernel_args.acpi.pm1a_control_block = fadt->PM1a_control_block;
-                        E_main_S_kernel_args.acpi.pm1a_control_block_mmio = no;
+                        E_main_S_kernel_args.acpi.pm1b_control_block = fadt->PM1b_control_block;
                     }
                     dsdt_physical = fadt->ex_dsdt ? fadt->ex_dsdt : fadt->dsdt;
                     if( header->length != sizeof( *fadt )

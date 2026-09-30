@@ -1746,10 +1746,10 @@ H_uefi_I_main( P image_handle
     }*/
     E_main_S_vtd_dma_n = 0;
     status = E_main_I_acpi( system_table );
-    struct H_uefi_Z_input_key key;
-    while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
-    if( status < 0 )
-        return status;
+    //struct H_uefi_Z_input_key key;
+    //while( system_table->input->read_key_stroke( system_table->input, &key ) == H_uefi_Z_error_S_not_ready ){}
+    //if( status < 0 )
+        //return status;
     N disk_io_handles_n;
     P *disk_io_handles;
     struct H_uefi_Z_guid H_uefi_Z_guid_S_disk_io_S = H_uefi_Z_guid_S_disk_io;
